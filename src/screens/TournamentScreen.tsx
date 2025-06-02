@@ -1116,7 +1116,7 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
       );
 
       // --- Determine Champions if not already set by specific round completion ---
-      const matchesAfterThisAdvancement = matches.concat(newMatchesToAdd);
+      const matchesAfterThisAdvancement = matches.concat(newMatchesToAdd); // Contains current matches + new WB/LB matches
 
       if (!wbChampion) {
         const potentialWbFinalMatches = matchesAfterThisAdvancement.filter(
@@ -1211,14 +1211,97 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
       }
 
       // --- Check for Grand Finals ---
-      // Define currentMatchesIncludingNew here, as it's used for GF check and setActiveBracketForDisplay
-      const currentMatchesIncludingNew = matches.concat(newMatchesToAdd);
-      const existingGFMatch = currentMatchesIncludingNew.find(
-        // Use currentMatchesIncludingNew
-        (m: Match) => m.bracket === "grandFinals" // Typed m
+      const currentMatchesState = matches; // Snapshot of matches state before new ones are added by this call
+      const grandFinalsMatchesInState = currentMatchesState.filter(
+        (m: Match) => m.bracket === "grandFinals"
+      );
+      const firstGFMatchFromState = grandFinalsMatchesInState.find(
+        (m: Match) => !m.isGrandFinalsReset
+      );
+      const resetGFMatchFromState = grandFinalsMatchesInState.find(
+        (m: Match) => m.isGrandFinalsReset === true
       );
 
-      if (wbChampion && lbChampion && !existingGFMatch) {
+      // 1. Check if a Grand Finals match (first or reset) has just been completed
+      if (
+        firstGFMatchFromState &&
+        firstGFMatchFromState.winner &&
+        !tournamentOver
+      ) {
+        const wbPlayerInGF = firstGFMatchFromState.player1;
+        const lbPlayerInGF = firstGFMatchFromState.player2;
+
+        if (
+          wbPlayerInGF &&
+          firstGFMatchFromState.winner.id === wbPlayerInGF.id
+        ) {
+          // WB Player won the first GF match
+          console.log(
+            `DE: WB Player ${wbPlayerInGF.name} won first Grand Finals. Tournament Over.`
+          );
+          setOverallWinner(firstGFMatchFromState.winner);
+          setTournamentOver(true);
+          newMatchesToAdd = [];
+        } else if (
+          lbPlayerInGF &&
+          firstGFMatchFromState.winner.id === lbPlayerInGF.id
+        ) {
+          // LB Player won the first GF match
+          if (
+            !resetGFMatchFromState &&
+            !newMatchesToAdd.some((m) => m.id === `match-gf-2-reset`)
+          ) {
+            // And reset not already created or in queue
+            console.log(
+              "DE: Grand Finals Reset! LB Player won the first match. Setting up reset match."
+            );
+            const gfResetMatch: Match = {
+              id: `match-gf-2-reset`,
+              round: (firstGFMatchFromState.round || 1) + 1,
+              matchNumber: 1,
+              player1: wbPlayerInGF, // Should be the WB champion
+              player2: lbPlayerInGF, // Should be the LB champion
+              winner: null,
+              bracket: "grandFinals",
+              isGrandFinalsReset: true,
+            };
+            if (!newMatchesToAdd.find((m) => m.id === gfResetMatch.id)) {
+              newMatchesToAdd.push(gfResetMatch);
+            }
+          } else if (resetGFMatchFromState && !resetGFMatchFromState.winner) {
+            console.log("DE: Grand Finals reset match is pending.");
+          }
+        }
+      }
+
+      if (
+        resetGFMatchFromState &&
+        resetGFMatchFromState.winner &&
+        !tournamentOver
+      ) {
+        console.log(
+          `DE: Reset Grand Finals winner: ${resetGFMatchFromState.winner.name}. Tournament Over.`
+        );
+        setOverallWinner(resetGFMatchFromState.winner);
+        setTournamentOver(true);
+        newMatchesToAdd = [];
+      }
+
+      // Define a variable that reflects all matches in state + all matches added to newMatchesToAdd SO FAR.
+      // This includes new WB/LB matches AND potentially a GF reset match from section 1.
+      const allMatchesIncludingNewAdditionsSoFar = matches.concat(newMatchesToAdd);
+
+      // 2. If no GF match exists yet, try to create the first one if champions are ready
+      const firstGFMatchStillMissing = !allMatchesIncludingNewAdditionsSoFar.find( // Use the correctly defined variable
+        (m: Match) => m.bracket === "grandFinals" && !m.isGrandFinalsReset
+      );
+
+      if (
+        wbChampion &&
+        lbChampion &&
+        firstGFMatchStillMissing &&
+        !tournamentOver // Only create if tournament isn't already over
+      ) {
         console.log(
           `DE: Setting up First Grand Finals! WB Champ: ${wbChampion.name}, LB Champ: ${lbChampion.name}`
         );
@@ -1232,18 +1315,11 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
           bracket: "grandFinals",
           isGrandFinalsReset: false,
         };
+        // Check against newMatchesToAdd directly to prevent adding it if it was somehow already there
         if (!newMatchesToAdd.find((m) => m.id === grandFinalsMatch.id)) {
-          newMatchesToAdd = [...newMatchesToAdd, grandFinalsMatch];
-          // Update currentMatchesIncludingNew if GF match was added to newMatchesToAdd
-          // currentMatchesIncludingNew.push(grandFinalsMatch); // Not strictly necessary if setMatches updates correctly
+          newMatchesToAdd.push(grandFinalsMatch);
         }
       }
-      // Grand Finals Reset Logic (if first GF match is in newMatchesToAdd and gets a winner immediately - less likely here)
-      // This part of GF logic (reset generation) is better handled if firstGFMatch.winner is set via handleSetWinner
-      // and then executeAdvanceRound is called again.
-      // For now, the existing GF logic from previous snippets that checks firstGFMatch.winner
-      // (which would be from the `matches` state after `handleSetWinner`) is more robust.
-      // The code below is for the case where the *first* GF match itself is being created.
 
       // --- Update States (Matches) ---
       if (newMatchesToAdd.length > 0) {
@@ -1475,6 +1551,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 5,
   },
+ 
   playerButton: {
     paddingVertical: 8,
     paddingHorizontal: 12,
