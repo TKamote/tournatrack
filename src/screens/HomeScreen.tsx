@@ -2,79 +2,127 @@ import React from "react";
 import {
   View,
   Text,
-  Button,
   StyleSheet,
   SafeAreaView,
+  TouchableOpacity,
   ScrollView,
 } from "react-native";
-
-// Updated TournamentType
-export type TournamentType =
-  | "Single Knockout 8"
-  | "Single Knockout 16"
-  | "Single Knockout 32"
-  | "Single Knockout 64"
-  | "Double Elimination 8" // Added
-  | "Double Elimination 16" // Placeholder for future
-  | "Double Elimination 32"; // Placeholder for future
+import { TournamentType } from "../types"; // Import from types.ts
 
 interface HomeScreenProps {
-  onSelectTournament: (type: TournamentType) => void;
+  onNavigateToPlayerInput: (type: TournamentType, numPlayers: number) => void;
 }
 
-const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectTournament }) => {
+const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateToPlayerInput }) => {
+  const handleTournamentSelect = (type: TournamentType, players: number) => {
+    onNavigateToPlayerInput(type, players);
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <Text style={styles.title}>Select Tournament Type</Text>
+      <ScrollView contentContainerStyle={styles.container}>
+        <Text style={styles.title}>TournaTrack</Text>
+        <Text style={styles.subtitle}>Select Tournament Type & Players</Text>
 
-        <Text style={styles.sectionTitle}>Single Elimination</Text>
-        <View style={styles.buttonContainer}>
-          <Button
-            title="Single Knockout (8 Players)"
-            onPress={() => onSelectTournament("Single Knockout 8")}
-          />
-        </View>
-        <View style={styles.buttonContainer}>
-          <Button
-            title="Single Knockout (16 Players)"
-            onPress={() => onSelectTournament("Single Knockout 16")}
-          />
-        </View>
-        <View style={styles.buttonContainer}>
-          <Button
-            title="Single Knockout (32 Players)"
-            onPress={() => onSelectTournament("Single Knockout 32")}
-          />
-        </View>
-        <View style={styles.buttonContainer}>
-          <Button
-            title="Single Knockout (64 Players)"
-            onPress={() => onSelectTournament("Single Knockout 64")}
-          />
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Single Elimination</Text>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() =>
+              handleTournamentSelect(TournamentType.SingleKnockout4, 4)
+            }
+          >
+            <Text style={styles.buttonText}>4 Players</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() =>
+              handleTournamentSelect(TournamentType.SingleKnockout8, 8)
+            }
+          >
+            <Text style={styles.buttonText}>8 Players</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() =>
+              handleTournamentSelect(TournamentType.SingleKnockout16, 16)
+            }
+          >
+            <Text style={styles.buttonText}>16 Players</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() =>
+              handleTournamentSelect(TournamentType.SingleKnockout32, 32)
+            }
+          >
+            <Text style={styles.buttonText}>32 Players</Text>
+          </TouchableOpacity>
+          {/* If you have SingleKnockout64
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() =>
+              handleTournamentSelect(TournamentType.SingleKnockout64, 64)
+            }
+          >
+            <Text style={styles.buttonText}>64 Players</Text>
+          </TouchableOpacity>
+          */}
         </View>
 
-        <Text style={styles.sectionTitle}>Double Elimination</Text>
-        <View style={styles.buttonContainer}>
-          <Button
-            title="Double Elimination (8 Players)"
-            onPress={() => onSelectTournament("Double Elimination 8")}
-          />
-        </View>
-        {/* Placeholders for other DE sizes */}
-        <View style={styles.buttonContainer}>
-          <Button
-            title="Double Elimination (16 Players) - Soon"
-            onPress={() => onSelectTournament("Double Elimination 16")}
-            disabled
-          />
-        </View>
-        <View style={styles.buttonContainer}>
-          <Button
-            title="Double Elimination (32 Players) - Soon"
-            onPress={() => onSelectTournament("Double Elimination 32")}
-            disabled
-          />
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Double Elimination</Text>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() =>
+              // Assuming DoubleElimination8 is the base type for 6,7,8 player DE
+              handleTournamentSelect(TournamentType.DoubleElimination8, 6)
+            }
+          >
+            <Text style={styles.buttonText}>6 Players</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() =>
+              handleTournamentSelect(TournamentType.DoubleElimination8, 7)
+            }
+          >
+            <Text style={styles.buttonText}>7 Players</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() =>
+              handleTournamentSelect(TournamentType.DoubleElimination8, 8)
+            }
+          >
+            <Text style={styles.buttonText}>8 Players</Text>
+          </TouchableOpacity>
+          {/* Removed 10 Players Button
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() =>
+              handleTournamentSelect(TournamentType.DoubleElimination10, 10)
+            }
+          >
+            <Text style={styles.buttonText}>10 Players</Text>
+          </TouchableOpacity>
+          */}
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() =>
+              handleTournamentSelect(TournamentType.DoubleElimination12, 12)
+            }
+          >
+            <Text style={styles.buttonText}>12 Players</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() =>
+              handleTournamentSelect(TournamentType.DoubleElimination16, 16)
+            }
+          >
+            <Text style={styles.buttonText}>16 Players</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -86,28 +134,56 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#f0f0f0",
   },
-  scrollContainer: {
+  container: {
     flexGrow: 1,
-    justifyContent: "center",
     alignItems: "center",
     paddingVertical: 20,
+    paddingHorizontal: 10,
   },
   title: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: "bold",
-    marginBottom: 20, // Adjusted margin
-    textAlign: "center",
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "600", // Semi-bold
-    marginTop: 20,
     marginBottom: 10,
     color: "#333",
   },
-  buttonContainer: {
-    width: "80%",
-    marginVertical: 8, // Adjusted margin
+  subtitle: {
+    fontSize: 16,
+    marginBottom: 30,
+    color: "#555",
+  },
+  section: {
+    width: "90%",
+    marginBottom: 25,
+    padding: 15,
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    marginBottom: 15,
+    color: "#007bff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+    paddingBottom: 5,
+  },
+  button: {
+    backgroundColor: "#007bff",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+    marginBottom: 10,
+    alignItems: "center",
+  },
+  buttonText: {
+    color: "#ffffff",
+    fontSize: 14,
+    fontWeight: "600",
   },
 });
 

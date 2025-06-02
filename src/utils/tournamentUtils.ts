@@ -95,32 +95,87 @@ export const generateSENextRoundMatches = (
 
 // --- Double Elimination (DE) Specific Functions ---
 export const createDoubleEliminationInitialMatches = (
-  players: Player[]
+  players: Player[] // Assume players are sorted by seed (player[0] is seed 1)
 ): Match[] => {
-  if (players.length < 2) return [];
+  const numActualPlayers = players.length;
+  const matches: Match[] = [];
 
-  const aPlayers = players.map((p) => ({
-    ...p,
-    losses: p.losses !== undefined ? p.losses : 0,
-  }));
-
-  const initialWinnersMatches: Match[] = [];
-  const numPlayers = aPlayers.length;
-
-  for (let i = 0; i < numPlayers / 2; i++) {
-    initialWinnersMatches.push(
-      createMatch(
-        // Use createMatch
-        `match-wb-r1-${i + 1}`,
-        1,
-        i + 1,
-        aPlayers[i * 2],
-        aPlayers[i * 2 + 1],
-        "winners"
-      )
+  if (numActualPlayers < 2) {
+    // DE typically needs at least 3-4 players to be meaningful, but 2 is the absolute minimum for a match.
+    // Adjust as per your tournament rules. For now, allowing 2.
+    console.warn(
+      "DE Initial Matches: Fewer than 2 players. Generated empty matches."
     );
+    return [];
   }
-  return initialWinnersMatches;
+
+  let bracketSize: number;
+  if (numActualPlayers <= 8) {
+    bracketSize = 8;
+  } else if (numActualPlayers <= 16) {
+    bracketSize = 16;
+  } else {
+    console.error(
+      `DE Initial Matches: Unsupported number of players (${numActualPlayers}). Max 16 supported by current logic.`
+    );
+    return [];
+  }
+
+  console.log(
+    `DE Initial Matches: numActualPlayers=${numActualPlayers}, determined bracketSize=${bracketSize}`
+  );
+
+  if (bracketSize === 8) {
+    // Standard 8-player bracket seeding: (1v8, 4v5, 3v6, 2v7)
+    // These are seed numbers.
+    const pairings = [
+      { p1Seed: 1, p2Seed: 8, matchNum: 1 },
+      { p1Seed: 4, p2Seed: 5, matchNum: 2 },
+      { p1Seed: 3, p2Seed: 6, matchNum: 3 },
+      { p1Seed: 2, p2Seed: 7, matchNum: 4 },
+    ];
+
+    pairings.forEach((p) => {
+      matches.push(
+        createMatch(
+          `match-wb1-${p.matchNum}`,
+          1,
+          p.matchNum,
+          getPlayerBySeed(p.p1Seed, players, numActualPlayers),
+          getPlayerBySeed(p.p2Seed, players, numActualPlayers),
+          "winners"
+        )
+      );
+    });
+  } else if (bracketSize === 16) {
+    // Standard 16-player bracket seeding:
+    // (1v16, 8v9, 5v12, 4v13, 3v14, 6v11, 7v10, 2v15)
+    const pairings = [
+      { p1Seed: 1, p2Seed: 16, matchNum: 1 },
+      { p1Seed: 8, p2Seed: 9, matchNum: 2 },
+      { p1Seed: 5, p2Seed: 12, matchNum: 3 },
+      { p1Seed: 4, p2Seed: 13, matchNum: 4 },
+      { p1Seed: 3, p2Seed: 14, matchNum: 5 },
+      { p1Seed: 6, p2Seed: 11, matchNum: 6 },
+      { p1Seed: 7, p2Seed: 10, matchNum: 7 },
+      { p1Seed: 2, p2Seed: 15, matchNum: 8 },
+    ];
+
+    pairings.forEach((p) => {
+      matches.push(
+        createMatch(
+          `match-wb1-${p.matchNum}`,
+          1,
+          p.matchNum,
+          getPlayerBySeed(p.p1Seed, players, numActualPlayers),
+          getPlayerBySeed(p.p2Seed, players, numActualPlayers),
+          "winners"
+        )
+      );
+    });
+  }
+
+  return matches;
 };
 
 export const generateDEWinnersBracketNextRound = (
@@ -156,56 +211,102 @@ export const generateDELosersBracketRound1Matches = (
   wbRound1Losers: Player[],
   existingMatchCount: number
 ): Match[] => {
+  const numLosers = wbRound1Losers.length;
+  const matches: Match[] = [];
+  let matchIdCounter = existingMatchCount;
+
   console.log(
-    "UTIL: generateDELosersBracketRound1Matches CALLED with losers:", // Log 1
-    wbRound1Losers.map((p) => p.name),
-    "and existingMatchCount:",
-    existingMatchCount
+    `UTIL: generateDELosersBracketRound1Matches called with ${numLosers} losers.`
   );
 
-  const newMatches: Match[] = [];
-  if (wbRound1Losers.length !== 4) {
+  if (numLosers === 0) {
+    return []; // No losers, no LB R1 matches from WB R1.
+  } else if (numLosers === 1) {
+    // 1 loser gets a bye in LB R1
+    matchIdCounter++;
+    matches.push({
+      id: `match-lb1-${matchIdCounter}`,
+      round: 1,
+      matchNumber: 1, // Only one "match" which is a bye
+      player1: wbRound1Losers[0],
+      player2: null,
+      winner: wbRound1Losers[0], // Auto-winner for bye
+      bracket: "losers",
+      isGrandFinalsReset: false,
+    });
+  } else if (numLosers === 2) {
+    // 2 losers play 1 match
+    matchIdCounter++;
+    matches.push({
+      id: `match-lb1-${matchIdCounter}`,
+      round: 1,
+      matchNumber: 1,
+      player1: wbRound1Losers[0], // Simple pairing: 1st vs 2nd
+      player2: wbRound1Losers[1],
+      winner: null,
+      bracket: "losers",
+      isGrandFinalsReset: false,
+    });
+  } else if (numLosers === 3) {
+    // 3 losers: 1 match, 1 player gets a bye.
+    // For simplicity, let's assume the "last" loser (by original WB seeding or order in array) gets the bye.
+    // And the first two play. You might want more sophisticated seeding here.
+    // Match: Loser[0] vs Loser[1]
+    matchIdCounter++;
+    matches.push({
+      id: `match-lb1-${matchIdCounter}`,
+      round: 1,
+      matchNumber: 1,
+      player1: wbRound1Losers[0],
+      player2: wbRound1Losers[1],
+      winner: null,
+      bracket: "losers",
+      isGrandFinalsReset: false,
+    });
+    // Bye for Loser[2]
+    matchIdCounter++;
+    matches.push({
+      id: `match-lb1-${matchIdCounter}`,
+      round: 1,
+      matchNumber: 2, // Second "match slot" in LB R1
+      player1: wbRound1Losers[2],
+      player2: null,
+      winner: wbRound1Losers[2], // Auto-winner
+      bracket: "losers",
+      isGrandFinalsReset: false,
+    });
+  } else if (numLosers === 4) {
+    // 4 losers play 2 matches (original logic for DE-8)
+    // Standard pairing for 4 players: P1vP4, P2vP3 (using indices 0v3, 1v2)
+    matchIdCounter++;
+    matches.push({
+      id: `match-lb1-${matchIdCounter}`,
+      round: 1,
+      matchNumber: 1,
+      player1: wbRound1Losers[0],
+      player2: wbRound1Losers[3],
+      winner: null,
+      bracket: "losers",
+      isGrandFinalsReset: false,
+    });
+    matchIdCounter++;
+    matches.push({
+      id: `match-lb1-${matchIdCounter}`,
+      round: 1,
+      matchNumber: 2,
+      player1: wbRound1Losers[1],
+      player2: wbRound1Losers[2],
+      winner: null,
+      bracket: "losers",
+      isGrandFinalsReset: false,
+    });
+  } else {
     console.warn(
-      "UTIL: generateDELosersBracketRound1Matches - EARLY EXIT: Expected 4 losers for 8-player DE, got:", // Log 2
-      wbRound1Losers.length,
-      "Returning empty array."
+      `generateDELosersBracketRound1Matches received an unexpected number of losers: ${numLosers}`
     );
-    return [];
   }
 
-  console.log(
-    "UTIL: generateDELosersBracketRound1Matches - Proceeding to create matches. Losers count is 4."
-  ); // Log 3
-
-  let matchNumberOffset = 0;
-  newMatches.push(
-    createMatch(
-      `match-lb1-${existingMatchCount + matchNumberOffset + 1}`,
-      1, // LB Round 1
-      existingMatchCount + matchNumberOffset + 1,
-      wbRound1Losers[0],
-      wbRound1Losers[1],
-      "losers"
-    )
-  );
-  matchNumberOffset++;
-  newMatches.push(
-    createMatch(
-      `match-lb1-${existingMatchCount + matchNumberOffset + 1}`,
-      1, // LB Round 1
-      existingMatchCount + matchNumberOffset + 1,
-      wbRound1Losers[2],
-      wbRound1Losers[3],
-      "losers"
-    )
-  );
-
-  console.log(
-    "UTIL: generateDELosersBracketRound1Matches SUCCESSFULLY generated matches:", // Log 4
-    newMatches.map((m) => `(${m.player1?.name} vs ${m.player2?.name})`),
-    "Returning these matches."
-  );
-  return newMatches;
+  return matches;
 };
 
 export const generateDELosersBracketNextRoundMatches = (
@@ -319,3 +420,17 @@ export const generateDELosersBracketNextRoundMatches = (
 };
 
 // More DE functions will be added here for Losers' Bracket and Grand Finals
+
+// Helper function to get player by seed (1-indexed seed)
+// This function should be defined before createDoubleEliminationInitialMatches or be a local helper.
+const getPlayerBySeed = (
+  seed: number,
+  playersList: Player[],
+  totalPlayersInTournament: number
+): Player | null => {
+  if (seed <= 0) return null; // Invalid seed
+  if (seed > totalPlayersInTournament) {
+    return null; // This seed number is a bye because we don't have that many players
+  }
+  return playersList[seed - 1]; // 0-indexed access for playersList
+};

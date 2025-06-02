@@ -1,117 +1,171 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   StyleSheet,
   Text,
   View,
   FlatList,
   SafeAreaView,
-  Button,
   TouchableOpacity,
   Pressable,
-  Alert, // Added
-  Modal, // Added
+  Alert,
+  Modal,
+  ScrollView,
+  Button, // Import Button
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
-import { Player, Match, BracketType } from "../types";
+import { Player, Match, BracketType, TournamentType } from "../types"; // Add TournamentType to import
 import {
-  generatePlayers,
+  generatePlayers as generateDefaultPlayers,
   createSEInitialMatches,
   generateSENextRoundMatches,
   createDoubleEliminationInitialMatches,
   generateDEWinnersBracketNextRound,
   generateDELosersBracketRound1Matches,
-  generateDELosersBracketNextRoundMatches, // <-- Add this import
+  generateDELosersBracketNextRoundMatches,
 } from "../utils/tournamentUtils";
-import { TournamentType } from "./HomeScreen";
 
 interface TournamentScreenProps {
   tournamentType: TournamentType;
   numPlayers: number;
+  playerNames: string[];
   onGoBack: () => void;
 }
 
 const TournamentScreen: React.FC<TournamentScreenProps> = ({
   tournamentType,
   numPlayers,
+  playerNames: receivedPlayerNames,
   onGoBack,
 }) => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
-  const [currentWinnersRound, setCurrentWinnersRound] = useState<number>(1);
-  const [currentLosersRound, setCurrentLosersRound] = useState<number>(1);
-  const [activeBracketForDisplay, setActiveBracketForDisplay] = useState<
-    BracketType | "all"
-  >("winners");
-  const [tournamentOver, setTournamentOver] = useState<boolean>(false);
+  const [currentWinnersRound, setCurrentWinnersRound] = useState(1);
+  const [currentLosersRound, setCurrentLosersRound] = useState(1);
+  const [tournamentOver, setTournamentOver] = useState(false);
   const [overallWinner, setOverallWinner] = useState<Player | null>(null);
   const [wbRound1Losers, setWbRound1Losers] = useState<Player[]>([]);
-  const [isAdvanceModalVisible, setIsAdvanceModalVisible] = useState(false); // New state for modal
+  const [activeBracketForDisplay, setActiveBracketForDisplay] = useState<
+    BracketType | "all"
+  >("all");
+  const [isAdvanceModalVisible, setIsAdvanceModalVisible] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false); // New state
 
+  // Effect 1: Reset hasInitialized if core tournament definition props change
   useEffect(() => {
     console.log(
-      `Initializing ${tournamentType} tournament with ${numPlayers} players...`
+      "TournamentScreen: Core props changed (numPlayers, tournamentType, or receivedPlayerNames). Resetting hasInitialized."
     );
-    const initialPlayers = generatePlayers(numPlayers);
-    setPlayers(initialPlayers);
+    setHasInitialized(false);
+    // Clear out old players and matches to ensure a fresh start for the new tournament config
+    setPlayers([]);
+    setMatches([]);
+  }, [numPlayers, tournamentType, receivedPlayerNames]);
 
-    let firstRoundMatches: Match[] = [];
-    if (tournamentType.startsWith("Single Knockout")) {
-      firstRoundMatches = createSEInitialMatches(initialPlayers);
-      setCurrentWinnersRound(1);
-      setActiveBracketForDisplay("winners");
-    } else if (tournamentType.startsWith("Double Elimination")) {
-      firstRoundMatches = createDoubleEliminationInitialMatches(initialPlayers);
-      setCurrentWinnersRound(1);
-      setCurrentLosersRound(1);
-      setActiveBracketForDisplay("winners");
+  // Effect 2: Initialize players array
+  useEffect(() => {
+    if (
+      !hasInitialized &&
+      receivedPlayerNames &&
+      receivedPlayerNames.length === numPlayers &&
+      numPlayers > 0
+    ) {
+      console.log(
+        "TournamentScreen: Effect 2 - Initializing players array from names."
+      );
+      const initialPlayers = receivedPlayerNames.map((name, index) => ({
+        id: `player-${index + 1}-${name.replace(/\s+/g, "-").toLowerCase()}`,
+        name: name,
+        losses: 0,
+      }));
+      setPlayers(initialPlayers);
+    } else if (
+      !hasInitialized &&
+      (!receivedPlayerNames || receivedPlayerNames.length !== numPlayers) &&
+      numPlayers > 0
+    ) {
+      console.warn(
+        "TournamentScreen: Effect 2 - Player names not received correctly or count mismatch. Generating default players."
+      );
+      setPlayers(generateDefaultPlayers(numPlayers));
     }
-    setMatches(firstRoundMatches);
-    setTournamentOver(false);
-    setOverallWinner(null);
-    setCurrentWinnersRound(1);
-    setCurrentLosersRound(1);
-    setWbRound1Losers([]);
-    setIsAdvanceModalVisible(false); // Ensure modal is hidden on re-init
-  }, [tournamentType, numPlayers]);
+    // This effect depends on hasInitialized to ensure it only runs once for a given tournament setup.
+    // It also depends on receivedPlayerNames and numPlayers to react to new tournament configurations.
+  }, [receivedPlayerNames, numPlayers, hasInitialized]);
 
-  // Moved isMatchLocked before handleSetWinner
+  // Effect 3: Generate initial matches
+  useEffect(() => {
+    // Only run if players are populated and we haven't fully initialized matches yet for this tournament instance.
+    if (players.length > 0 && !hasInitialized) {
+      console.log(
+        `TournamentScreen: Effect 3 - Generating INITIAL matches for ${tournamentType} with ${players.length} players.`
+      );
+      let initialMatches: Match[] = [];
+      if (tournamentType.startsWith("Single Knockout")) {
+        initialMatches = createSEInitialMatches(players);
+      } else if (tournamentType.startsWith("Double Elimination")) {
+        initialMatches = createDoubleEliminationInitialMatches(players);
+      }
+
+      if (initialMatches.length > 0) {
+        setMatches(initialMatches);
+        setCurrentWinnersRound(1);
+        setCurrentLosersRound(1);
+        setTournamentOver(false);
+        setOverallWinner(null);
+        setWbRound1Losers([]);
+        setActiveBracketForDisplay(
+          tournamentType.startsWith("Double Elimination") ? "all" : "winners"
+        );
+        setHasInitialized(true); // Mark as fully initialized
+        console.log(
+          "TournamentScreen: Effect 3 - Initial setup complete. hasInitialized set to true."
+        );
+      } else if (players.length > 0) {
+        // Only warn if players were there but no matches generated
+        console.warn(
+          "TournamentScreen: Effect 3 - No initial matches were generated despite having players. Check create...InitialMatches functions."
+        );
+      }
+    }
+    // This effect depends on the players array (to get the actual players for match generation)
+    // and tournamentType (if it could change and require new matches).
+    // hasInitialized ensures it only generates *initial* matches once.
+  }, [players, tournamentType, hasInitialized]);
+
+  // isMatchLocked is now a function that determines lock status dynamically
   const isMatchLocked = useCallback(
     (match: Match): boolean => {
       if (tournamentOver) return true;
 
-      // A match is locked if its round is less than the current active round for its bracket.
       if (match.bracket === "winners" && match.round < currentWinnersRound) {
-        // console.log(`Match ${match.id} (WB R${match.round}) is LOCKED because current WB round is ${currentWinnersRound}`);
         return true;
       }
       if (match.bracket === "losers" && match.round < currentLosersRound) {
-        // console.log(`Match ${match.id} (LB R${match.round}) is LOCKED because current LB round is ${currentLosersRound}`);
         return true;
       }
-
-      // Grand finals locking might need specific logic if it's considered a separate phase
       if (match.bracket === "grandFinals" && overallWinner) return true;
 
       return false;
     },
-    [
-      tournamentOver,
-      currentWinnersRound,
-      currentLosersRound,
-      // matches, // matches can be a frequent changer; only add if complex logic truly needs it
-      overallWinner,
-      // tournamentType, // tournamentType doesn't change after init for this screen
-    ]
+    [tournamentOver, currentWinnersRound, currentLosersRound, overallWinner]
   );
 
   const handleSetWinner = useCallback(
     (matchId: string, newWinningPlayer: Player) => {
+      // ***** ADD THIS LOG AS THE VERY FIRST LINE *****
+      console.log(
+        `handleSetWinner CALLED - Match ID: ${matchId}, Player: ${newWinningPlayer.name}`
+      );
+      // *****
+
       const targetMatchIndex = matches.findIndex((m) => m.id === matchId);
       if (targetMatchIndex === -1) {
         console.error(`Match with ID ${matchId} not found.`);
         return;
       }
       const targetMatch = { ...matches[targetMatchIndex] };
+
+      // Use the isMatchLocked function
       if (isMatchLocked(targetMatch)) {
         Alert.alert(
           "Match Locked",
@@ -124,7 +178,6 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
       const player1 = targetMatch.player1;
       const player2 = targetMatch.player2;
 
-      // If clicking the same winner again, do nothing (or allow unsetting if desired - more complex)
       if (oldWinner && oldWinner.id === newWinningPlayer.id) {
         console.log(
           `Player ${newWinningPlayer.name} is already the winner of match ${matchId}. No change.`
@@ -134,17 +187,14 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
 
       let newLoserOfMatch: Player | null = null;
       if (player1 && player2) {
-        // Determine new loser only if two players were in the match
         newLoserOfMatch =
           player1.id === newWinningPlayer.id ? player2 : player1;
       }
 
-      // --- State Update Logic ---
       let finalPlayers = [...players];
       let finalMatches = [...matches];
-      let finalWbRound1Losers = [...wbRound1Losers]; // Operate on copies
+      let finalWbRound1Losers = [...wbRound1Losers];
 
-      // 1. Handle consequences of the OLD outcome (if changing a winner)
       if (oldWinner && player1 && player2) {
         const oldLoserOfMatch = player1.id === oldWinner.id ? player2 : player1;
         console.log(
@@ -160,8 +210,8 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
         if (
           tournamentType.startsWith("Double Elimination") &&
           targetMatch.bracket === "winners" &&
-          targetMatch.round === 1 &&
-          numPlayers === 8
+          targetMatch.round === 1
+          // Removed numPlayers === 8 check here, as bye logic handles different player counts
         ) {
           finalWbRound1Losers = finalWbRound1Losers.filter(
             (l) => l.id !== oldLoserOfMatch.id
@@ -183,12 +233,10 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
         }
       }
 
-      // 2. Update the target match with the NEW winner
       finalMatches = finalMatches.map((m) =>
         m.id === targetMatch.id ? { ...m, winner: newWinningPlayer } : m
       );
 
-      // 3. Process consequences for the NEW loser
       if (newLoserOfMatch) {
         const newLoserId = newLoserOfMatch.id;
         let currentLosses = 0;
@@ -205,7 +253,7 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
             console.log(
               `${newLoserOfMatch.name} drops from WB (match ${targetMatch.id}).`
             );
-            if (targetMatch.round === 1 && numPlayers === 8) {
+            if (targetMatch.round === 1) {
               const alreadyExists = finalWbRound1Losers.some(
                 (l) => l.id === newLoserOfMatch.id
               );
@@ -215,41 +263,28 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
                   { ...newLoserOfMatch },
                 ];
                 console.log(
-                  // Log immediately after adding
                   "HANDLE_SET_WINNER: Added to wbRound1Losers:",
                   newLoserOfMatch.name,
                   "Current list:",
                   finalWbRound1Losers.map((p) => p.name)
                 );
               }
-
-              // Check if it's time to generate LB R1 matches
-              // This check is now outside the .map or a chained function
-              if (finalWbRound1Losers.length === 4) {
+              const expectedNumberOfWBR1Losers = Math.max(0, numPlayers - 4);
+              if (
+                finalWbRound1Losers.length === expectedNumberOfWBR1Losers &&
+                expectedNumberOfWBR1Losers > 0
+              ) {
                 console.log(
-                  "HANDLE_SET_WINNER: All 4 WB R1 Losers collected for LB R1 generation:",
+                  `HANDLE_SET_WINNER: All ${expectedNumberOfWBR1Losers} WB R1 Losers collected for LB R1 generation:`,
                   finalWbRound1Losers.map((p) => p.name + `(${p.id})`)
                 );
-
-                // Filter out any existing unplayed LB R1 matches before adding new ones
-                // This is to prevent duplicates if this logic somehow runs multiple times
-                // or if a winner is changed back and forth.
                 const matchesWithoutExistingUnplayedLBR1 = finalMatches.filter(
                   (m) => !(m.bracket === "losers" && m.round === 1 && !m.winner)
                 );
-
-                console.log(
-                  "HANDLE_SET_WINNER: PRE-CALL to generateDELosersBracketRound1Matches. Losers being passed:",
-                  finalWbRound1Losers.map((p) => `${p.name}(${p.id})`),
-                  "Count for existingMatchCount:",
-                  matchesWithoutExistingUnplayedLBR1.length
-                );
-
                 const newLBM = generateDELosersBracketRound1Matches(
-                  [...finalWbRound1Losers], // Pass a copy
+                  [...finalWbRound1Losers],
                   matchesWithoutExistingUnplayedLBR1.length
                 );
-
                 if (newLBM && newLBM.length > 0) {
                   console.log(
                     "HANDLE_SET_WINNER: POST-CALL - SUCCESSFULLY Generated LB R1 matches:",
@@ -262,17 +297,24 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
                     ...matchesWithoutExistingUnplayedLBR1,
                     ...newLBM,
                   ];
-                  finalWbRound1Losers = []; // Clear the collector
+                  finalWbRound1Losers = [];
                   console.log(
                     "HANDLE_SET_WINNER: wbRound1Losers cleared after LB R1 generation."
                   );
-                } else {
+                } else if (expectedNumberOfWBR1Losers > 0) {
                   console.log(
                     "HANDLE_SET_WINNER: POST-CALL - generateDELosersBracketRound1Matches returned no matches. wbRound1Losers at this point:",
                     finalWbRound1Losers.map((p) => p.name)
-                    // Not clearing finalWbRound1Losers here, as generation failed.
                   );
                 }
+              } else if (
+                expectedNumberOfWBR1Losers === 0 &&
+                finalWbRound1Losers.length === 0
+              ) {
+                console.log(
+                  "HANDLE_SET_WINNER: No WB R1 losers expected, so no LB R1 matches from WB R1 losers."
+                );
+                finalWbRound1Losers = [];
               }
             }
           } else if (targetMatch.bracket === "losers") {
@@ -284,8 +326,6 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
           }
         }
       }
-
-      // Apply all state updates
       setPlayers(finalPlayers);
       setMatches(finalMatches);
       setWbRound1Losers(finalWbRound1Losers);
@@ -295,10 +335,11 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
       players,
       tournamentType,
       numPlayers,
-      wbRound1Losers, // Still need this for initial read
-      isMatchLocked,
-      // generateDELosersBracketRound1Matches is a direct import, not needed in deps if stable
-      // currentWinnersRound, currentLosersRound, overallWinner are for isMatchLocked
+      wbRound1Losers,
+      isMatchLocked, // Now this is the function
+      currentWinnersRound, // Added as isMatchLocked depends on them
+      currentLosersRound, // Added
+      overallWinner, // Added
     ]
   );
 
@@ -758,114 +799,6 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
     players,
   ]);
 
-  const renderMatchItem = ({ item }: { item: Match }) => {
-    const player1 = players.find((p) => p.id === item.player1?.id);
-    const player2 = players.find((p) => p.id === item.player2?.id);
-
-    const player1Name = player1
-      ? `${player1.name} (${player1.losses}L)`
-      : item.player1
-      ? "P1?"
-      : "TBD";
-    const player2Name = player2
-      ? `${player2.name} (${player2.losses}L)`
-      : item.player2
-      ? "P2?"
-      : "TBD / BYE";
-
-    // Conditionally hide losses for SE
-    const displayP1Name = tournamentType.startsWith("Single Knockout")
-      ? player1?.name || "TBD"
-      : player1Name;
-    const displayP2Name = tournamentType.startsWith("Single Knockout")
-      ? player2?.name || "TBD / BYE"
-      : player2Name;
-
-    const matchIsEffectivelyLocked = isMatchLocked(item);
-
-    if (item.player1 && !item.player2 && item.winner) {
-      // Bye with auto-winner
-      return (
-        <View style={styles.matchContainer}>
-          <Text style={styles.bracketInfoText}>
-            {item.bracket.toUpperCase()} - R{item.round} M{item.matchNumber}
-          </Text>
-          <Text style={styles.matchText}>{displayP1Name} gets a BYE</Text>
-          {matchIsEffectivelyLocked && (
-            <Text style={styles.lockedMatchText}>Locked</Text>
-          )}
-        </View>
-      );
-    }
-
-    if (item.player1 && item.player2) {
-      // Standard match
-      return (
-        <View style={styles.matchContainer}>
-          <Text style={styles.bracketInfoText}>
-            {item.bracket.toUpperCase()} - R{item.round} M{item.matchNumber}
-          </Text>
-          <View style={styles.playerRow}>
-            <TouchableOpacity
-              style={[
-                styles.playerButton,
-                item.winner?.id === item.player1.id && styles.winnerButton,
-                matchIsEffectivelyLocked && styles.playerButtonDisabled,
-              ]}
-              onPress={() =>
-                item.player1 && handleSetWinner(item.id, item.player1)
-              }
-              disabled={matchIsEffectivelyLocked || !item.player1}
-            >
-              <Text style={styles.matchText}>{displayP1Name}</Text>
-            </TouchableOpacity>
-            <Text style={styles.vsText}>vs</Text>
-            <TouchableOpacity
-              style={[
-                styles.playerButton,
-                item.winner?.id === item.player2.id && styles.winnerButton,
-                matchIsEffectivelyLocked && styles.playerButtonDisabled,
-              ]}
-              onPress={() =>
-                item.player2 && handleSetWinner(item.id, item.player2)
-              }
-              disabled={matchIsEffectivelyLocked || !item.player2}
-            >
-              <Text style={styles.matchText}>{displayP2Name}</Text>
-            </TouchableOpacity>
-          </View>
-          {item.winner && (
-            <Text style={styles.winnerText}>
-              Winner: {players.find((p) => p.id === item.winner!.id)?.name}
-            </Text>
-          )}
-          {matchIsEffectivelyLocked && item.winner && (
-            <Text style={styles.lockedMatchText}>Locked</Text>
-          )}
-        </View>
-      );
-    }
-    // Fallback for TBD vs TBD or other unhandled cases
-    return (
-      <View style={styles.matchContainer}>
-        <Text style={styles.bracketInfoText}>
-          {item.bracket.toUpperCase()} - R{item.round} M{item.matchNumber}
-        </Text>
-        <Text style={styles.matchText}>
-          {displayP1Name} vs {displayP2Name}
-        </Text>
-        {item.winner && (
-          <Text style={styles.winnerText}>
-            Winner: {players.find((p) => p.id === item.winner!.id)?.name}
-          </Text>
-        )}
-        {matchIsEffectivelyLocked && item.winner && (
-          <Text style={styles.lockedMatchText}>Locked</Text>
-        )}
-      </View>
-    );
-  };
-
   const executeAdvanceRound = () => {
     setIsAdvanceModalVisible(false);
     if (tournamentOver) return;
@@ -1084,7 +1017,7 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
         } else if (
           currentLosersRound === 3 &&
           allLbMatchesThisRoundCompleted &&
-          currentWinnersRound === 3 && // WB R3 (Final) should be done
+          currentWinnersRound === 3 && // WB R3 should be done
           allWbMatchesThisRoundCompleted && // WB R3 was completed
           collectedWBLosersForLB.length === 1 && // Loser from WB R3 (WB Final)
           lbWinnersFromThisRound.length === 1
@@ -1289,12 +1222,15 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
 
       // Define a variable that reflects all matches in state + all matches added to newMatchesToAdd SO FAR.
       // This includes new WB/LB matches AND potentially a GF reset match from section 1.
-      const allMatchesIncludingNewAdditionsSoFar = matches.concat(newMatchesToAdd);
+      const allMatchesIncludingNewAdditionsSoFar =
+        matches.concat(newMatchesToAdd);
 
       // 2. If no GF match exists yet, try to create the first one if champions are ready
-      const firstGFMatchStillMissing = !allMatchesIncludingNewAdditionsSoFar.find( // Use the correctly defined variable
-        (m: Match) => m.bracket === "grandFinals" && !m.isGrandFinalsReset
-      );
+      const firstGFMatchStillMissing =
+        !allMatchesIncludingNewAdditionsSoFar.find(
+          // Use the correctly defined variable
+          (m: Match) => m.bracket === "grandFinals" && !m.isGrandFinalsReset
+        );
 
       if (
         wbChampion &&
@@ -1419,14 +1355,138 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
     );
   };
 
-  // Main return JSX - Restore this full block
+  const renderMatchItem = ({ item }: { item: Match }) => {
+    const player1 = players.find((p) => p.id === item.player1?.id);
+    const player2 = players.find((p) => p.id === item.player2?.id);
+
+    const player1Name = player1
+      ? `${player1.name} (${player1.losses}L)`
+      : item.player1
+      ? "P1?"
+      : "TBD";
+    const player2Name = player2
+      ? `${player2.name} (${player2.losses}L)`
+      : item.player2
+      ? "P2?"
+      : "TBD / BYE";
+
+    const displayP1Name = tournamentType.startsWith("Single Knockout")
+      ? player1?.name || "TBD"
+      : player1Name;
+    const displayP2Name = tournamentType.startsWith("Single Knockout")
+      ? player2?.name || "TBD / BYE"
+      : player2Name;
+
+    const matchIsEffectivelyLocked = isMatchLocked(item);
+
+    // ADD THIS LOG:
+    console.log(
+      `Render Match ${item.id} (R${item.round} ${item.bracket}): P1: ${
+        player1?.name
+      }, P2: ${player2?.name}, Locked: ${matchIsEffectivelyLocked}, Winner: ${
+        item.winner?.name
+      }, P1_exists: ${!!item.player1}, P2_exists: ${!!item.player2}`
+    );
+
+    if (item.player1 && !item.player2 && item.winner) {
+      // Bye with auto-winner
+      return (
+        <View style={styles.matchContainer}>
+          <Text style={styles.bracketInfoText}>
+            {item.bracket.toUpperCase()} - R{item.round} M{item.matchNumber}
+          </Text>
+          <Text style={styles.matchText}>{displayP1Name} gets a BYE</Text>
+          {matchIsEffectivelyLocked && (
+            <Text style={styles.lockedMatchText}>Locked</Text>
+          )}
+        </View>
+      );
+    }
+
+    if (item.player1 && item.player2) {
+      // Standard match
+      return (
+        <View style={styles.matchContainer}>
+          <Text style={styles.bracketInfoText}>
+            {item.bracket.toUpperCase()} - R{item.round} M{item.matchNumber}
+          </Text>
+          <View style={styles.playerRow}>
+            <TouchableOpacity
+              style={[
+                styles.playerButton,
+                item.winner?.id === item.player1.id && styles.winnerButton,
+                matchIsEffectivelyLocked && styles.playerButtonDisabled,
+              ]}
+              onPress={() =>
+                item.player1 && handleSetWinner(item.id, item.player1)
+              }
+              disabled={matchIsEffectivelyLocked || !item.player1}
+            >
+              <Text style={styles.playerButtonText}>{displayP1Name}</Text>
+            </TouchableOpacity>
+            <Text style={styles.vsText}>vs</Text>
+            <TouchableOpacity
+              style={[
+                styles.playerButton,
+                item.winner?.id === item.player2.id && styles.winnerButton,
+                matchIsEffectivelyLocked && styles.playerButtonDisabled,
+              ]}
+              onPress={() =>
+                item.player2 && handleSetWinner(item.id, item.player2)
+              }
+              disabled={matchIsEffectivelyLocked || !item.player2}
+            >
+              <Text style={styles.playerButtonText}>{displayP2Name}</Text>
+            </TouchableOpacity>
+          </View>
+          {item.winner && (
+            <Text style={styles.winnerText}>
+              Winner: {players.find((p) => p.id === item.winner!.id)?.name}
+            </Text>
+          )}
+          {matchIsEffectivelyLocked && item.winner && (
+            <Text style={styles.lockedMatchText}>Locked</Text>
+          )}
+        </View>
+      );
+    }
+    // Fallback for TBD vs TBD or other unhandled cases
+    return (
+      <View style={styles.matchContainer}>
+        <Text style={styles.bracketInfoText}>
+          {item.bracket.toUpperCase()} - R{item.round} M{item.matchNumber}
+        </Text>
+        <Text style={styles.matchText}>
+          {displayP1Name} vs {displayP2Name}
+        </Text>
+        {item.winner && (
+          <Text style={styles.winnerText}>
+            Winner: {players.find((p) => p.id === item.winner!.id)?.name}
+          </Text>
+        )}
+        {matchIsEffectivelyLocked && item.winner && (
+          <Text style={styles.lockedMatchText}>Locked</Text>
+        )}
+      </View>
+    );
+  };
+
+  // --- PASTE YOUR FULL executeAdvanceRound, allCurrentRoundMatchesCompleted, displayTitle, matchesForDisplay, BracketViewButtons HERE ---
+  // --- from your provided code to ensure they are complete ---
+  // For brevity, I'm not re-pasting them, but they are essential.
+  // Ensure the `Button` component is imported if BracketViewButtons uses it.
+
+  // Main return JSX
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        <View style={{ marginBottom: 10, width: "80%", alignSelf: "center" }}>
-          <Button title="< Back to Home" onPress={onGoBack} />
+        <View style={styles.headerControls}>
+          <TouchableOpacity onPress={onGoBack} style={styles.backButton}>
+            <Text style={styles.backButtonText}>&lt; Home</Text>
+          </TouchableOpacity>
+          {/* <Text style={styles.title}>{displayTitle()}</Text> */}
         </View>
-        <Text style={styles.title}>TournaTrack - {tournamentType}</Text>
+        <Text style={styles.titleText}>TournaTrack - {tournamentType}</Text>
         <Text style={styles.subTitle}>{displayTitle()}</Text>
         <BracketViewButtons />
         {tournamentOver && overallWinner ? (
@@ -1440,9 +1500,8 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
             keyExtractor={(item) => item.id}
             renderItem={renderMatchItem}
             extraData={{
-              // Forcing re-render when these change
-              playersVersion: players.map((p) => p.id + p.losses).join("-"), // A string that changes if player losses change
-              matchesVersion: matches.map((m) => m.id + m.winner?.id).join("-"), // A string that changes if match winners change
+              playersVersion: players.map((p) => p.id + p.losses).join("-"),
+              matchesVersion: matches.map((m) => m.id + m.winner?.id).join("-"),
               currentWinnersRound,
               currentLosersRound,
               activeBracketForDisplay,
@@ -1493,7 +1552,7 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
                 </Pressable>
                 <Pressable
                   style={[styles.modalButton, styles.modalButtonConfirm]}
-                  onPress={executeAdvanceRound}
+                  onPress={executeAdvanceRound} // Ensure executeAdvanceRound is defined
                 >
                   <Text style={styles.modalButtonText}>YES</Text>
                 </Pressable>
@@ -1505,177 +1564,173 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
       </View>
     </SafeAreaView>
   );
-}; // End of TournamentScreen component
+};
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: "#f0f0f0" },
-  container: {
-    flex: 1,
-    width: "100%",
-    backgroundColor: "#fff",
+  container: { flex: 1, padding: 10 },
+  headerControls: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    paddingTop: 10,
+    marginBottom: 10,
   },
-  title: {
+  backButton: { padding: 10 },
+  backButtonText: { fontSize: 16, color: "#007bff" },
+  titleText: {
+    // Renamed from title to avoid conflict if displayTitle was also 'title'
+    fontSize: 20,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 5,
+  },
+  subTitle: {
+    fontSize: 16,
+    textAlign: "center",
+    marginBottom: 10,
+    color: "#555",
+  },
+  tournamentWinner: {
     fontSize: 22,
     fontWeight: "bold",
-    marginTop: 10,
+    color: "green",
     textAlign: "center",
-    marginBottom: 5,
+    marginVertical: 20,
   },
-  subTitle: { fontSize: 18, marginBottom: 15, textAlign: "center" },
-  bracketInfoText: {
-    fontSize: 10,
-    color: "#666",
+  infoText: {
+    fontSize: 16,
     textAlign: "center",
-    marginBottom: 4,
+    marginVertical: 20,
+    color: "#666",
   },
   matchContainer: {
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-    alignSelf: "center",
-    width: "95%",
-    marginBottom: 10,
+    // Added
+    padding: 10,
+    marginVertical: 5,
     backgroundColor: "#fff",
-    borderRadius: 5,
-    elevation: 1,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 1,
-  },
-  playerRow: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-    marginBottom: 5,
-  },
- 
-  playerButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
     borderRadius: 5,
     borderWidth: 1,
     borderColor: "#ddd",
+    elevation: 1,
+  },
+  bracketInfoText: {
+    // Added
+    fontSize: 12,
+    color: "#666",
+    marginBottom: 5,
+  },
+  playerRow: {
+    // Added
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  playerButton: {
+    // Added
     flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 5,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 4,
+    alignItems: "center",
     marginHorizontal: 5,
-    alignItems: "center",
   },
-  winnerButton: { backgroundColor: "#a0e8a0", borderColor: "#6bc66b" },
-  vsText: { fontSize: 14, fontWeight: "bold", marginHorizontal: 10 },
-  matchText: { fontSize: 15 },
-  winnerText: {
-    marginTop: 5,
-    textAlign: "center",
-    color: "green",
-    fontWeight: "bold",
-  },
-  advanceButtonContainer: {
-    width: "80%",
-    marginVertical: 20,
-    alignItems: "center",
-  },
-  tournamentWinner: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "blue",
-    marginVertical: 10,
-    textAlign: "center",
-  },
-  pressableButton: {
-    backgroundColor: "#007bff",
-    paddingVertical: 12,
-    paddingHorizontal: 25,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-  },
-  pressableButtonText: { color: "#ffffff", fontSize: 16, fontWeight: "bold" },
-  pressableButtonDisabled: {
-    backgroundColor: "#cccccc",
-    elevation: 0,
-    shadowOpacity: 0,
-  },
-  pressableButtonPressed: { backgroundColor: "#0056b3" },
-  infoText: {
-    marginVertical: 20,
-    fontSize: 16,
-    color: "#555",
-    textAlign: "center",
+  playerButtonText: {
+    // Added
+    fontSize: 14,
   },
   playerButtonDisabled: {
+    // Added
     backgroundColor: "#e9ecef",
-    borderColor: "#ced4da",
-    opacity: 0.7,
+  },
+  winnerButton: {
+    // Added
+    backgroundColor: "#d4edda", // Light green
+    borderColor: "#c3e6cb",
+  },
+  vsText: {
+    // Added
+    marginHorizontal: 5,
+    fontSize: 14,
+    fontWeight: "bold",
+  },
+  matchText: {
+    // Added (generic text for match details)
+    fontSize: 14,
+  },
+  winnerText: {
+    // Added
+    marginTop: 5,
+    fontSize: 13,
+    fontWeight: "bold",
+    color: "green",
+    textAlign: "center",
   },
   lockedMatchText: {
+    // Added
     fontSize: 10,
     color: "red",
     textAlign: "center",
-    fontWeight: "bold",
     marginTop: 3,
+  },
+  advanceButtonContainer: {
+    // Added
+    marginVertical: 15,
+    alignItems: "center",
+  },
+  pressableButton: {
+    // Added
+    backgroundColor: "#007bff",
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 5,
+    elevation: 2,
+  },
+  pressableButtonDisabled: {
+    // Added
+    backgroundColor: "#6c757d",
+  },
+  pressableButtonPressed: {
+    // Added
+    backgroundColor: "#0056b3",
+  },
+  pressableButtonText: {
+    // Added
+    color: "white",
+    fontSize: 16,
+    fontWeight: "bold",
   },
   modalOverlay: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.6)",
+    backgroundColor: "rgba(0,0,0,0.5)",
   },
   modalContent: {
-    width: "85%",
-    maxWidth: 400,
     backgroundColor: "white",
-    padding: 25,
+    padding: 20,
     borderRadius: 10,
+    width: "80%",
     alignItems: "center",
-    elevation: 5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
   },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 15,
-    textAlign: "center",
-  },
-  modalMessage: {
-    fontSize: 16,
-    textAlign: "center",
-    marginBottom: 25,
-    lineHeight: 22,
-  },
+  modalTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 10 },
+  modalMessage: { fontSize: 16, marginBottom: 20, textAlign: "center" },
   modalButtonContainer: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "space-around",
     width: "100%",
   },
   modalButton: {
-    paddingVertical: 12,
+    paddingVertical: 10,
     paddingHorizontal: 20,
-    borderRadius: 8,
-    flex: 1,
-    marginHorizontal: 5,
+    borderRadius: 5,
+    minWidth: 100,
     alignItems: "center",
   },
-  modalButtonCancel: {
-    backgroundColor: "#6c757d",
-  },
-  modalButtonConfirm: {
-    backgroundColor: "#007bff",
-  },
-  modalButtonText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
+  modalButtonCancel: { backgroundColor: "#6c757d" },
+  modalButtonConfirm: { backgroundColor: "#007bff" },
+  modalButtonText: { color: "white", fontSize: 16 },
 });
 
 export default TournamentScreen;
