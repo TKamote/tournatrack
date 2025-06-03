@@ -313,109 +313,184 @@ export const generateDELosersBracketNextRoundMatches = (
   advancingLBPlayers: Player[],
   droppingWBPlayers: Player[],
   nextLBRoundNumber: number,
-  numPlayersInTournament: number,
+  numActualPlayers: number, // Changed from numPlayersInTournament for clarity
   existingMatchCount: number
 ): Match[] => {
   const newMatches: Match[] = [];
-  if (numPlayersInTournament !== 8) {
-    console.warn(
-      "generateDELosersBracketNextRoundMatches currently only supports 8-player DE."
-    );
-    return [];
-  }
-
   console.log(
-    `UTIL: generateDELosersBracketNextRoundMatches CALLED for LB R${nextLBRoundNumber}. Advancing LB: ${advancingLBPlayers.map(
-      (p) => p.name
-    )}. Dropping WB: ${droppingWBPlayers.map((p) => p.name)}`
+    `UTIL: generateDELosersBracketNextRoundMatches CALLED for LB R${nextLBRoundNumber}. ActualPlayers: ${numActualPlayers}. Advancing LB: ${advancingLBPlayers.map(
+      (p) => p?.name || "BYE"
+    )}. Dropping WB: ${droppingWBPlayers.map((p) => p?.name || "N/A")}`
   );
 
-  let matchNumberOffset = 0; // If you have a global match counter or need to offset within a round
+  let matchNumberOffset = 0;
+  let bracketSize: number;
 
-  if (nextLBRoundNumber === 2) {
-    if (advancingLBPlayers.length !== 2 || droppingWBPlayers.length !== 2) {
-      console.warn(
-        `UTIL: Incorrect player count for LB R${nextLBRoundNumber}. Expected 2 LB winners and 2 WB losers. Got ${advancingLBPlayers.length} LB, ${droppingWBPlayers.length} WB.`
-      );
-      return [];
-    }
-    // Example pairing: Advancing[0] vs Dropping[0], Advancing[1] vs Dropping[1]
-    // You might want a more sophisticated seeding/pairing logic here based on original seeds or previous match IDs.
-    newMatches.push({
-      id: `match-lb${nextLBRoundNumber}-${
-        existingMatchCount + matchNumberOffset + 1
-      }`,
-      round: nextLBRoundNumber,
-      matchNumber: matchNumberOffset + 1, // Ensure match numbers are unique within the round
-      player1: advancingLBPlayers[0],
-      player2: droppingWBPlayers[0],
-      winner: null,
-      bracket: "losers",
-      isGrandFinalsReset: false,
-    });
-    newMatches.push({
-      id: `match-lb${nextLBRoundNumber}-${
-        existingMatchCount + matchNumberOffset + 2
-      }`,
-      round: nextLBRoundNumber,
-      matchNumber: matchNumberOffset + 2,
-      player1: advancingLBPlayers[1],
-      player2: droppingWBPlayers[1],
-      winner: null,
-      bracket: "losers",
-      isGrandFinalsReset: false,
-    });
-  } else if (nextLBRoundNumber === 3) {
-    if (advancingLBPlayers.length !== 2 || droppingWBPlayers.length !== 0) {
-      console.warn(
-        `UTIL: Incorrect player count for LB R${nextLBRoundNumber}. Expected 2 LB winners and 0 WB losers. Got ${advancingLBPlayers.length} LB, ${droppingWBPlayers.length} WB.`
-      );
-      return [];
-    }
-    newMatches.push({
-      id: `match-lb${nextLBRoundNumber}-${
-        existingMatchCount + matchNumberOffset + 1
-      }`,
-      round: nextLBRoundNumber,
-      matchNumber: matchNumberOffset + 1,
-      player1: advancingLBPlayers[0],
-      player2: advancingLBPlayers[1],
-      winner: null,
-      bracket: "losers",
-      isGrandFinalsReset: false,
-    });
-  } else if (nextLBRoundNumber === 4) {
-    if (advancingLBPlayers.length !== 1 || droppingWBPlayers.length !== 1) {
-      console.warn(
-        `UTIL: Incorrect player count for LB R${nextLBRoundNumber}. Expected 1 LB winner and 1 WB loser. Got ${advancingLBPlayers.length} LB, ${droppingWBPlayers.length} WB.`
-      );
-      return [];
-    }
-    newMatches.push({
-      id: `match-lb${nextLBRoundNumber}-${
-        existingMatchCount + matchNumberOffset + 1
-      }`,
-      round: nextLBRoundNumber,
-      matchNumber: matchNumberOffset + 1,
-      player1: advancingLBPlayers[0],
-      player2: droppingWBPlayers[0],
-      winner: null,
-      bracket: "losers",
-      isGrandFinalsReset: false,
-    });
+  if (numActualPlayers <= 8) {
+    bracketSize = 8;
+  } else if (numActualPlayers <= 16) {
+    bracketSize = 16;
+    console.warn(
+      "generateDELosersBracketNextRoundMatches: 16-player bracket logic not yet fully implemented for LB next rounds."
+    );
+    // For now, let's return empty for 16p until fully fleshed out to avoid errors.
+    // You'll need to build this out similar to the 8-player bracket logic below.
+    return [];
   } else {
-    console.warn(
-      `UTIL: generateDELosersBracketNextRoundMatches: Unsupported LB round ${nextLBRoundNumber} for 8-player DE or logic not implemented.`
+    console.error(
+      "generateDELosersBracketNextRoundMatches: Unsupported number of actual players:",
+      numActualPlayers
     );
     return [];
   }
 
-  console.log(
-    `UTIL: generateDELosersBracketNextRoundMatches for LB R${nextLBRoundNumber} generated matches:`,
-    newMatches.map(
-      (m) => `(${m.player1?.name} vs ${m.player2?.name}) ID: ${m.id}`
-    )
-  );
+  if (bracketSize === 8) {
+    if (nextLBRoundNumber === 2) {
+      // LB R2
+      // 8 Players: 2 LB R1 winners, 2 WB R2 losers -> 2 matches
+      // 6 Players: 1 LB R1 winner, 2 WB R2 losers -> 1 match, 1 WB R2 loser gets a bye to LB R3
+      if (numActualPlayers === 8) {
+        if (advancingLBPlayers.length === 2 && droppingWBPlayers.length === 2) {
+          newMatches.push(
+            createMatch(
+              `match-lb${nextLBRoundNumber}-${existingMatchCount + 1}`,
+              nextLBRoundNumber,
+              1,
+              advancingLBPlayers[0],
+              droppingWBPlayers[0],
+              "losers"
+            )
+          );
+          newMatches.push(
+            createMatch(
+              `match-lb${nextLBRoundNumber}-${existingMatchCount + 2}`,
+              nextLBRoundNumber,
+              2,
+              advancingLBPlayers[1],
+              droppingWBPlayers[1],
+              "losers"
+            )
+          );
+        } else {
+          console.warn(
+            `UTIL: LB R${nextLBRoundNumber} (8P): Incorrect player counts. AdvLB: ${advancingLBPlayers.length}, DropWB: ${droppingWBPlayers.length}`
+          );
+        }
+      } else if (numActualPlayers === 6) {
+        if (advancingLBPlayers.length === 1 && droppingWBPlayers.length === 2) {
+          // LB R1 winner plays one of the WB R2 losers. The other WB R2 loser gets a bye.
+          // (Seeding of who plays vs who gets bye can be more specific if needed)
+          newMatches.push(
+            createMatch(
+              `match-lb${nextLBRoundNumber}-${existingMatchCount + 1}`,
+              nextLBRoundNumber,
+              1,
+              advancingLBPlayers[0],
+              droppingWBPlayers[0],
+              "losers"
+            )
+          );
+          // The second droppingWBPlayer gets a bye to the next applicable LB round.
+          // This "bye" player needs to be correctly collected by executeAdvanceRound for the next LB round.
+          // For simplicity in match generation, we can create a "bye match" for them.
+          newMatches.push(
+            createMatch(
+              `match-lb${nextLBRoundNumber}-${existingMatchCount + 2}`,
+              nextLBRoundNumber,
+              2,
+              droppingWBPlayers[1],
+              null,
+              "losers"
+            )
+          );
+        } else {
+          console.warn(
+            `UTIL: LB R${nextLBRoundNumber} (6P): Incorrect player counts. AdvLB: ${advancingLBPlayers.length}, DropWB: ${droppingWBPlayers.length}`
+          );
+        }
+      }
+    } else if (nextLBRoundNumber === 3) {
+      // LB R3
+      // 8 Players: 2 LB R2 winners -> 1 match
+      // 6 Players: 1 LB R2 winner (from match), 1 LB R2 winner (bye from WB R2 loser) -> 1 match
+      if (numActualPlayers === 8) {
+        if (advancingLBPlayers.length === 2 && droppingWBPlayers.length === 0) {
+          newMatches.push(
+            createMatch(
+              `match-lb${nextLBRoundNumber}-${existingMatchCount + 1}`,
+              nextLBRoundNumber,
+              1,
+              advancingLBPlayers[0],
+              advancingLBPlayers[1],
+              "losers"
+            )
+          );
+        } else {
+          console.warn(
+            `UTIL: LB R${nextLBRoundNumber} (8P): Incorrect player counts. AdvLB: ${advancingLBPlayers.length}, DropWB: ${droppingWBPlayers.length}`
+          );
+        }
+      } else if (numActualPlayers === 6) {
+        // After LB R2 for 6 players: one match winner, one player who got a bye.
+        if (advancingLBPlayers.length === 2 && droppingWBPlayers.length === 0) {
+          newMatches.push(
+            createMatch(
+              `match-lb${nextLBRoundNumber}-${existingMatchCount + 1}`,
+              nextLBRoundNumber,
+              1,
+              advancingLBPlayers[0],
+              advancingLBPlayers[1],
+              "losers"
+            )
+          );
+        } else {
+          console.warn(
+            `UTIL: LB R${nextLBRoundNumber} (6P): Incorrect player counts. AdvLB: ${advancingLBPlayers.length}, DropWB: ${droppingWBPlayers.length}`
+          );
+        }
+      }
+    } else if (nextLBRoundNumber === 4) {
+      // LB R4 (LB Final)
+      // 8 Players: 1 LB R3 winner, 1 WB R3 (WB Final) loser -> 1 match
+      // 6 Players: 1 LB R3 winner, 1 WB R3 (WB Final) loser -> 1 match
+      if (advancingLBPlayers.length === 1 && droppingWBPlayers.length === 1) {
+        newMatches.push(
+          createMatch(
+            `match-lb${nextLBRoundNumber}-${existingMatchCount + 1}`,
+            nextLBRoundNumber,
+            1,
+            advancingLBPlayers[0],
+            droppingWBPlayers[0],
+            "losers"
+          )
+        );
+      } else {
+        console.warn(
+          `UTIL: LB R${nextLBRoundNumber} (6P/8P): Incorrect player counts. AdvLB: ${advancingLBPlayers.length}, DropWB: ${droppingWBPlayers.length}`
+        );
+      }
+    } else {
+      console.warn(
+        `UTIL: generateDELosersBracketNextRoundMatches: Unsupported LB round ${nextLBRoundNumber} for 8-player bracket structure.`
+      );
+    }
+  }
+
+  if (newMatches.length > 0) {
+    console.log(
+      `UTIL: generateDELosersBracketNextRoundMatches for LB R${nextLBRoundNumber} (actual players: ${numActualPlayers}) generated matches:`,
+      newMatches.map(
+        (m) =>
+          `(${m.player1?.name || "BYE"} vs ${m.player2?.name || "BYE"}) ID: ${
+            m.id
+          }`
+      )
+    );
+  } else {
+    console.log(
+      `UTIL: generateDELosersBracketNextRoundMatches for LB R${nextLBRoundNumber} (actual players: ${numActualPlayers}) generated NO matches for this specific scenario.`
+    );
+  }
   return newMatches;
 };
 

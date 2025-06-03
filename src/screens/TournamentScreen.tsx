@@ -10,10 +10,10 @@ import {
   Alert,
   Modal,
   ScrollView,
-  Button, // Import Button
+  Button,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
-import { Player, Match, BracketType, TournamentType } from "../types"; // Add TournamentType to import
+import { Player, Match, BracketType, TournamentType } from "../types";
 import {
   generatePlayers as generateDefaultPlayers,
   createSEInitialMatches,
@@ -22,6 +22,7 @@ import {
   generateDEWinnersBracketNextRound,
   generateDELosersBracketRound1Matches,
   generateDELosersBracketNextRoundMatches,
+  createMatch,
 } from "../utils/tournamentUtils";
 
 interface TournamentScreenProps {
@@ -48,20 +49,14 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
     BracketType | "all"
   >("all");
   const [isAdvanceModalVisible, setIsAdvanceModalVisible] = useState(false);
-  const [hasInitialized, setHasInitialized] = useState(false); // New state
+  const [hasInitialized, setHasInitialized] = useState(false);
 
-  // Effect 1: Reset hasInitialized if core tournament definition props change
   useEffect(() => {
-    console.log(
-      "TournamentScreen: Core props changed (numPlayers, tournamentType, or receivedPlayerNames). Resetting hasInitialized."
-    );
     setHasInitialized(false);
-    // Clear out old players and matches to ensure a fresh start for the new tournament config
     setPlayers([]);
     setMatches([]);
   }, [numPlayers, tournamentType, receivedPlayerNames]);
 
-  // Effect 2: Initialize players array
   useEffect(() => {
     if (
       !hasInitialized &&
@@ -69,9 +64,6 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
       receivedPlayerNames.length === numPlayers &&
       numPlayers > 0
     ) {
-      console.log(
-        "TournamentScreen: Effect 2 - Initializing players array from names."
-      );
       const initialPlayers = receivedPlayerNames.map((name, index) => ({
         id: `player-${index + 1}-${name.replace(/\s+/g, "-").toLowerCase()}`,
         name: name,
@@ -83,22 +75,12 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
       (!receivedPlayerNames || receivedPlayerNames.length !== numPlayers) &&
       numPlayers > 0
     ) {
-      console.warn(
-        "TournamentScreen: Effect 2 - Player names not received correctly or count mismatch. Generating default players."
-      );
       setPlayers(generateDefaultPlayers(numPlayers));
     }
-    // This effect depends on hasInitialized to ensure it only runs once for a given tournament setup.
-    // It also depends on receivedPlayerNames and numPlayers to react to new tournament configurations.
   }, [receivedPlayerNames, numPlayers, hasInitialized]);
 
-  // Effect 3: Generate initial matches
   useEffect(() => {
-    // Only run if players are populated and we haven't fully initialized matches yet for this tournament instance.
     if (players.length > 0 && !hasInitialized) {
-      console.log(
-        `TournamentScreen: Effect 3 - Generating INITIAL matches for ${tournamentType} with ${players.length} players.`
-      );
       let initialMatches: Match[] = [];
       if (tournamentType.startsWith("Single Knockout")) {
         initialMatches = createSEInitialMatches(players);
@@ -116,35 +98,19 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
         setActiveBracketForDisplay(
           tournamentType.startsWith("Double Elimination") ? "all" : "winners"
         );
-        setHasInitialized(true); // Mark as fully initialized
-        console.log(
-          "TournamentScreen: Effect 3 - Initial setup complete. hasInitialized set to true."
-        );
-      } else if (players.length > 0) {
-        // Only warn if players were there but no matches generated
-        console.warn(
-          "TournamentScreen: Effect 3 - No initial matches were generated despite having players. Check create...InitialMatches functions."
-        );
+        setHasInitialized(true);
       }
     }
-    // This effect depends on the players array (to get the actual players for match generation)
-    // and tournamentType (if it could change and require new matches).
-    // hasInitialized ensures it only generates *initial* matches once.
   }, [players, tournamentType, hasInitialized]);
 
-  // isMatchLocked is now a function that determines lock status dynamically
   const isMatchLocked = useCallback(
     (match: Match): boolean => {
       if (tournamentOver) return true;
-
-      if (match.bracket === "winners" && match.round < currentWinnersRound) {
+      if (match.bracket === "winners" && match.round < currentWinnersRound)
         return true;
-      }
-      if (match.bracket === "losers" && match.round < currentLosersRound) {
+      if (match.bracket === "losers" && match.round < currentLosersRound)
         return true;
-      }
       if (match.bracket === "grandFinals" && overallWinner) return true;
-
       return false;
     },
     [tournamentOver, currentWinnersRound, currentLosersRound, overallWinner]
@@ -152,311 +118,192 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
 
   const handleSetWinner = useCallback(
     (matchId: string, newWinningPlayer: Player) => {
-      // ***** ADD THIS LOG AS THE VERY FIRST LINE *****
-      console.log(
-        `handleSetWinner CALLED - Match ID: ${matchId}, Player: ${newWinningPlayer.name}`
-      );
-      // *****
-
       const targetMatchIndex = matches.findIndex((m) => m.id === matchId);
-      if (targetMatchIndex === -1) {
-        console.error(`Match with ID ${matchId} not found.`);
-        return;
-      }
-      const targetMatch = { ...matches[targetMatchIndex] };
+      if (targetMatchIndex === -1) return;
 
-      // Use the isMatchLocked function
-      if (isMatchLocked(targetMatch)) {
-        Alert.alert(
-          "Match Locked",
-          "This match's result cannot be changed as subsequent rounds may depend on it or have already been processed."
-        );
+      const currentTargetMatch = { ...matches[targetMatchIndex] }; // Use a different name to avoid conflict
+
+      if (isMatchLocked(currentTargetMatch)) {
+        Alert.alert("Match Locked", "This match's result cannot be changed.");
         return;
       }
 
-      const oldWinner = targetMatch.winner;
-      const player1 = targetMatch.player1;
-      const player2 = targetMatch.player2;
-
-      if (oldWinner && oldWinner.id === newWinningPlayer.id) {
-        console.log(
-          `Player ${newWinningPlayer.name} is already the winner of match ${matchId}. No change.`
-        );
-        return;
-      }
+      const oldWinner = currentTargetMatch.winner;
+      if (oldWinner && oldWinner.id === newWinningPlayer.id) return;
 
       let newLoserOfMatch: Player | null = null;
-      if (player1 && player2) {
+      if (currentTargetMatch.player1 && currentTargetMatch.player2) {
         newLoserOfMatch =
-          player1.id === newWinningPlayer.id ? player2 : player1;
+          currentTargetMatch.player1.id === newWinningPlayer.id
+            ? currentTargetMatch.player2
+            : currentTargetMatch.player1;
       }
 
-      let finalPlayers = [...players];
-      let finalMatches = [...matches];
-      let finalWbRound1Losers = [...wbRound1Losers];
-
-      if (oldWinner && player1 && player2) {
-        const oldLoserOfMatch = player1.id === oldWinner.id ? player2 : player1;
-        console.log(
-          `Changing winner for match ${targetMatch.id}. Old winner: ${oldWinner.name}, Old loser: ${oldLoserOfMatch.name}. New winner: ${newWinningPlayer.name}`
-        );
-
-        finalPlayers = finalPlayers.map((p) =>
-          p.id === oldLoserOfMatch.id
+      // Prepare updated players list (for loss counting)
+      let tempUpdatedPlayers = [...players];
+      if (
+        oldWinner &&
+        currentTargetMatch.player1 &&
+        currentTargetMatch.player2
+      ) {
+        const oldLoser =
+          currentTargetMatch.player1.id === oldWinner.id
+            ? currentTargetMatch.player2
+            : currentTargetMatch.player1;
+        tempUpdatedPlayers = tempUpdatedPlayers.map((p) =>
+          p.id === oldLoser.id
             ? { ...p, losses: Math.max(0, (p.losses || 0) - 1) }
             : p
         );
+      }
+      if (newLoserOfMatch) {
+        tempUpdatedPlayers = tempUpdatedPlayers.map((p) =>
+          p.id === newLoserOfMatch!.id
+            ? { ...p, losses: (p.losses || 0) + 1 }
+            : p
+        );
+      }
 
+      // Prepare updated matches list
+      let tempUpdatedMatches = matches.map((m) =>
+        m.id === currentTargetMatch.id ? { ...m, winner: newWinningPlayer } : m
+      );
+      let tempUpdatedWbRound1Losers = [...wbRound1Losers]; // Keep this if WB R1 logic is still here
+
+      // --- WB R1 Loser Collection (if still relevant in this function structure) ---
+      if (
+        tournamentType.startsWith("Double Elimination") &&
+        currentTargetMatch.bracket === "winners" &&
+        currentTargetMatch.round === 1
+      ) {
         if (
-          tournamentType.startsWith("Double Elimination") &&
-          targetMatch.bracket === "winners" &&
-          targetMatch.round === 1
-          // Removed numPlayers === 8 check here, as bye logic handles different player counts
+          oldWinner &&
+          currentTargetMatch.player1 &&
+          currentTargetMatch.player2
         ) {
-          finalWbRound1Losers = finalWbRound1Losers.filter(
-            (l) => l.id !== oldLoserOfMatch.id
+          const oldLoser =
+            currentTargetMatch.player1.id === oldWinner.id
+              ? currentTargetMatch.player2
+              : currentTargetMatch.player1;
+          tempUpdatedWbRound1Losers = tempUpdatedWbRound1Losers.filter(
+            (l) => l.id !== oldLoser.id
           );
-          finalMatches = finalMatches.filter((m) => {
+          tempUpdatedMatches = tempUpdatedMatches.filter((m) => {
+            // Remove old LB R1 match
             if (m.bracket === "losers" && m.round === 1 && !m.winner) {
               if (
-                m.player1?.id === oldLoserOfMatch.id ||
-                m.player2?.id === oldLoserOfMatch.id
+                (m.player1?.id === oldLoser.id && !m.player2) ||
+                (m.player2?.id === oldLoser.id && !m.player1) ||
+                (m.player1?.id === oldLoser.id && m.player2) ||
+                (m.player2?.id === oldLoser.id && m.player1)
               ) {
-                console.log(
-                  `Removing unplayed LB match ${m.id} due to winner change affecting ${oldLoserOfMatch.name}`
-                );
                 return false;
               }
             }
             return true;
           });
         }
-      }
-
-      finalMatches = finalMatches.map((m) =>
-        m.id === targetMatch.id ? { ...m, winner: newWinningPlayer } : m
-      );
-
-      if (newLoserOfMatch) {
-        const newLoserId = newLoserOfMatch.id;
-        let currentLosses = 0;
-        finalPlayers = finalPlayers.map((p) => {
-          if (p.id === newLoserId) {
-            currentLosses = (p.losses || 0) + 1;
-            return { ...p, losses: currentLosses };
-          }
-          return p;
-        });
-
-        if (tournamentType.startsWith("Double Elimination")) {
-          if (targetMatch.bracket === "winners") {
-            console.log(
-              `${newLoserOfMatch.name} drops from WB (match ${targetMatch.id}).`
-            );
-            if (targetMatch.round === 1) {
-              const alreadyExists = finalWbRound1Losers.some(
-                (l) => l.id === newLoserOfMatch.id
-              );
-              if (!alreadyExists) {
-                finalWbRound1Losers = [
-                  ...finalWbRound1Losers,
-                  { ...newLoserOfMatch },
-                ];
-                console.log(
-                  "HANDLE_SET_WINNER: Added to wbRound1Losers:",
-                  newLoserOfMatch.name,
-                  "Current list:",
-                  finalWbRound1Losers.map((p) => p.name)
-                );
-              }
-              const expectedNumberOfWBR1Losers = Math.max(0, numPlayers - 4);
-              if (
-                finalWbRound1Losers.length === expectedNumberOfWBR1Losers &&
-                expectedNumberOfWBR1Losers > 0
-              ) {
-                console.log(
-                  `HANDLE_SET_WINNER: All ${expectedNumberOfWBR1Losers} WB R1 Losers collected for LB R1 generation:`,
-                  finalWbRound1Losers.map((p) => p.name + `(${p.id})`)
-                );
-                const matchesWithoutExistingUnplayedLBR1 = finalMatches.filter(
-                  (m) => !(m.bracket === "losers" && m.round === 1 && !m.winner)
-                );
-                const newLBM = generateDELosersBracketRound1Matches(
-                  [...finalWbRound1Losers],
-                  matchesWithoutExistingUnplayedLBR1.length
-                );
-                if (newLBM && newLBM.length > 0) {
-                  console.log(
-                    "HANDLE_SET_WINNER: POST-CALL - SUCCESSFULLY Generated LB R1 matches:",
-                    newLBM.map(
-                      (m) =>
-                        `(${m.player1?.name} vs ${m.player2?.name}) ID: ${m.id}`
-                    )
-                  );
-                  finalMatches = [
-                    ...matchesWithoutExistingUnplayedLBR1,
-                    ...newLBM,
-                  ];
-                  finalWbRound1Losers = [];
-                  console.log(
-                    "HANDLE_SET_WINNER: wbRound1Losers cleared after LB R1 generation."
-                  );
-                } else if (expectedNumberOfWBR1Losers > 0) {
-                  console.log(
-                    "HANDLE_SET_WINNER: POST-CALL - generateDELosersBracketRound1Matches returned no matches. wbRound1Losers at this point:",
-                    finalWbRound1Losers.map((p) => p.name)
-                  );
-                }
-              } else if (
-                expectedNumberOfWBR1Losers === 0 &&
-                finalWbRound1Losers.length === 0
-              ) {
-                console.log(
-                  "HANDLE_SET_WINNER: No WB R1 losers expected, so no LB R1 matches from WB R1 losers."
-                );
-                finalWbRound1Losers = [];
-              }
-            }
-          } else if (targetMatch.bracket === "losers") {
-            if (currentLosses >= 2) {
-              console.log(
-                `${newLoserOfMatch.name} (now ${currentLosses}L) is eliminated from LB.`
-              );
-            }
+        if (newLoserOfMatch) {
+          const alreadyInList = tempUpdatedWbRound1Losers.some(
+            (l) => l.id === newLoserOfMatch!.id
+          );
+          if (!alreadyInList) {
+            tempUpdatedWbRound1Losers = [
+              ...tempUpdatedWbRound1Losers,
+              { ...newLoserOfMatch! },
+            ];
           }
         }
       }
-      setPlayers(finalPlayers);
-      setMatches(finalMatches);
-      setWbRound1Losers(finalWbRound1Losers);
+
+      // --- Grand Finals Specific Logic ---
+      if (currentTargetMatch.bracket === "grandFinals") {
+        const wbPlayerInGF = currentTargetMatch.player1; // Crucially assumes player1 is WB champ
+        const lbPlayerInGF = currentTargetMatch.player2; // Crucially assumes player2 is LB champ
+
+        if (!currentTargetMatch.isGrandFinalsReset) {
+          // This is the FIRST Grand Finals match
+          if (wbPlayerInGF && newWinningPlayer.id === wbPlayerInGF.id) {
+            // WB Champion (player1) wins the first GF match
+            setOverallWinner(newWinningPlayer);
+            setTournamentOver(true);
+            setPlayers(tempUpdatedPlayers);
+            setMatches(tempUpdatedMatches);
+            setWbRound1Losers(tempUpdatedWbRound1Losers);
+            return; // Tournament ends
+          } else if (lbPlayerInGF && newWinningPlayer.id === lbPlayerInGF.id) {
+            // LB Champion (player2) wins the first GF match - a reset is needed
+            const resetMatchExists = tempUpdatedMatches.some(
+              (m) =>
+                m.bracket === "grandFinals" && m.isGrandFinalsReset === true
+            );
+            if (!resetMatchExists && wbPlayerInGF && lbPlayerInGF) {
+              const gfResetMatch = createMatch(
+                `match-gf-reset-1`,
+                currentTargetMatch.round, // Keep same round or +1 for visual
+                currentTargetMatch.matchNumber + 1, // Increment match number
+                wbPlayerInGF, // WB Champ
+                lbPlayerInGF, // LB Champ
+                "grandFinals",
+                true // isGrandFinalsReset = true
+              );
+              tempUpdatedMatches.push(gfResetMatch);
+            }
+            // Tournament does NOT end here. UI will update to show the new reset match.
+          }
+        } else {
+          // This is the RESET Grand Finals match
+          // The winner of this match is the overall tournament winner.
+          setOverallWinner(newWinningPlayer);
+          setTournamentOver(true);
+          setPlayers(tempUpdatedPlayers);
+          setMatches(tempUpdatedMatches);
+          setWbRound1Losers(tempUpdatedWbRound1Losers);
+          return; // Tournament ends
+        }
+      }
+
+      // Standard state updates if not a concluding GF match
+      setPlayers(tempUpdatedPlayers);
+      setMatches(tempUpdatedMatches);
+      setWbRound1Losers(tempUpdatedWbRound1Losers);
     },
     [
       matches,
       players,
-      tournamentType,
-      numPlayers,
       wbRound1Losers,
-      isMatchLocked, // Now this is the function
-      currentWinnersRound, // Added as isMatchLocked depends on them
-      currentLosersRound, // Added
-      overallWinner, // Added
+      isMatchLocked,
+      tournamentType,
+      // numPlayers, // numPlayers might not be needed directly here anymore
+      // createMatch is implicitly used, ensure it's stable or add if it's from component state/props
     ]
   );
 
-  const handleAdvanceRound = () => {
-    if (tournamentOver) return;
-
-    if (tournamentType.startsWith("Single Knockout")) {
-      const completedMatchesThisRound = matches.filter(
+  const getLosersOfRound = (
+    roundNumber: number,
+    bracketType: BracketType
+  ): Player[] => {
+    return matches
+      .filter(
         (match) =>
-          match.round === currentWinnersRound &&
-          match.winner &&
-          match.bracket === "winners"
-      );
-      const winners = completedMatchesThisRound
-        .map((match) => match.winner!)
-        .filter(Boolean) as Player[];
-
-      if (winners.length === 1 && completedMatchesThisRound.length === 1) {
-        setOverallWinner(winners[0]);
-        setTournamentOver(true);
-        return;
-      }
-      if (winners.length < 2 && completedMatchesThisRound.length > 0) {
-        if (winners.length === 1) {
-          setOverallWinner(winners[0]);
-          setTournamentOver(true);
-          return;
+          match.round === roundNumber &&
+          match.bracket === bracketType &&
+          match.winner
+      )
+      .reduce((acc: Player[], match) => {
+        if (match.player1 && match.player1.id !== match.winner?.id) {
+          acc.push(match.player1);
         }
-        console.log("Not enough winners to form the next round for SE.");
-        return;
-      }
-      if (winners.length === 0) {
-        console.log("No winners from current round to advance for SE.");
-        return;
-      }
-
-      const nextRoundNumber = currentWinnersRound + 1;
-      const newMatches = generateSENextRoundMatches(
-        winners,
-        nextRoundNumber,
-        matches.length
-      );
-
-      if (newMatches.length === 0 && winners.length === 1) {
-        setOverallWinner(winners[0]);
-        setTournamentOver(true);
-        return;
-      } else if (newMatches.length === 1 && newMatches[0].winner) {
-        setMatches((prev) => [...prev, ...newMatches]);
-        setOverallWinner(newMatches[0].winner!);
-        setTournamentOver(true);
-        setCurrentWinnersRound(nextRoundNumber);
-        return;
-      }
-      setMatches((prev) => [...prev, ...newMatches]);
-      setCurrentWinnersRound(nextRoundNumber);
-    } else if (tournamentType.startsWith("Double Elimination")) {
-      console.log("Attempting to advance round for Double Elimination...");
-      const currentWBRoundMatches = matches.filter(
-        (m) => m.bracket === "winners" && m.round === currentWinnersRound
-      );
-      const allCurrentWBRoundMatchesCompleted =
-        currentWBRoundMatches.length > 0 &&
-        currentWBRoundMatches.every((m) => !!m.winner);
-
-      if (allCurrentWBRoundMatchesCompleted) {
-        const wbWinners = currentWBRoundMatches
-          .map((m) => m.winner!)
-          .filter(Boolean) as Player[];
-        if (wbWinners.length >= 2) {
-          const nextWBRoundNumber = currentWinnersRound + 1;
-          const newWBMatches = generateDEWinnersBracketNextRound(
-            wbWinners,
-            nextWBRoundNumber,
-            matches.length
-          );
-          if (newWBMatches.length > 0) {
-            setMatches((prev) => [...prev, ...newWBMatches]);
-            setCurrentWinnersRound(nextWBRoundNumber);
-            console.log(
-              `Advanced Winners' Bracket to round ${nextWBRoundNumber}`
-            );
-          } else if (wbWinners.length === 1) {
-            console.log(
-              `Winner of Winners' Bracket: ${wbWinners[0].name}. Waiting for Losers' Bracket.`
-            );
-          }
-        } else if (wbWinners.length === 1) {
-          console.log(
-            `Winner of Winners' Bracket: ${wbWinners[0].name}. Waiting for Losers' Bracket.`
-          );
+        if (match.player2 && match.player2.id !== match.winner?.id) {
+          acc.push(match.player2);
         }
-      } else {
-        console.log(
-          "Not all Winners' Bracket matches for current round are completed."
-        );
-      }
-
-      // --- Losers' Bracket Advancement (Very Basic Placeholder) ---
-      // TODO: Implement full LB advancement logic
-      // This would involve:
-      // 1. Identifying losers from completed WB matches who need to be placed in LB.
-      // 2. Creating new LB matches.
-      // 3. Advancing winners of existing LB matches.
-      console.log("Losers' Bracket advancement logic needs to be implemented.");
-
-      // --- Check for Grand Finals ---
-      // TODO: Implement Grand Finals check
-      // This would happen when one player remains in WB and one in LB.
-    }
+        return acc;
+      }, []);
   };
 
-  // Define matchesForDisplay as a function
   const matchesForDisplay = (): Match[] => {
     let filteredMatches: Match[] = [];
     if (tournamentOver && overallWinner) {
-      // If tournament is over, try to show the round that produced the winner
       const finalMatch = matches.find(
         (m) =>
           m.winner?.id === overallWinner.id &&
@@ -468,7 +315,6 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
             m.bracket === finalMatch.bracket && m.round === finalMatch.round
         );
       } else {
-        // Fallback: show all matches from the last played round in winners or grand finals
         const lastWBRound = Math.max(
           0,
           ...matches.filter((m) => m.bracket === "winners").map((m) => m.round)
@@ -489,51 +335,34 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
         }
       }
       if (filteredMatches.length === 0) {
-        // Absolute fallback if tournament is over
         filteredMatches = matches;
       }
     } else if (tournamentType.startsWith("Single Knockout")) {
-      // Primarily show matches of the current designated round
       let currentRoundMatches = matches.filter(
         (match) =>
           match.bracket === "winners" && match.round === currentWinnersRound
       );
 
       if (currentRoundMatches.length > 0) {
-        // If there are matches for the current round, display them
         filteredMatches = currentRoundMatches;
       } else {
-        // No matches for currentWinnersRound.
-        // This could mean:
-        // 1. Tournament just advanced, currentWinnersRound incremented, but matches for this new round haven't been generated/added yet (should be brief).
-        // 2. All matches for currentWinnersRound are done, and we are waiting for next round generation.
         if (currentWinnersRound > 1) {
-          // If current round is > 1 and has no matches, show the completed previous round.
-          // This handles the state where R1 is done, CWR is 2, but R2 matches are not yet shown/clicked.
           filteredMatches = matches.filter(
             (match) =>
               match.bracket === "winners" &&
               match.round === currentWinnersRound - 1
           );
         } else {
-          // Still on Round 1, but no matches? This is an anomaly if initialized.
-          // Or, all R1 matches are done, and R2 is about to be generated.
-          // Show all pending matches in winners bracket as a fallback.
           filteredMatches = matches.filter(
             (m) => m.bracket === "winners" && !m.winner
           );
         }
       }
-      // If, after all this, filteredMatches is still empty and tournament not over,
-      // show all winners bracket matches as a last resort (should indicate an issue).
       if (
         filteredMatches.length === 0 &&
         !tournamentOver &&
         matches.some((m) => m.bracket === "winners")
       ) {
-        console.warn(
-          "matchesForDisplay (SE): No specific matches found, showing all WB matches as fallback."
-        );
         filteredMatches = matches.filter((m) => m.bracket === "winners");
       }
     } else if (tournamentType.startsWith("Double Elimination")) {
@@ -548,7 +377,6 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
           currentWinnersRound > 1 &&
           !tournamentOver
         ) {
-          // If no WB matches for current round, show previous completed WB round
           filteredMatches = matches.filter(
             (m) =>
               m.bracket === "winners" && m.round === currentWinnersRound - 1
@@ -563,13 +391,11 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
           currentLosersRound > 1 &&
           !tournamentOver
         ) {
-          // If no LB matches for current round, show previous completed LB round
           filteredMatches = matches.filter(
             (m) => m.bracket === "losers" && m.round === currentLosersRound - 1
           );
         }
       } else {
-        // "all"
         const wbCurrent = matches.filter(
           (m) => m.bracket === "winners" && m.round === currentWinnersRound
         );
@@ -583,16 +409,9 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
           !tournamentOver &&
           matches.some((m) => !m.winner)
         ) {
-          filteredMatches = matches.filter((m) => !m.winner); // Show all pending
+          filteredMatches = matches.filter((m) => !m.winner);
         }
       }
-    }
-
-    // If still no matches and tournament not over (e.g. initial state or error), show all matches.
-    if (filteredMatches.length === 0 && !tournamentOver && matches.length > 0) {
-      // console.warn("matchesForDisplay: No specific matches found for current view, showing all matches.");
-      // return matches.sort(/* ... */); // Avoid showing all if not intended.
-      // Instead, let it be empty if no specific logic above catches it.
     }
 
     return filteredMatches.sort((a, b) => {
@@ -605,7 +424,6 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
     });
   };
 
-  // Define displayTitle as a function
   const displayTitle = (): string => {
     if (tournamentOver && overallWinner) return "Tournament Completed!";
     if (matches.some((m) => m.bracket === "grandFinals" && !overallWinner))
@@ -655,44 +473,21 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
   const allCurrentRoundMatchesCompleted = useCallback((): boolean => {
     if (tournamentOver) return true;
 
-    const grandFinalsMatchesFromState = matches.filter(
+    const grandFinalsMatches = matches.filter(
       (m) => m.bracket === "grandFinals"
     );
-
-    if (grandFinalsMatchesFromState.length > 0) {
-      const firstGF = grandFinalsMatchesFromState.find(
-        (m) => !m.isGrandFinalsReset
-      );
-      const resetGF = grandFinalsMatchesFromState.find(
+    if (grandFinalsMatches.length > 0) {
+      const firstGF = grandFinalsMatches.find((m) => !m.isGrandFinalsReset);
+      const resetGF = grandFinalsMatches.find(
         (m) => m.isGrandFinalsReset === true
       );
-
-      if (!firstGF) {
-        console.warn(
-          "allCurrentRoundMatchesCompleted: GF matches exist but no firstGF found."
-        );
-        return false; // Path 1
-      }
-      if (!firstGF.winner) {
-        return false; // Path 2: First GF not played
-      }
-
+      if (!firstGF || !firstGF.winner) return false;
       const lbPlayerWonFirstGF =
         firstGF.player2 &&
         firstGF.winner &&
         firstGF.player2.id === firstGF.winner.id;
-
-      if (lbPlayerWonFirstGF) {
-        if (!resetGF) {
-          return true; // Path 3: Ready to generate reset match
-        }
-        if (!resetGF.winner) {
-          return false; // Path 4: Reset match pending
-        }
-        return true; // Path 5: Reset match played
-      } else {
-        return true; // Path 6: WB player won first GF
-      }
+      if (lbPlayerWonFirstGF) return !!(resetGF && resetGF.winner);
+      return true; // WB champ won first GF
     }
 
     if (tournamentType.startsWith("Single Knockout")) {
@@ -707,87 +502,113 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
               m.round === currentWinnersRound - 1 && m.bracket === "winners"
           );
           if (prevRoundMatches.length === 1 && prevRoundMatches[0].winner) {
-            return true; // Tournament ended
+            return true; // Tournament winner found
           }
         }
-        return false;
+        return false; // No matches in current round, and not the final winner
       }
       return currentRoundSEMatches.every((match) => !!match.winner);
     } else if (tournamentType.startsWith("Double Elimination")) {
-      const wbMatchesCurrentRound = matches.filter(
-        (m) => m.bracket === "winners" && m.round === currentWinnersRound
-      );
-      const lbMatchesCurrentRound = matches.filter(
-        (m) => m.bracket === "losers" && m.round === currentLosersRound
-      );
+      const expectedWbFinalRound =
+        numPlayers === 6 || numPlayers === 8 ? 3 : -1;
+      const expectedLbFinalRound =
+        numPlayers === 6 || numPlayers === 8 ? 4 : -1;
 
-      const wbCompleted =
-        wbMatchesCurrentRound.length > 0
-          ? wbMatchesCurrentRound.every((m) => !!m.winner)
-          : true;
-      const lbCompleted =
-        lbMatchesCurrentRound.length > 0
-          ? lbMatchesCurrentRound.every((m) => !!m.winner)
-          : true;
+      // Check if WB Champion is determined
+      const wbFinalMatch = matches.find(
+        (m) => m.bracket === "winners" && m.round === expectedWbFinalRound
+      );
+      const wbChampionIsKnown = !!(wbFinalMatch && wbFinalMatch.winner);
 
-      if (numPlayers === 8) {
-        if (currentWinnersRound === 1 && currentLosersRound === 1) {
-          return wbCompleted && lbCompleted;
-        }
-        if (currentWinnersRound === 2 && currentLosersRound === 2) {
-          return wbCompleted && lbCompleted;
-        }
-        if (currentWinnersRound === 3 && currentLosersRound === 3) {
-          return wbCompleted && lbCompleted;
-        }
-        if (currentWinnersRound === 3 && currentLosersRound === 4) {
-          const wbR3Matches = matches.filter(
-            (m) => m.bracket === "winners" && m.round === 3
+      // Check if LB Champion is determined (i.e., LB Final is played)
+      const lbFinalMatch = matches.find(
+        (m) => m.bracket === "losers" && m.round === expectedLbFinalRound
+      );
+      const lbChampionIsKnown = !!(lbFinalMatch && lbFinalMatch.winner);
+
+      if (wbChampionIsKnown && lbChampionIsKnown) {
+        return true; // Ready for Grand Finals (or GF already handled)
+      }
+
+      // --- Pre-Grand Finals ---
+      let wbRoundCompleted = true;
+      if (currentWinnersRound <= expectedWbFinalRound && !wbChampionIsKnown) {
+        // Only check WB if it's not yet at/past its final
+        const wbMatchesCurrent = matches.filter(
+          (m) => m.bracket === "winners" && m.round === currentWinnersRound
+        );
+        if (wbMatchesCurrent.length > 0) {
+          wbRoundCompleted = wbMatchesCurrent.every((m) => !!m.winner);
+        } else if (
+          currentWinnersRound > 1 &&
+          !matches.some(
+            (m) => m.bracket === "winners" && m.round === currentWinnersRound
+          )
+        ) {
+          // If currentWinnersRound has advanced past existing matches, consider it "done" for this check,
+          // assuming previous round led to a champion or advancement.
+          // This case needs to be careful not to stall if WB champ is found but LB isn't ready.
+          const prevWbMatches = matches.filter(
+            (m) =>
+              m.bracket === "winners" && m.round === currentWinnersRound - 1
           );
-          const wbR3Completed =
-            wbR3Matches.length > 0
-              ? wbR3Matches.every((m) => !!m.winner)
-              : true;
-          return wbR3Completed && lbCompleted;
+          if (!prevWbMatches.some((m) => !m.winner))
+            wbRoundCompleted = true; // if prev round fully done
+          else wbRoundCompleted = false;
+        } else {
+          wbRoundCompleted = true; // No matches in this specific WB round (e.g. WB R1 for 2 players, or if WB champ already found)
         }
       }
 
-      if (
-        wbMatchesCurrentRound.length === 0 &&
-        lbMatchesCurrentRound.length === 0 &&
-        !grandFinalsMatchesFromState.length
-      ) {
-        const wbChamp = players.find(
-          (p) =>
-            p.losses === 0 &&
-            matches.some(
-              (m) =>
-                m.bracket === "winners" &&
-                m.winner?.id === p.id &&
-                m.round === (numPlayers === 8 ? 3 : -1) // Max WB round for DE-8 is 3
-            )
+      let lbRoundCompleted = true;
+      if (currentLosersRound <= expectedLbFinalRound && !lbChampionIsKnown) {
+        // Only check LB if it's not yet at/past its final
+        const lbMatchesCurrent = matches.filter(
+          (m) => m.bracket === "losers" && m.round === currentLosersRound
         );
-        const lbChamp = players.find(
-          (p) =>
-            p.losses === 1 &&
-            matches.some(
-              (m) =>
-                m.bracket === "losers" &&
-                m.winner?.id === p.id &&
-                m.round === (numPlayers === 8 ? 4 : -1) // Max LB round for DE-8 is 4
-            )
-        );
-        if (wbChamp && lbChamp) {
-          return true; // Ready for GF
+        if (lbMatchesCurrent.length > 0) {
+          lbRoundCompleted = lbMatchesCurrent.every((m) => !!m.winner);
+        } else if (
+          currentLosersRound > 1 &&
+          !matches.some(
+            (m) => m.bracket === "losers" && m.round === currentLosersRound
+          )
+        ) {
+          // Similar to WB: if currentLosersRound has advanced past existing matches.
+          const prevLbMatches = matches.filter(
+            (m) => m.bracket === "losers" && m.round === currentLosersRound - 1
+          );
+          if (!prevLbMatches.some((m) => !m.winner)) lbRoundCompleted = true;
+          else lbRoundCompleted = false;
+        } else if (
+          currentLosersRound === 1 &&
+          !matches.some((m) => m.bracket === "losers" && m.round === 1)
+        ) {
+          // Special case for LB R1: if no LB R1 matches exist (e.g. after WB R1, before LB R1 generated),
+          // it's not "completed" in a way that should allow advancement if WB R1 isn't also done.
+          // This is tricky. The main check should be if *playable* matches in current rounds are done.
+          // If LB R1 hasn't been formed yet, but WB R1 is done, `executeAdvanceRound` should form LB R1.
+          // So, if `currentLosersRound` is 1 and no matches exist, it's "completed" for the purpose of `executeAdvanceRound`
+          // potentially creating them, *if* the WB side is also ready.
+          lbRoundCompleted = true; // Let executeAdvanceRound decide if it can form LB R1
+        } else {
+          lbRoundCompleted = true; // No matches in this specific LB round
         }
       }
-      // If specific DE-8 stage conditions aren't met, or for other numPlayers,
-      // rely on the general wbCompleted && lbCompleted.
-      if (wbCompleted && lbCompleted) {
-        return true;
+
+      // If WB final is done, we only care about LB completion up to LB final
+      if (wbChampionIsKnown && currentWinnersRound >= expectedWbFinalRound) {
+        return lbRoundCompleted; // Advance if current LB round is done (or if LB champ also known)
       }
+
+      // If LB final is done, we only care about WB completion up to WB final
+      if (lbChampionIsKnown && currentLosersRound >= expectedLbFinalRound) {
+        return wbRoundCompleted; // Advance if current WB round is done (or if WB champ also known)
+      }
+
+      // Default: both current rounds must be completed
+      return wbRoundCompleted && lbRoundCompleted;
     }
-    // Default fallback if no other condition was met (e.g., unknown tournament type, or a DE logic path not returning)
     return false;
   }, [
     matches,
@@ -796,39 +617,40 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
     tournamentOver,
     tournamentType,
     numPlayers,
-    players,
+    overallWinner, // Added overallWinner as it's used in GF check
+    // players, // players state was used before, but not in this version
   ]);
 
   const executeAdvanceRound = () => {
     setIsAdvanceModalVisible(false);
     if (tournamentOver) return;
 
-    console.log("Executing Advance Round...");
     let newMatchesToAdd: Match[] = [];
-    // --- DECLARE MISSING VARIABLES HERE ---
-    let collectedWBLosersForLB: Player[] = [];
+    let losersFromCurrentWBCompletion: Player[] = [];
+    let lbWinnersFromThisRound: Player[] = [];
+
     let advancedWB = false;
     let advancedLB = false;
-    let wbChampion: Player | null = null;
-    let lbChampion: Player | null = null;
-    // --- END OF DECLARATIONS ---
+    let wbChampionDeterminedThisCall: Player | null = null;
+    let lbChampionDeterminedThisCall: Player | null = null;
+
+    const initialCurrentWinnersRound = currentWinnersRound;
+    const initialCurrentLosersRound = currentLosersRound;
 
     if (tournamentType.startsWith("Single Knockout")) {
-      // Define currentRoundSEMatches here to get completed matches for the current round
+      // ... (existing SE logic - assumed okay for now) ...
       const currentRoundSECompletedMatches = matches.filter(
-        (
-          match: Match // Added type for match
-        ) =>
+        (match: Match) =>
           match.bracket === "winners" &&
-          match.round === currentWinnersRound &&
-          !!match.winner // Ensure we only get completed matches
+          match.round === initialCurrentWinnersRound &&
+          !!match.winner
       );
 
-      const winners = currentRoundSECompletedMatches // Use the correct variable
-        .map((match: Match) => match.winner!) // Added type for match
+      const winners = currentRoundSECompletedMatches
+        .map((match: Match) => match.winner!)
         .filter(Boolean) as Player[];
 
-      const nextRoundNumber = currentWinnersRound + 1;
+      const nextRoundNumber = initialCurrentWinnersRound + 1;
       const generatedSEMatches = generateSENextRoundMatches(
         winners,
         nextRoundNumber,
@@ -838,474 +660,431 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
       if (generatedSEMatches.length === 0 && winners.length === 1) {
         setOverallWinner(winners[0]);
         setTournamentOver(true);
-        console.log(
-          `SE Tournament Over (final match was this one). Winner: ${winners[0].name}`
-        );
       } else if (generatedSEMatches.length > 0) {
         setMatches((prev) => [...prev, ...generatedSEMatches]);
         setCurrentWinnersRound(nextRoundNumber);
-        console.log(
-          `SE: Advanced to Round ${nextRoundNumber}. New matches added:`,
-          generatedSEMatches.map((m) => m.id)
-        );
-      } else if (generatedSEMatches.length === 0 && winners.length > 1) {
-        console.log(
-          "SE: No new matches generated, but multiple winners. This indicates an issue or unhandled end state."
-        );
-      } else if (
-        winners.length === 0 &&
-        currentRoundSECompletedMatches.length > 0
-      ) {
-        // All matches in the round are done, but no winners (e.g., all draws if that were possible, or an error)
-        console.log(
-          "SE: All matches in current round completed, but no winners to advance."
-        );
-      } else if (
-        winners.length === 0 &&
-        currentRoundSECompletedMatches.length === 0
-      ) {
-        // No completed matches in the current round. This case should ideally be caught by allCurrentRoundMatchesCompleted()
-        console.log(
-          "SE: No completed matches in the current round to advance from."
-        );
       }
     } else if (tournamentType.startsWith("Double Elimination")) {
-      console.log(
-        `DE: Advancing. Current WB R${currentWinnersRound}, LB R${currentLosersRound}`
-      );
-      // --- Initialize arrays for newly generated matches in this call ---
       let newWBMatchesGeneratedThisCall: Match[] = [];
       let newLBMatchesGeneratedThisCall: Match[] = [];
-      // ---
 
-      // --- Winners' Bracket (WB) Advancement ---
-      const wbMatchesThisRound = matches.filter(
-        (m) => m.bracket === "winners" && m.round === currentWinnersRound
+      const expectedWbFinalRound =
+        numPlayers === 6 || numPlayers === 8 ? 3 : -1;
+      const expectedLbFinalRound =
+        numPlayers === 6 || numPlayers === 8 ? 4 : -1;
+
+      // Define allGrandFinalsMatches here so it's in scope for the later else if
+      const allGrandFinalsMatches = matches
+        .concat(newMatchesToAdd) // newMatchesToAdd will be empty here initially, but this mirrors the later usage
+        .filter((m: Match) => m.bracket === "grandFinals");
+
+      // --- (A) Winners' Bracket (WB) Advancement ---
+      // Only process WB if it's not past its final round OR if the champion isn't determined yet from a previous call
+      const wbFinalMatchOverall = matches.find(
+        (m) => m.bracket === "winners" && m.round === expectedWbFinalRound
       );
-      const allWbMatchesThisRoundCompleted =
-        wbMatchesThisRound.length > 0 &&
-        wbMatchesThisRound.every((m) => !!m.winner);
+      const overallWbChampionAlreadyKnown = !!(
+        wbFinalMatchOverall && wbFinalMatchOverall.winner
+      );
 
-      if (allWbMatchesThisRoundCompleted) {
-        const wbWinners = wbMatchesThisRound
-          .map((m) => m.winner!)
-          .filter(Boolean) as Player[];
-        collectedWBLosersForLB = wbMatchesThisRound
-          .map((m) => (m.player1?.id === m.winner?.id ? m.player2 : m.player1))
-          .filter(Boolean) as Player[];
-
-        console.log(
-          `DE WB R${currentWinnersRound} completed. Winners: ${wbWinners.map(
-            (p) => p.name
-          )}, Losers for LB: ${collectedWBLosersForLB.map(
-            (p: Player) => p.name
-          )}`
+      if (
+        initialCurrentWinnersRound <= expectedWbFinalRound &&
+        !overallWbChampionAlreadyKnown
+      ) {
+        const wbMatchesThisRound = matches.filter(
+          (m) =>
+            m.bracket === "winners" && m.round === initialCurrentWinnersRound
         );
+        const allWbMatchesThisRoundCompleted =
+          wbMatchesThisRound.length > 0 &&
+          wbMatchesThisRound.every((m) => !!m.winner);
 
-        if (
-          wbWinners.length === 1 &&
-          !matches.concat(newMatchesToAdd).some(
-            // Check against potentially already added matches too
-            (m) => m.bracket === "winners" && m.round > currentWinnersRound
-          ) &&
-          !matches
-            .concat(newMatchesToAdd)
-            .some((m) => m.bracket === "grandFinals")
-        ) {
-          console.log(`DE: Winners' Bracket Champion: ${wbWinners[0].name}.`);
-          wbChampion = wbWinners[0];
-        } else if (wbWinners.length >= 2) {
-          const nextWBRoundNumber = currentWinnersRound + 1;
-          // Assign to newWBMatchesGeneratedThisCall
-          newWBMatchesGeneratedThisCall = generateDEWinnersBracketNextRound(
-            wbWinners,
-            nextWBRoundNumber,
-            matches.length + newMatchesToAdd.length // Base count before adding from this call
+        if (allWbMatchesThisRoundCompleted) {
+          const wbWinners = wbMatchesThisRound
+            .map((m) => m.winner!)
+            .filter(Boolean) as Player[];
+          losersFromCurrentWBCompletion = getLosersOfRound(
+            initialCurrentWinnersRound,
+            "winners"
           );
-          if (newWBMatchesGeneratedThisCall.length > 0) {
-            // newMatchesToAdd will be updated later with all generated matches
-            setCurrentWinnersRound(nextWBRoundNumber);
-            advancedWB = true;
-            console.log(`DE: Generated WB R${nextWBRoundNumber} matches.`);
+
+          if (
+            initialCurrentWinnersRound === expectedWbFinalRound &&
+            wbWinners.length === 1
+          ) {
+            wbChampionDeterminedThisCall = wbWinners[0];
+            // Don't advance currentWinnersRound here; WB is done.
+            advancedWB = true; // Mark WB as "processed" for this stage
+          } else if (wbWinners.length >= 2) {
+            const nextWBRoundNumber = initialCurrentWinnersRound + 1;
+            newWBMatchesGeneratedThisCall = generateDEWinnersBracketNextRound(
+              wbWinners,
+              nextWBRoundNumber,
+              matches.length + newMatchesToAdd.length
+            );
+            if (newWBMatchesGeneratedThisCall.length > 0) {
+              setCurrentWinnersRound(nextWBRoundNumber);
+              advancedWB = true;
+            }
           }
         }
-      } else {
-        console.log(`DE: WB R${currentWinnersRound} not fully completed.`);
+      } else if (overallWbChampionAlreadyKnown) {
+        // WB Champion is already known, ensure wbChampionDeterminedThisCall is set if it wasn't from this call
+        if (!wbChampionDeterminedThisCall)
+          wbChampionDeterminedThisCall = wbFinalMatchOverall!.winner;
       }
 
-      // --- Losers' Bracket (LB) Advancement ---
-      const lbMatchesThisRound = matches.filter(
-        (m) => m.bracket === "losers" && m.round === currentLosersRound
+      // --- (B) Losers' Bracket (LB) Round 1 Generation (if applicable) ---
+      // This logic should run if WB R1 just completed and LB R1 isn't made.
+      const lbR1MatchesAlreadyExist = matches.some(
+        (m) => m.bracket === "losers" && m.round === 1
       );
-      const allLbMatchesThisRoundCompleted =
-        lbMatchesThisRound.length > 0 &&
-        lbMatchesThisRound.every((m) => !!m.winner);
-      let lbWinnersFromThisRound: Player[] = [];
+      if (
+        initialCurrentWinnersRound === 1 && // WB R1 was the focus
+        losersFromCurrentWBCompletion.length > 0 && // WB R1 actually produced losers in *this* call
+        !lbR1MatchesAlreadyExist &&
+        wbRound1Losers.length > 0 // Ensure wbRound1Losers state has been populated by handleSetWinner
+      ) {
+        let expectedLoserCountForLBR1 = 0;
+        if (numPlayers === 6) expectedLoserCountForLBR1 = 2;
+        else if (numPlayers === 8) expectedLoserCountForLBR1 = 4;
 
-      if (allLbMatchesThisRoundCompleted) {
-        lbWinnersFromThisRound = lbMatchesThisRound
-          .map((m) => m.winner!)
-          .filter(Boolean) as Player[];
-        console.log(
-          `DE LB R${currentLosersRound} completed. Winners: ${lbWinnersFromThisRound.map(
-            (p) => p.name
-          )}`
-        );
-        if (
-          lbWinnersFromThisRound.length === 1 &&
-          !matches.concat(newMatchesToAdd).some(
-            // Check against potentially already added matches
-            (m) => m.bracket === "losers" && m.round > currentLosersRound
-          ) &&
-          !matches
-            .concat(newMatchesToAdd)
-            .some((m) => m.bracket === "grandFinals")
-        ) {
-          console.log(
-            `DE: Losers' Bracket Champion: ${lbWinnersFromThisRound[0].name}.`
+        // Use wbRound1Losers state as the source of truth for LB R1
+        if (wbRound1Losers.length === expectedLoserCountForLBR1) {
+          const generatedLbR1Matches = generateDELosersBracketRound1Matches(
+            [...wbRound1Losers],
+            matches.length +
+              newMatchesToAdd.length +
+              newWBMatchesGeneratedThisCall.length
           );
-          lbChampion = lbWinnersFromThisRound[0];
-        }
-      } else if (lbMatchesThisRound.length > 0) {
-        console.log(`DE: LB R${currentLosersRound} not fully completed.`);
-      } else {
-        console.log(`DE: No matches in LB R${currentLosersRound} to complete.`);
-      }
-
-      // --- Generate Next LB Round (if conditions met) ---
-      const nextLBRoundNumber = currentLosersRound + 1;
-      // Base match count before adding WB or LB matches from this specific call
-      const baseMatchCountForNewLB =
-        matches.length +
-        newMatchesToAdd.length +
-        newWBMatchesGeneratedThisCall.length;
-
-      if (numPlayers === 8) {
-        if (
-          currentLosersRound === 1 &&
-          allLbMatchesThisRoundCompleted &&
-          currentWinnersRound === 2 && // WB R2 should have been processed (advancedWB implies this)
-          allWbMatchesThisRoundCompleted && // WB R1 was completed to get here
-          collectedWBLosersForLB.length === 2 && // These are losers from WB R2
-          lbWinnersFromThisRound.length === 2
-        ) {
-          console.log("DE: Conditions met to generate LB Round 2.");
-          // Assign to newLBMatchesGeneratedThisCall
-          newLBMatchesGeneratedThisCall =
-            generateDELosersBracketNextRoundMatches(
-              lbWinnersFromThisRound,
-              collectedWBLosersForLB,
-              nextLBRoundNumber,
-              numPlayers,
-              baseMatchCountForNewLB
-            );
-        } else if (
-          currentLosersRound === 2 &&
-          allLbMatchesThisRoundCompleted &&
-          lbWinnersFromThisRound.length === 2
-        ) {
-          console.log("DE: Conditions met to generate LB Round 3.");
-          // Assign to newLBMatchesGeneratedThisCall
-          newLBMatchesGeneratedThisCall =
-            generateDELosersBracketNextRoundMatches(
-              lbWinnersFromThisRound,
-              [],
-              nextLBRoundNumber,
-              numPlayers,
-              baseMatchCountForNewLB
-            );
-        } else if (
-          currentLosersRound === 3 &&
-          allLbMatchesThisRoundCompleted &&
-          currentWinnersRound === 3 && // WB R3 should be done
-          allWbMatchesThisRoundCompleted && // WB R3 was completed
-          collectedWBLosersForLB.length === 1 && // Loser from WB R3 (WB Final)
-          lbWinnersFromThisRound.length === 1
-        ) {
-          console.log("DE: Conditions met to generate LB Round 4 (LB Final).");
-          // Assign to newLBMatchesGeneratedThisCall
-          newLBMatchesGeneratedThisCall =
-            generateDELosersBracketNextRoundMatches(
-              lbWinnersFromThisRound,
-              collectedWBLosersForLB,
-              nextLBRoundNumber,
-              numPlayers,
-              baseMatchCountForNewLB
-            );
+          if (generatedLbR1Matches.length > 0) {
+            newLBMatchesGeneratedThisCall.push(...generatedLbR1Matches);
+            // currentLosersRound is already 1. advancedLB will be set later if these matches are for nextLBRoundNumberTarget
+          }
         }
       }
 
-      if (newLBMatchesGeneratedThisCall.length > 0) {
-        // newMatchesToAdd will be updated later
-        setCurrentLosersRound(nextLBRoundNumber);
-        advancedLB = true;
-        console.log(`DE: Generated LB R${nextLBRoundNumber} matches.`);
+      // --- (C) Losers' Bracket (LB) Advancement (for LB R1 completion and R2+ generation) ---
+      const lbFinalMatchOverall = matches.find(
+        (m) => m.bracket === "losers" && m.round === expectedLbFinalRound
+      );
+      const overallLbChampionAlreadyKnown = !!(
+        lbFinalMatchOverall && lbFinalMatchOverall.winner
+      );
+
+      if (
+        initialCurrentLosersRound <= expectedLbFinalRound &&
+        !overallLbChampionAlreadyKnown
+      ) {
+        const lbMatchesThisRound = matches.filter(
+          (m) => m.bracket === "losers" && m.round === initialCurrentLosersRound
+        );
+        const allLbMatchesThisRoundCompleted =
+          lbMatchesThisRound.length > 0 &&
+          lbMatchesThisRound.every((m) => !!m.winner);
+
+        if (allLbMatchesThisRoundCompleted) {
+          lbWinnersFromThisRound = lbMatchesThisRound // These are winners from initialCurrentLosersRound
+            .map((m) => m.winner!)
+            .filter(Boolean) as Player[];
+
+          if (
+            initialCurrentLosersRound === expectedLbFinalRound &&
+            lbWinnersFromThisRound.length === 1
+          ) {
+            if (lbWinnersFromThisRound[0].losses === 1) {
+              lbChampionDeterminedThisCall = lbWinnersFromThisRound[0];
+            }
+            // Don't advance currentLosersRound here; LB is done.
+            advancedLB = true; // Mark LB as "processed" for this stage
+          } else if (
+            lbWinnersFromThisRound.length > 0 ||
+            initialCurrentLosersRound === 1
+          ) {
+            // Allow advancing from LB R1 even if 0 winners (all byes)
+            // Try to generate the NEXT LB round
+            const nextLBRoundNumberTarget = initialCurrentLosersRound + 1;
+            const baseMatchCountForNewLB =
+              matches.length +
+              newMatchesToAdd.length +
+              newWBMatchesGeneratedThisCall.length +
+              newLBMatchesGeneratedThisCall.length;
+
+            let generatedNextLbMatches: Match[] = [];
+
+            if (numPlayers === 6 || numPlayers === 8) {
+              const expectedWbFinalRound = 3; // WB Final is Round 3 for 6/8 players
+              const penultimateLbRound = 3; // LB Round that feeds into LB Final (LB R4) is Round 3
+              const actualLbFinalRoundTarget = 4; // The LB Final itself is Round 4
+
+              // LB Round 2: Needs W(LBR1) and L(WBR2)
+              if (
+                nextLBRoundNumberTarget === 2 &&
+                initialCurrentLosersRound === 1 && // LB R1 just finished
+                (numPlayers === 6
+                  ? lbWinnersFromThisRound.length === 1
+                  : lbWinnersFromThisRound.length === 2) &&
+                ((initialCurrentWinnersRound === 2 &&
+                  losersFromCurrentWBCompletion.length ===
+                    (numPlayers === 6 ? 2 : 2)) ||
+                  ((currentWinnersRound > 2 || wbChampionDeterminedThisCall) &&
+                    matches.some(
+                      (m) =>
+                        m.bracket === "winners" && m.round === 2 && m.winner
+                    )))
+              ) {
+                const wbR2Losers =
+                  initialCurrentWinnersRound === 2 &&
+                  losersFromCurrentWBCompletion.length > 0
+                    ? losersFromCurrentWBCompletion
+                    : getLosersOfRound(2, "winners");
+                if (wbR2Losers.length === (numPlayers === 6 ? 2 : 2)) {
+                  generatedNextLbMatches =
+                    generateDELosersBracketNextRoundMatches(
+                      lbWinnersFromThisRound,
+                      wbR2Losers,
+                      nextLBRoundNumberTarget,
+                      numPlayers,
+                      baseMatchCountForNewLB
+                    );
+                }
+              }
+              // LB Round 3: Needs W(LBR2) (no WB drops for 6P/8P here)
+              else if (
+                nextLBRoundNumberTarget === 3 && // Target is LB R3
+                initialCurrentLosersRound === 2 && // LB R2 just finished
+                (numPlayers === 6
+                  ? lbWinnersFromThisRound.length === 2
+                  : lbWinnersFromThisRound.length === 2)
+              ) {
+                generatedNextLbMatches =
+                  generateDELosersBracketNextRoundMatches(
+                    lbWinnersFromThisRound,
+                    [],
+                    nextLBRoundNumberTarget,
+                    numPlayers,
+                    baseMatchCountForNewLB
+                  );
+              }
+              // LB Round 4 (LB Final): Needs W(LBR3) and L(WBR3/Final)
+              else if (
+                nextLBRoundNumberTarget === actualLbFinalRoundTarget && // We are trying to form LB R4
+                // Condition 1: LB R3 must be complete (either now or previously)
+                ((initialCurrentLosersRound === penultimateLbRound &&
+                  lbWinnersFromThisRound.length === 1) ||
+                  matches.some(
+                    (m) =>
+                      m.bracket === "losers" &&
+                      m.round === penultimateLbRound &&
+                      m.winner
+                  )) &&
+                // Condition 2: WB R3 (Final) must be complete (either now or previously)
+                ((initialCurrentWinnersRound === expectedWbFinalRound &&
+                  losersFromCurrentWBCompletion.length === 1) ||
+                  matches.some(
+                    (m) =>
+                      m.bracket === "winners" &&
+                      m.round === expectedWbFinalRound &&
+                      m.winner
+                  ))
+              ) {
+                // Fetch the winner of LB R3
+                let winnerOfLBR3: Player | null = null;
+                if (
+                  initialCurrentLosersRound === penultimateLbRound &&
+                  lbWinnersFromThisRound.length === 1
+                ) {
+                  winnerOfLBR3 = lbWinnersFromThisRound[0];
+                } else {
+                  const lbR3WinnerMatch = matches.find(
+                    (m) =>
+                      m.bracket === "losers" &&
+                      m.round === penultimateLbRound &&
+                      m.winner
+                  );
+                  if (lbR3WinnerMatch) winnerOfLBR3 = lbR3WinnerMatch.winner;
+                }
+
+                // Fetch the loser of WB R3
+                let loserOfWBR3: Player | null = null;
+                if (
+                  initialCurrentWinnersRound === expectedWbFinalRound &&
+                  losersFromCurrentWBCompletion.length === 1
+                ) {
+                  loserOfWBR3 = losersFromCurrentWBCompletion[0];
+                } else {
+                  // Ensure getLosersOfRound correctly finds the single loser of the WB final round
+                  const wbR3Matches = matches.filter(
+                    (m) =>
+                      m.bracket === "winners" &&
+                      m.round === expectedWbFinalRound &&
+                      m.winner
+                  );
+                  if (wbR3Matches.length === 1) {
+                    // Should be exactly one WB final match
+                    const wbFinal = wbR3Matches[0];
+                    if (
+                      wbFinal.player1 &&
+                      wbFinal.player1.id !== wbFinal.winner?.id
+                    )
+                      loserOfWBR3 = wbFinal.player1;
+                    else if (
+                      wbFinal.player2 &&
+                      wbFinal.player2.id !== wbFinal.winner?.id
+                    )
+                      loserOfWBR3 = wbFinal.player2;
+                  }
+                }
+
+                if (winnerOfLBR3 && loserOfWBR3) {
+                  // Check if LB R4 already exists to prevent duplicates if executeAdvanceRound is called multiple times
+                  // when conditions are met but before state updates fully propagate.
+                  const lbR4Exists = matches
+                    .concat(
+                      newMatchesToAdd,
+                      newWBMatchesGeneratedThisCall,
+                      newLBMatchesGeneratedThisCall
+                    )
+                    .some(
+                      (m) =>
+                        m.bracket === "losers" &&
+                        m.round === actualLbFinalRoundTarget
+                    );
+                  if (!lbR4Exists) {
+                    generatedNextLbMatches =
+                      generateDELosersBracketNextRoundMatches(
+                        [winnerOfLBR3],
+                        [loserOfWBR3],
+                        actualLbFinalRoundTarget,
+                        numPlayers,
+                        baseMatchCountForNewLB
+                      );
+                  }
+                }
+              }
+            }
+
+            if (generatedNextLbMatches.length > 0) {
+              newLBMatchesGeneratedThisCall.push(...generatedNextLbMatches);
+              setCurrentLosersRound(nextLBRoundNumberTarget);
+              advancedLB = true;
+            }
+          }
+        }
+      } else if (overallLbChampionAlreadyKnown) {
+        // LB Champion is already known
+        if (!lbChampionDeterminedThisCall)
+          lbChampionDeterminedThisCall = lbFinalMatchOverall!.winner;
       }
 
-      // Consolidate all newly generated matches for this advancement call
       newMatchesToAdd.push(
         ...newWBMatchesGeneratedThisCall,
         ...newLBMatchesGeneratedThisCall
       );
 
-      // --- Determine Champions if not already set by specific round completion ---
-      const matchesAfterThisAdvancement = matches.concat(newMatchesToAdd); // Contains current matches + new WB/LB matches
-
-      if (!wbChampion) {
-        const potentialWbFinalMatches = matchesAfterThisAdvancement.filter(
-          (m: Match) => m.bracket === "winners" && m.winner // Typed m
+      // --- (D) Determine Champions (if not already set by round completion logic) ---
+      if (wbChampionDeterminedThisCall && !lbChampionDeterminedThisCall) {
+        // Try to see if LB champion can be determined now (e.g. LB final was just added and is a bye)
+        const freshLbFinalMatch = newMatchesToAdd.find(
+          (m) => m.bracket === "losers" && m.round === expectedLbFinalRound
         );
-        if (potentialWbFinalMatches.length > 0) {
-          const highestWbRoundPlayed = Math.max(
-            ...potentialWbFinalMatches.map((m: Match) => m.round) // Typed m
-          );
-          const finalWbMatchesInHighestRound = potentialWbFinalMatches.filter(
-            (m: Match) => m.round === highestWbRoundPlayed // Typed m
-          );
-
-          const allHighestRoundWbPlayed = finalWbMatchesInHighestRound.every(
-            (m: Match) => m.winner // Typed m
-          );
-          const noFutureUnplayedWbMatches = !matchesAfterThisAdvancement.some(
-            (
-              m: Match // Typed m
-            ) =>
-              m.bracket === "winners" &&
-              m.round > highestWbRoundPlayed &&
-              !m.winner
-          );
-          const distinctWinnersInHighestRound = new Set(
-            finalWbMatchesInHighestRound.map((m: Match) => m.winner!.id) // Typed m
-          );
-
-          if (
-            allHighestRoundWbPlayed &&
-            noFutureUnplayedWbMatches &&
-            distinctWinnersInHighestRound.size === 1 &&
-            finalWbMatchesInHighestRound.length === 1
-          ) {
-            const foundWbChampion = players.find(
-              (p) => p.id === Array.from(distinctWinnersInHighestRound)[0]
-            );
-            wbChampion = foundWbChampion || null; // Handle undefined from find
-            if (wbChampion) {
-              console.log(
-                `DE: Determined WB Champion (fallback logic): ${wbChampion.name} from round ${highestWbRoundPlayed}`
-              );
-            }
-          }
-        }
-      }
-
-      if (!lbChampion) {
-        const potentialLbFinalMatches = matchesAfterThisAdvancement.filter(
-          (m: Match) => m.bracket === "losers" && m.winner // Typed m
-        );
-        if (potentialLbFinalMatches.length > 0) {
-          const highestLbRoundPlayed = Math.max(
-            ...potentialLbFinalMatches.map((m: Match) => m.round) // Typed m
-          );
-          const finalLbMatchesInHighestRound = potentialLbFinalMatches.filter(
-            (m: Match) => m.round === highestLbRoundPlayed // Typed m
-          );
-
-          const allHighestRoundLbPlayed = finalLbMatchesInHighestRound.every(
-            (m: Match) => m.winner // Typed m
-          );
-          const noFutureUnplayedLbMatches = !matchesAfterThisAdvancement.some(
-            (
-              m: Match // Typed m
-            ) =>
-              m.bracket === "losers" &&
-              m.round > highestLbRoundPlayed &&
-              !m.winner
-          );
-          const distinctWinnersInHighestLbRound = new Set(
-            finalLbMatchesInHighestRound.map((m: Match) => m.winner!.id) // Typed m
-          );
-
-          if (
-            allHighestRoundLbPlayed &&
-            noFutureUnplayedLbMatches &&
-            distinctWinnersInHighestLbRound.size === 1 &&
-            finalLbMatchesInHighestRound.length === 1
-          ) {
-            const foundLbChampion = players.find(
-              (p) => p.id === Array.from(distinctWinnersInHighestLbRound)[0]
-            );
-            lbChampion = foundLbChampion || null; // Handle undefined from find
-            if (lbChampion) {
-              console.log(
-                `DE: Determined LB Champion (fallback logic): ${lbChampion.name} from round ${highestLbRoundPlayed}`
-              );
-            }
-          }
-        }
-      }
-
-      // --- Check for Grand Finals ---
-      const currentMatchesState = matches; // Snapshot of matches state before new ones are added by this call
-      const grandFinalsMatchesInState = currentMatchesState.filter(
-        (m: Match) => m.bracket === "grandFinals"
-      );
-      const firstGFMatchFromState = grandFinalsMatchesInState.find(
-        (m: Match) => !m.isGrandFinalsReset
-      );
-      const resetGFMatchFromState = grandFinalsMatchesInState.find(
-        (m: Match) => m.isGrandFinalsReset === true
-      );
-
-      // 1. Check if a Grand Finals match (first or reset) has just been completed
-      if (
-        firstGFMatchFromState &&
-        firstGFMatchFromState.winner &&
-        !tournamentOver
-      ) {
-        const wbPlayerInGF = firstGFMatchFromState.player1;
-        const lbPlayerInGF = firstGFMatchFromState.player2;
-
         if (
-          wbPlayerInGF &&
-          firstGFMatchFromState.winner.id === wbPlayerInGF.id
+          freshLbFinalMatch &&
+          freshLbFinalMatch.winner &&
+          freshLbFinalMatch.winner.losses === 1
         ) {
-          // WB Player won the first GF match
-          console.log(
-            `DE: WB Player ${wbPlayerInGF.name} won first Grand Finals. Tournament Over.`
-          );
-          setOverallWinner(firstGFMatchFromState.winner);
-          setTournamentOver(true);
-          newMatchesToAdd = [];
-        } else if (
-          lbPlayerInGF &&
-          firstGFMatchFromState.winner.id === lbPlayerInGF.id
-        ) {
-          // LB Player won the first GF match
-          if (
-            !resetGFMatchFromState &&
-            !newMatchesToAdd.some((m) => m.id === `match-gf-2-reset`)
-          ) {
-            // And reset not already created or in queue
-            console.log(
-              "DE: Grand Finals Reset! LB Player won the first match. Setting up reset match."
+          lbChampionDeterminedThisCall = freshLbFinalMatch.winner;
+        }
+      }
+      if (lbChampionDeterminedThisCall && !wbChampionDeterminedThisCall) {
+        // Try to see if WB champion can be determined now
+        const freshWbFinalMatch = newMatchesToAdd.find(
+          (m) => m.bracket === "winners" && m.round === expectedWbFinalRound
+        );
+        if (freshWbFinalMatch && freshWbFinalMatch.winner) {
+          // losses check not needed for WB champ
+          wbChampionDeterminedThisCall = freshWbFinalMatch.winner;
+        }
+      }
+
+      // --- (E) Grand Finals Logic ---
+      if (
+        wbChampionDeterminedThisCall &&
+        lbChampionDeterminedThisCall &&
+        !matches // Check against existing matches
+          .concat(newMatchesToAdd) // And any matches just added in this cycle
+          .some((m: Match) => m.bracket === "grandFinals")
+      ) {
+        const gfMatch = createMatch(
+          `match-gf-1`,
+          Math.max(expectedWbFinalRound, expectedLbFinalRound) + 1,
+          1,
+          wbChampionDeterminedThisCall,
+          lbChampionDeterminedThisCall,
+          "grandFinals",
+          false
+        );
+        newMatchesToAdd.push(gfMatch);
+      }
+
+      // --- (F) Set Overall Winner (after Grand Finals played) ---
+      // This section in executeAdvanceRound is now largely redundant for GF if handleSetWinner is comprehensive.
+      // It might still serve as a fallback for other tournament types or if handleSetWinner misses a case.
+      // For DE GF, handleSetWinner should be the primary driver.
+      // Consider removing or commenting out the GF-specific parts of Section F in executeAdvanceRound.
+      /*
+          // const allGrandFinalsMatches = matches // Definition moved up
+          //  .concat(newMatchesToAdd)
+          //  .filter((m) => m.bracket === "grandFinals");
+          if (!tournamentOver && allGrandFinalsMatches.length > 0) { // Check !tournamentOver
+            const firstGF = allGrandFinalsMatches.find(
+              (m) => !m.isGrandFinalsReset && m.winner
             );
-            const gfResetMatch: Match = {
-              id: `match-gf-2-reset`,
-              round: (firstGFMatchFromState.round || 1) + 1,
-              matchNumber: 1,
-              player1: wbPlayerInGF, // Should be the WB champion
-              player2: lbPlayerInGF, // Should be the LB champion
-              winner: null,
-              bracket: "grandFinals",
-              isGrandFinalsReset: true,
-            };
-            if (!newMatchesToAdd.find((m) => m.id === gfResetMatch.id)) {
-              newMatchesToAdd.push(gfResetMatch);
+            const resetGF = allGrandFinalsMatches.find(
+              (m) => m.isGrandFinalsReset === true && m.winner
+            );
+
+            // This logic is now primarily in handleSetWinner
+            if (firstGF) {
+              const wbPlayerInGF = firstGF.player1; 
+              if (firstGF.winner?.id === wbPlayerInGF?.id && !tournamentOver) {
+                // setOverallWinner(firstGF.winner!); // Handled by handleSetWinner
+                // setTournamentOver(true);           // Handled by handleSetWinner
+              } else if (firstGF.winner?.id !== wbPlayerInGF?.id) { // LB Player won first GF
+                if (resetGF && !tournamentOver) {
+                  // setOverallWinner(resetGF.winner!); // Handled by handleSetWinner
+                  // setTournamentOver(true);            // Handled by handleSetWinner
+                }
+                // Creation of reset match is now in handleSetWinner
+              }
             }
-          } else if (resetGFMatchFromState && !resetGFMatchFromState.winner) {
-            console.log("DE: Grand Finals reset match is pending.");
           }
-        }
-      }
+      */
 
-      if (
-        resetGFMatchFromState &&
-        resetGFMatchFromState.winner &&
-        !tournamentOver
-      ) {
-        console.log(
-          `DE: Reset Grand Finals winner: ${resetGFMatchFromState.winner.name}. Tournament Over.`
-        );
-        setOverallWinner(resetGFMatchFromState.winner);
-        setTournamentOver(true);
-        newMatchesToAdd = [];
-      }
-
-      // Define a variable that reflects all matches in state + all matches added to newMatchesToAdd SO FAR.
-      // This includes new WB/LB matches AND potentially a GF reset match from section 1.
-      const allMatchesIncludingNewAdditionsSoFar =
-        matches.concat(newMatchesToAdd);
-
-      // 2. If no GF match exists yet, try to create the first one if champions are ready
-      const firstGFMatchStillMissing =
-        !allMatchesIncludingNewAdditionsSoFar.find(
-          // Use the correctly defined variable
-          (m: Match) => m.bracket === "grandFinals" && !m.isGrandFinalsReset
-        );
-
-      if (
-        wbChampion &&
-        lbChampion &&
-        firstGFMatchStillMissing &&
-        !tournamentOver // Only create if tournament isn't already over
-      ) {
-        console.log(
-          `DE: Setting up First Grand Finals! WB Champ: ${wbChampion.name}, LB Champ: ${lbChampion.name}`
-        );
-        const grandFinalsMatch: Match = {
-          id: `match-gf-1`,
-          round: 1,
-          matchNumber: 1,
-          player1: wbChampion,
-          player2: lbChampion,
-          winner: null,
-          bracket: "grandFinals",
-          isGrandFinalsReset: false,
-        };
-        // Check against newMatchesToAdd directly to prevent adding it if it was somehow already there
-        if (!newMatchesToAdd.find((m) => m.id === grandFinalsMatch.id)) {
-          newMatchesToAdd.push(grandFinalsMatch);
-        }
-      }
-
-      // --- Update States (Matches) ---
       if (newMatchesToAdd.length > 0) {
         setMatches((prev) => {
-          const prevMatchIds = new Set(prev.map((m) => m.id));
+          const existingMatchIds = new Set(prev.map((m: Match) => m.id));
           const trulyNewMatches = newMatchesToAdd.filter(
-            (nm) => !prevMatchIds.has(nm.id)
+            (nm: Match) => !existingMatchIds.has(nm.id)
           );
-          if (trulyNewMatches.length > 0) {
-            return [...prev, ...trulyNewMatches];
-          }
-          return prev;
+          return [...prev, ...trulyNewMatches];
         });
-      }
-
-      // If a GF match was just added or is pending, switch view
-      // Re-evaluate currentMatchesIncludingNew after setMatches might have been called (or use newMatchesToAdd)
-      const finalMatchesForDisplayCheck = matches.concat(newMatchesToAdd); // Use the most definitive list
-      if (
-        finalMatchesForDisplayCheck.some(
-          // Use finalMatchesForDisplayCheck
-          (m: Match) => m.bracket === "grandFinals" && !m.winner // Typed m
-        ) &&
-        activeBracketForDisplay !== "grandFinals"
-      ) {
-        setActiveBracketForDisplay("grandFinals");
-      }
-
-      if (
+      } else if (
         !advancedWB &&
         !advancedLB &&
-        newMatchesToAdd.length === 0 &&
-        !finalMatchesForDisplayCheck.some(
-          // Use finalMatchesForDisplayCheck
-          (m: Match) => m.bracket === "grandFinals" && !m.winner // Typed m
-        ) &&
-        !tournamentOver
+        !wbChampionDeterminedThisCall &&
+        !lbChampionDeterminedThisCall &&
+        // Re-filter allGrandFinalsMatches here to get the most current state before this check
+        !matches
+          .concat(newMatchesToAdd)
+          .filter((m: Match) => m.bracket === "grandFinals")
+          .some((m: Match) => m.winner)
       ) {
-        if (
-          allWbMatchesThisRoundCompleted &&
-          (allLbMatchesThisRoundCompleted || lbMatchesThisRound.length === 0)
-        ) {
-          console.log(
-            "DE: All current round matches seem completed, but no further advancement or GF. Check conditions."
-          );
-        }
+        // If nothing happened, and no champs determined, and GFs not resolved, it might be stuck.
+        // This is a fallback, ideally allCurrentRoundMatchesCompleted should prevent unnecessary calls.
       }
-    } // End DE logic
-  }; // End executeAdvanceRound
-
+    }
+  };
   const handleAdvanceRoundPress = () => {
     if (!allCurrentRoundMatchesCompleted() || tournamentOver) {
       Alert.alert(
@@ -1317,14 +1096,13 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
     setIsAdvanceModalVisible(true);
   };
 
-  // Define BracketViewButtons as a function component
   const BracketViewButtons = () => {
     if (
       !tournamentType.startsWith("Double Elimination") ||
       tournamentOver ||
       matches.some((m) => m.bracket === "grandFinals")
     ) {
-      return null; // Only show for DE and before Grand Finals
+      return null;
     }
     return (
       <View
@@ -1379,17 +1157,7 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
 
     const matchIsEffectivelyLocked = isMatchLocked(item);
 
-    // ADD THIS LOG:
-    console.log(
-      `Render Match ${item.id} (R${item.round} ${item.bracket}): P1: ${
-        player1?.name
-      }, P2: ${player2?.name}, Locked: ${matchIsEffectivelyLocked}, Winner: ${
-        item.winner?.name
-      }, P1_exists: ${!!item.player1}, P2_exists: ${!!item.player2}`
-    );
-
     if (item.player1 && !item.player2 && item.winner) {
-      // Bye with auto-winner
       return (
         <View style={styles.matchContainer}>
           <Text style={styles.bracketInfoText}>
@@ -1404,7 +1172,6 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
     }
 
     if (item.player1 && item.player2) {
-      // Standard match
       return (
         <View style={styles.matchContainer}>
           <Text style={styles.bracketInfoText}>
@@ -1450,7 +1217,6 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
         </View>
       );
     }
-    // Fallback for TBD vs TBD or other unhandled cases
     return (
       <View style={styles.matchContainer}>
         <Text style={styles.bracketInfoText}>
@@ -1471,12 +1237,6 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
     );
   };
 
-  // --- PASTE YOUR FULL executeAdvanceRound, allCurrentRoundMatchesCompleted, displayTitle, matchesForDisplay, BracketViewButtons HERE ---
-  // --- from your provided code to ensure they are complete ---
-  // For brevity, I'm not re-pasting them, but they are essential.
-  // Ensure the `Button` component is imported if BracketViewButtons uses it.
-
-  // Main return JSX
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
@@ -1484,7 +1244,6 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
           <TouchableOpacity onPress={onGoBack} style={styles.backButton}>
             <Text style={styles.backButtonText}>&lt; Home</Text>
           </TouchableOpacity>
-          {/* <Text style={styles.title}>{displayTitle()}</Text> */}
         </View>
         <Text style={styles.titleText}>TournaTrack - {tournamentType}</Text>
         <Text style={styles.subTitle}>{displayTitle()}</Text>
@@ -1552,7 +1311,7 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
                 </Pressable>
                 <Pressable
                   style={[styles.modalButton, styles.modalButtonConfirm]}
-                  onPress={executeAdvanceRound} // Ensure executeAdvanceRound is defined
+                  onPress={executeAdvanceRound}
                 >
                   <Text style={styles.modalButtonText}>YES</Text>
                 </Pressable>
@@ -1578,7 +1337,6 @@ const styles = StyleSheet.create({
   backButton: { padding: 10 },
   backButtonText: { fontSize: 16, color: "#007bff" },
   titleText: {
-    // Renamed from title to avoid conflict if displayTitle was also 'title'
     fontSize: 20,
     fontWeight: "bold",
     textAlign: "center",
@@ -1604,7 +1362,6 @@ const styles = StyleSheet.create({
     color: "#666",
   },
   matchContainer: {
-    // Added
     padding: 10,
     marginVertical: 5,
     backgroundColor: "#fff",
@@ -1614,19 +1371,16 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   bracketInfoText: {
-    // Added
     fontSize: 12,
     color: "#666",
     marginBottom: 5,
   },
   playerRow: {
-    // Added
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
   playerButton: {
-    // Added
     flex: 1,
     paddingVertical: 10,
     paddingHorizontal: 5,
@@ -1637,30 +1391,24 @@ const styles = StyleSheet.create({
     marginHorizontal: 5,
   },
   playerButtonText: {
-    // Added
     fontSize: 14,
   },
   playerButtonDisabled: {
-    // Added
     backgroundColor: "#e9ecef",
   },
   winnerButton: {
-    // Added
-    backgroundColor: "#d4edda", // Light green
+    backgroundColor: "#d4edda",
     borderColor: "#c3e6cb",
   },
   vsText: {
-    // Added
     marginHorizontal: 5,
     fontSize: 14,
     fontWeight: "bold",
   },
   matchText: {
-    // Added (generic text for match details)
     fontSize: 14,
   },
   winnerText: {
-    // Added
     marginTop: 5,
     fontSize: 13,
     fontWeight: "bold",
@@ -1668,19 +1416,16 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   lockedMatchText: {
-    // Added
     fontSize: 10,
     color: "red",
     textAlign: "center",
     marginTop: 3,
   },
   advanceButtonContainer: {
-    // Added
     marginVertical: 15,
     alignItems: "center",
   },
   pressableButton: {
-    // Added
     backgroundColor: "#007bff",
     paddingVertical: 12,
     paddingHorizontal: 30,
@@ -1688,15 +1433,12 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   pressableButtonDisabled: {
-    // Added
     backgroundColor: "#6c757d",
   },
   pressableButtonPressed: {
-    // Added
     backgroundColor: "#0056b3",
   },
   pressableButtonText: {
-    // Added
     color: "white",
     fontSize: 16,
     fontWeight: "bold",

@@ -75,12 +75,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateToPlayerInput }) => {
           <TouchableOpacity
             style={styles.button}
             onPress={() =>
-              // Assuming DoubleElimination8 is the base type for 6,7,8 player DE
               handleTournamentSelect(TournamentType.DoubleElimination8, 6)
             }
           >
             <Text style={styles.buttonText}>6 Players</Text>
           </TouchableOpacity>
+          {/* Removed 7 Players Button
           <TouchableOpacity
             style={styles.button}
             onPress={() =>
@@ -89,6 +89,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateToPlayerInput }) => {
           >
             <Text style={styles.buttonText}>7 Players</Text>
           </TouchableOpacity>
+          */}
           <TouchableOpacity
             style={styles.button}
             onPress={() =>
@@ -97,16 +98,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateToPlayerInput }) => {
           >
             <Text style={styles.buttonText}>8 Players</Text>
           </TouchableOpacity>
-          {/* Removed 10 Players Button
-          <TouchableOpacity
-            style={styles.button}
-            onPress={() =>
-              handleTournamentSelect(TournamentType.DoubleElimination10, 10)
-            }
-          >
-            <Text style={styles.buttonText}>10 Players</Text>
-          </TouchableOpacity>
-          */}
           <TouchableOpacity
             style={styles.button}
             onPress={() =>
