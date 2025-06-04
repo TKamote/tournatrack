@@ -74,8 +74,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateToPlayerInput }) => {
           <Text style={styles.sectionTitle}>Double Elimination</Text>
           <TouchableOpacity
             style={styles.button}
-            onPress={() =>
-              handleTournamentSelect(TournamentType.DoubleElimination8, 6)
+            onPress={
+              () => handleTournamentSelect(TournamentType.DoubleElimination8, 6) // Note: Type implies 8, but players is 6. Ensure this is intended.
             }
           >
             <Text style={styles.buttonText}>6 Players</Text>
@@ -123,58 +123,61 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateToPlayerInput }) => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#f0f0f0",
+    backgroundColor: "#2c3e50", // Darker background for a more "serious" feel
   },
   container: {
     flexGrow: 1,
     alignItems: "center",
-    paddingVertical: 20,
-    paddingHorizontal: 10,
+    paddingVertical: 30, // Increased vertical padding
+    paddingHorizontal: 15, // Increased horizontal padding
   },
   title: {
-    fontSize: 26,
+    fontSize: 30, // Reduced font size by 2px
     fontWeight: "bold",
-    marginBottom: 10,
-    color: "#333",
+    marginBottom: 15,
+    color: "#ecf0f1", // Light color for dark background
   },
   subtitle: {
-    fontSize: 16,
-    marginBottom: 30,
-    color: "#555",
+    fontSize: 18, // Slightly larger subtitle
+    marginBottom: 40, // Increased margin
+    color: "#bdc3c7", // Lighter grey
+    textAlign: "center",
   },
   section: {
-    width: "90%",
-    marginBottom: 25,
-    padding: 15,
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    elevation: 2,
+    width: "95%", // Slightly wider sections
+    marginBottom: 30,
+    padding: 20, // Increased padding within sections
+    backgroundColor: "#34495e", // Darker section background
+    borderRadius: 10, // More rounded corners
+    elevation: 3, // Slightly more elevation
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 20, // Larger section title
     fontWeight: "600",
-    marginBottom: 15,
-    color: "#007bff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-    paddingBottom: 5,
+    marginBottom: 20, // Increased margin
+    color: "#1abc9c", // Teal accent color for section titles
+    borderBottomWidth: 2, // Thicker border
+    borderBottomColor: "#2c3e50", // Border color matching overall background
+    paddingBottom: 8, // Increased padding
+    textAlign: "center",
   },
   button: {
-    backgroundColor: "#007bff",
-    paddingVertical: 12,
+    backgroundColor: "#1abc9c", // Teal buttons
+    paddingVertical: 15, // Taller buttons
     paddingHorizontal: 20,
-    borderRadius: 5,
-    marginBottom: 10,
+    borderRadius: 8, // More rounded buttons
+    marginBottom: 12, // Slightly more space between buttons
     alignItems: "center",
+    elevation: 2,
   },
   buttonText: {
     color: "#ffffff",
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: 16, // Larger button text
+    fontWeight: "bold", // Bolder button text
   },
 });
 
