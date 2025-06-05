@@ -14,6 +14,8 @@ import {
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { Player, Match, BracketType, TournamentType } from "../types";
+import { COLORS } from "../constants/colors";
+import MatchListItem from "../components/MatchListItem";
 import {
   generatePlayers as generateDefaultPlayers,
   createSEInitialMatches,
@@ -1257,7 +1259,15 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
             style={{ width: "100%" }}
             data={matchesForDisplay()}
             keyExtractor={(item) => item.id}
-            renderItem={renderMatchItem}
+            renderItem={({ item }) => (
+              <MatchListItem
+                item={item}
+                players={players}
+                tournamentType={tournamentType}
+                isMatchLocked={isMatchLocked}
+                onSetWinner={handleSetWinner}
+              />
+            )}
             extraData={{
               playersVersion: players.map((p) => p.id + p.losses).join("-"),
               matchesVersion: matches.map((m) => m.id + m.winner?.id).join("-"),
@@ -1326,7 +1336,7 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
 };
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#f0f0f0" },
+  safeArea: { flex: 1, backgroundColor: COLORS.backgroundLight },
   container: { flex: 1, padding: 10 },
   headerControls: {
     flexDirection: "row",
@@ -1335,23 +1345,24 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   backButton: { padding: 10 },
-  backButtonText: { fontSize: 16, color: "#007bff" },
+  backButtonText: { fontSize: 16, color: COLORS.primary },
   titleText: {
     fontSize: 20,
     fontWeight: "bold",
     textAlign: "center",
     marginBottom: 5,
+    color: COLORS.textDark, // Assuming you want a dark color for the title
   },
   subTitle: {
     fontSize: 16,
     textAlign: "center",
     marginBottom: 10,
-    color: "#555",
+    color: COLORS.textMedium,
   },
   tournamentWinner: {
     fontSize: 22,
     fontWeight: "bold",
-    color: "green",
+    color: COLORS.success,
     textAlign: "center",
     marginVertical: 20,
   },
@@ -1359,87 +1370,27 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: "center",
     marginVertical: 20,
-    color: "#666",
-  },
-  matchContainer: {
-    padding: 10,
-    marginVertical: 5,
-    backgroundColor: "#fff",
-    borderRadius: 5,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    elevation: 1,
-  },
-  bracketInfoText: {
-    fontSize: 12,
-    color: "#666",
-    marginBottom: 5,
-  },
-  playerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  playerButton: {
-    flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 5,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 4,
-    alignItems: "center",
-    marginHorizontal: 5,
-  },
-  playerButtonText: {
-    fontSize: 14,
-  },
-  playerButtonDisabled: {
-    backgroundColor: "#e9ecef",
-  },
-  winnerButton: {
-    backgroundColor: "#d4edda",
-    borderColor: "#c3e6cb",
-  },
-  vsText: {
-    marginHorizontal: 5,
-    fontSize: 14,
-    fontWeight: "bold",
-  },
-  matchText: {
-    fontSize: 14,
-  },
-  winnerText: {
-    marginTop: 5,
-    fontSize: 13,
-    fontWeight: "bold",
-    color: "green",
-    textAlign: "center",
-  },
-  lockedMatchText: {
-    fontSize: 10,
-    color: "red",
-    textAlign: "center",
-    marginTop: 3,
+    color: COLORS.textLight,
   },
   advanceButtonContainer: {
     marginVertical: 15,
     alignItems: "center",
   },
   pressableButton: {
-    backgroundColor: "#007bff",
+    backgroundColor: COLORS.primary,
     paddingVertical: 12,
-    paddingHorizontal: 30,
+    paddingHorizontal: 30, // This was your original value
     borderRadius: 5,
     elevation: 2,
   },
   pressableButtonDisabled: {
-    backgroundColor: "#6c757d",
+    backgroundColor: COLORS.secondary,
   },
   pressableButtonPressed: {
-    backgroundColor: "#0056b3",
+    backgroundColor: COLORS.primaryDark,
   },
   pressableButtonText: {
-    color: "white",
+    color: COLORS.textWhite,
     fontSize: 16,
     fontWeight: "bold",
   },
@@ -1450,14 +1401,24 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.5)",
   },
   modalContent: {
-    backgroundColor: "white",
+    backgroundColor: COLORS.backgroundWhite,
     padding: 20,
     borderRadius: 10,
     width: "80%",
     alignItems: "center",
   },
-  modalTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 10 },
-  modalMessage: { fontSize: 16, marginBottom: 20, textAlign: "center" },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 10,
+    color: COLORS.textDark, // Assuming dark text for modal title
+  },
+  modalMessage: {
+    fontSize: 16,
+    marginBottom: 20,
+    textAlign: "center",
+    color: COLORS.textMedium, // Assuming medium text for modal message
+  },
   modalButtonContainer: {
     flexDirection: "row",
     justifyContent: "space-around",
@@ -1470,9 +1431,9 @@ const styles = StyleSheet.create({
     minWidth: 100,
     alignItems: "center",
   },
-  modalButtonCancel: { backgroundColor: "#6c757d" },
-  modalButtonConfirm: { backgroundColor: "#007bff" },
-  modalButtonText: { color: "white", fontSize: 16 },
+  modalButtonCancel: { backgroundColor: COLORS.secondary },
+  modalButtonConfirm: { backgroundColor: COLORS.primary },
+  modalButtonText: { color: COLORS.textWhite, fontSize: 16 },
 });
 
 export default TournamentScreen;
