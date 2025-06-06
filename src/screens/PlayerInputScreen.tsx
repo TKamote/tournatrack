@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -11,16 +11,21 @@ import {
   KeyboardAvoidingView, // Import KeyboardAvoidingView
   Platform, // Import Platform
 } from "react-native";
-import { TournamentType } from "../types";
+import { TournamentType, MatchFormat } from "../types";
+import { COLORS } from "../constants/colors";
+import MatchFormatSelector from "../components/MatchFormatSelector";
+
+const defaultMatchFormats = {
+  bo5: { bestOf: 5, gamesNeededToWin: 3 },
+  bo7: { bestOf: 7, gamesNeededToWin: 4 },
+  bo9: { bestOf: 9, gamesNeededToWin: 5 },
+  bo11: { bestOf: 11, gamesNeededToWin: 6 },
+} as const;
 
 interface PlayerInputScreenProps {
   tournamentType: TournamentType;
   numPlayers: number;
-  onStartTournament: (
-    type: TournamentType,
-    numPlayers: number,
-    names: string[]
-  ) => void;
+  onStartTournament: (playerNames: string[], format: MatchFormat) => void;
   onGoBack?: () => void;
 }
 
@@ -30,19 +35,28 @@ const PlayerInputScreen: React.FC<PlayerInputScreenProps> = ({
   onStartTournament,
   onGoBack,
 }) => {
-  const [playerNames, setPlayerNames] = useState<string[]>([]);
+  // Initialize playerNames with proper length immediately
+  const [playerNames, setPlayerNames] = useState<string[]>(() =>
+    Array(numPlayers).fill("")
+  );
+  const [matchFormat, setMatchFormat] = useState<MatchFormat | null>(null);
+  const [isFormatSelected, setIsFormatSelected] = useState(false);
 
-  useEffect(() => {
-    setPlayerNames(Array(numPlayers).fill(""));
-  }, [numPlayers]);
-
-  const handleNameChange = (text: string, index: number) => {
-    const newPlayerNames = [...playerNames];
-    newPlayerNames[index] = text;
-    setPlayerNames(newPlayerNames);
-  };
+  const handleNameChange = useCallback((text: string, index: number) => {
+    setPlayerNames((prev) => {
+      const newNames = [...prev];
+      newNames[index] = text;
+      return newNames;
+    });
+  }, []);
 
   const validateAndProceed = () => {
+    // Add null/undefined check before validation
+    if (!playerNames || playerNames.length === 0) {
+      Alert.alert("Error", "No players available");
+      return;
+    }
+
     if (playerNames.some((name) => name.trim() === "")) {
       Alert.alert("Validation Error", "All player names must be filled in.");
       return;
@@ -53,12 +67,31 @@ const PlayerInputScreen: React.FC<PlayerInputScreenProps> = ({
       Alert.alert("Validation Error", "Player names must be unique.");
       return;
     }
+
+    if (!matchFormat) {
+      Alert.alert("Error", "Please select a race format");
+      return;
+    }
+
+    // Add logging to debug
+    console.log("Starting tournament with:", {
+      playerCount: playerNames.length,
+      players: playerNames,
+      format: matchFormat,
+    });
+
     onStartTournament(
-      tournamentType,
-      numPlayers,
-      playerNames.map((name) => name.trim())
+      playerNames.map((name) => name.trim()),
+      matchFormat
     );
   };
+
+  const areAllPlayersEntered = useCallback(() => {
+    return (
+      playerNames.every((name) => name.trim() !== "") &&
+      playerNames.length === numPlayers
+    );
+  }, [playerNames, numPlayers]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -81,29 +114,48 @@ const PlayerInputScreen: React.FC<PlayerInputScreenProps> = ({
             For: {tournamentType} ({numPlayers} Players)
           </Text>
 
-          {playerNames.map((name, index) => (
-            <View key={index} style={styles.inputContainer}>
-              <Text style={styles.label}>Player {index + 1}:</Text>
-              <TextInput
-                style={styles.input}
-                placeholder={`Enter name for Player ${index + 1}`}
-                value={name}
-                onChangeText={(text) => handleNameChange(text, index)}
-                autoCapitalize="words"
-                returnKeyType={
-                  index === playerNames.length - 1 ? "done" : "next"
-                } // Helpful for keyboard navigation
-                onSubmitEditing={() => {
-                  // Optionally, focus next input or submit form
-                  // This requires managing refs to TextInputs
-                }}
-              />
-            </View>
-          ))}
+          <View style={styles.playersGridContainer}>
+            {playerNames.map((name, index) => (
+              <View key={index} style={styles.playerInputWrapper}>
+                <Text style={styles.label}>P{index + 1}</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder={`Player ${index + 1}`}
+                  value={name}
+                  onChangeText={(text) =>
+                    handleNameChange(text.slice(0, 12), index)
+                  } // Limit to 12 chars
+                  autoCapitalize="words"
+                  returnKeyType={
+                    index === playerNames.length - 1 ? "done" : "next"
+                  }
+                  maxLength={12} // Add character limit
+                />
+              </View>
+            ))}
+          </View>
+
+          <View
+            style={[
+              styles.formatSelectorContainer,
+              !areAllPlayersEntered() && styles.formatSelectorDisabled,
+            ]}
+          >
+            <Text style={styles.sectionTitle}>Select Race Format</Text>
+            <MatchFormatSelector
+              selectedFormat={matchFormat}
+              onFormatChange={(format) => {
+                setMatchFormat(format);
+                setIsFormatSelected(true);
+              }}
+              disabled={!areAllPlayersEntered()}
+            />
+          </View>
 
           <TouchableOpacity
             style={styles.proceedButton}
             onPress={validateAndProceed}
+            disabled={!areAllPlayersEntered() || !isFormatSelected}
           >
             <Text style={styles.proceedButtonText}>Start Tournament</Text>
           </TouchableOpacity>
@@ -123,8 +175,8 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     flexGrow: 1,
-    padding: 20,
-    justifyContent: "center", // Helps to center content if it's less than screen height
+    padding: 10, // Reduced padding
+    justifyContent: "flex-start", // Changed to start from top
   },
   backButton: {
     alignSelf: "flex-start",
@@ -147,22 +199,34 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     color: "#555",
   },
-  inputContainer: {
-    marginBottom: 15,
+  playersGridContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    marginHorizontal: 10,
+  },
+  playerInputWrapper: {
+    width: "48%", // Just under 50% to account for spacing
+    marginBottom: 10,
+    flexDirection: "row",
+    alignItems: "center",
   },
   label: {
-    fontSize: 16,
-    marginBottom: 5,
+    fontSize: 14,
+    marginRight: 5,
     color: "#333",
+    width: 25, // Fixed width for label
   },
   input: {
+    flex: 1,
     borderWidth: 1,
     borderColor: "#ccc",
     borderRadius: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 12,
-    fontSize: 16,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    fontSize: 14,
     backgroundColor: "#fff",
+    height: 36,
   },
   proceedButton: {
     backgroundColor: "#28a745",
@@ -180,6 +244,25 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 18,
     fontWeight: "bold",
+  },
+  formatSelectorContainer: {
+    marginTop: 20,
+    marginBottom: 15,
+    width: "100%",
+    opacity: 1,
+  },
+  formatSelectorDisabled: {
+    opacity: 0.5,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: COLORS.textDark,
+    textAlign: "center",
+    marginBottom: 10,
+  },
+  startButton: {
+    marginTop: 20,
   },
 });
 

@@ -5,15 +5,17 @@ import {
   View,
   FlatList,
   SafeAreaView,
-  TouchableOpacity,
-  Pressable,
   Alert,
-  Modal,
-  ScrollView,
-  Button,
+  TouchableOpacity,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
-import { Player, Match, BracketType, TournamentType } from "../types";
+import {
+  Player,
+  Match,
+  BracketType,
+  TournamentType,
+  MatchFormat,
+} from "../types";
 import { COLORS } from "../constants/colors";
 import MatchListItem from "../components/MatchListItem";
 import {
@@ -25,12 +27,19 @@ import {
   generateDELosersBracketRound1Matches,
   generateDELosersBracketNextRoundMatches,
   createMatch,
+  shuffleArray,
 } from "../utils/tournamentUtils";
+import BracketSelectionButtons from "../components/BracketSelectionButtons";
+import ConfirmActionModal from "../components/ConfirmActionModal";
+import PrimaryButton from "../components/PrimaryButton";
+import ScreenHeader from "../components/ScreenHeader";
+import MatchFormatSelector from "../components/MatchFormatSelector";
 
 interface TournamentScreenProps {
   tournamentType: TournamentType;
   numPlayers: number;
   playerNames: string[];
+  matchFormat: MatchFormat; // Add this prop
   onGoBack: () => void;
 }
 
@@ -38,6 +47,7 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
   tournamentType,
   numPlayers,
   playerNames: receivedPlayerNames,
+  matchFormat: receivedMatchFormat,
   onGoBack,
 }) => {
   const [players, setPlayers] = useState<Player[]>([]);
@@ -51,59 +61,59 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
     BracketType | "all"
   >("all");
   const [isAdvanceModalVisible, setIsAdvanceModalVisible] = useState(false);
-  const [hasInitialized, setHasInitialized] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState<boolean>(false);
+  const defaultMatchFormats = {
+    bo5: { bestOf: 5, gamesNeededToWin: 3 },
+    bo7: { bestOf: 7, gamesNeededToWin: 4 },
+    bo9: { bestOf: 9, gamesNeededToWin: 5 },
+    bo11: { bestOf: 11, gamesNeededToWin: 6 },
+  } as const;
 
   useEffect(() => {
+    console.log("Resetting tournament state..."); // Add logging
     setHasInitialized(false);
     setPlayers([]);
     setMatches([]);
-  }, [numPlayers, tournamentType, receivedPlayerNames]);
+  }, [numPlayers, tournamentType]); // Remove receivedPlayerNames from dependencies
 
+  // Update the useEffect that handles initialization
   useEffect(() => {
     if (
-      !hasInitialized &&
       receivedPlayerNames &&
       receivedPlayerNames.length === numPlayers &&
-      numPlayers > 0
+      numPlayers > 0 &&
+      receivedMatchFormat // Add this check
     ) {
-      const initialPlayers = receivedPlayerNames.map((name, index) => ({
-        id: `player-${index + 1}-${name.replace(/\s+/g, "-").toLowerCase()}`,
-        name: name,
+      const initialPlayers = receivedPlayerNames.map((name, i) => ({
+        id: `player-${i + 1}`,
+        name,
         losses: 0,
+        seed: i + 1,
       }));
-      setPlayers(initialPlayers);
-    } else if (
-      !hasInitialized &&
-      (!receivedPlayerNames || receivedPlayerNames.length !== numPlayers) &&
-      numPlayers > 0
-    ) {
-      setPlayers(generateDefaultPlayers(numPlayers));
-    }
-  }, [receivedPlayerNames, numPlayers, hasInitialized]);
 
-  useEffect(() => {
-    if (players.length > 0 && !hasInitialized) {
+      const shuffledPlayers = shuffleArray(initialPlayers);
+      setPlayers(shuffledPlayers);
+
+      // Create initial matches with the received format
       let initialMatches: Match[] = [];
       if (tournamentType.startsWith("Single Knockout")) {
-        initialMatches = createSEInitialMatches(players);
+        initialMatches = createSEInitialMatches(
+          shuffledPlayers,
+          receivedMatchFormat
+        );
       } else if (tournamentType.startsWith("Double Elimination")) {
-        initialMatches = createDoubleEliminationInitialMatches(players);
+        initialMatches = createDoubleEliminationInitialMatches(
+          shuffledPlayers,
+          receivedMatchFormat
+        );
       }
 
-      if (initialMatches.length > 0) {
-        setMatches(initialMatches);
-        setCurrentWinnersRound(1);
-        setCurrentLosersRound(1);
-        setTournamentOver(false);
-        setOverallWinner(null);
-        setWbRound1Losers([]);
-        setActiveBracketForDisplay(
-          tournamentType.startsWith("Double Elimination") ? "all" : "winners"
-        );
-        setHasInitialized(true);
-      }
+      setMatches(initialMatches);
+      setHasInitialized(true);
+
+      console.log("Tournament initialized with format:", receivedMatchFormat);
     }
-  }, [players, tournamentType, hasInitialized]);
+  }, [receivedPlayerNames, numPlayers, tournamentType, receivedMatchFormat]);
 
   const isMatchLocked = useCallback(
     (match: Match): boolean => {
@@ -279,6 +289,122 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
       // numPlayers, // numPlayers might not be needed directly here anymore
       // createMatch is implicitly used, ensure it's stable or add if it's from component state/props
     ]
+  );
+
+  // Add these helper functions
+  const findNextMatch = (
+    currentMatch: Match,
+    allMatches: Match[]
+  ): Match | null => {
+    if (currentMatch.bracket === "winners") {
+      // Find next winners bracket match
+      return (
+        allMatches.find(
+          (m) =>
+            (m.bracket === "winners" &&
+              m.round === currentMatch.round + 1 &&
+              !m.player1) ||
+            !m.player2
+        ) || null
+      );
+    } else {
+      // Find next losers bracket match
+      return (
+        allMatches.find(
+          (m) =>
+            (m.bracket === "losers" &&
+              m.round === currentMatch.round + 1 &&
+              !m.player1) ||
+            !m.player2
+        ) || null
+      );
+    }
+  };
+
+  const advanceWinner = useCallback((match: Match) => {
+    if (!match.winner) return;
+
+    setMatches((prevMatches) => {
+      const nextMatch = findNextMatch(match, prevMatches);
+      if (!nextMatch) return prevMatches;
+
+      return prevMatches.map((m) => {
+        if (m.id === nextMatch.id) {
+          // Place winner in next available slot
+          if (!m.player1) {
+            return { ...m, player1: match.winner };
+          } else {
+            return { ...m, player2: match.winner };
+          }
+        }
+        return m;
+      });
+    });
+  }, []);
+
+  const handleIncrementScore = useCallback(
+    (matchId: string, playerId: string) => {
+      setMatches((prevMatches) => {
+        return prevMatches.map((match) => {
+          if (match.id !== matchId) return match;
+
+          // Initialize games array if it doesn't exist
+          const games = match.games || [];
+          const winningPlayer = players.find((p) => p.id === playerId);
+          if (!winningPlayer) return match;
+
+          // Check current scores before adding new game
+          const currentP1Wins = games.filter(
+            (g) => g.winner?.id === match.player1?.id
+          ).length;
+          const currentP2Wins = games.filter(
+            (g) => g.winner?.id === match.player2?.id
+          ).length;
+
+          // Check if someone has already won
+          if (
+            currentP1Wins >= match.format.gamesNeededToWin ||
+            currentP2Wins >= match.format.gamesNeededToWin
+          ) {
+            return match; // Don't allow more scores if someone has won
+          }
+
+          // Create new game
+          const newGame = {
+            id: `game-${matchId}-${games.length + 1}`,
+            winner: winningPlayer,
+          };
+          const updatedGames = [...games, newGame];
+
+          // Check if this game resulted in a win
+          const p1Wins = updatedGames.filter(
+            (g) => g.winner?.id === match.player1?.id
+          ).length;
+          const p2Wins = updatedGames.filter(
+            (g) => g.winner?.id === match.player2?.id
+          ).length;
+
+          let winner = null;
+          if (p1Wins >= match.format.gamesNeededToWin) {
+            winner = match.player1;
+          } else if (p2Wins >= match.format.gamesNeededToWin) {
+            winner = match.player2;
+          }
+
+          // If we have a winner after this game, advance them
+          if (winner) {
+            advanceWinner(match);
+          }
+
+          return {
+            ...match,
+            games: updatedGames,
+            winner,
+          };
+        });
+      });
+    },
+    [players, advanceWinner] // Add players to dependencies
   );
 
   const getLosersOfRound = (
@@ -1029,40 +1155,6 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
         newMatchesToAdd.push(gfMatch);
       }
 
-      // --- (F) Set Overall Winner (after Grand Finals played) ---
-      // This section in executeAdvanceRound is now largely redundant for GF if handleSetWinner is comprehensive.
-      // It might still serve as a fallback for other tournament types or if handleSetWinner misses a case.
-      // For DE GF, handleSetWinner should be the primary driver.
-      // Consider removing or commenting out the GF-specific parts of Section F in executeAdvanceRound.
-      /*
-          // const allGrandFinalsMatches = matches // Definition moved up
-          //  .concat(newMatchesToAdd)
-          //  .filter((m) => m.bracket === "grandFinals");
-          if (!tournamentOver && allGrandFinalsMatches.length > 0) { // Check !tournamentOver
-            const firstGF = allGrandFinalsMatches.find(
-              (m) => !m.isGrandFinalsReset && m.winner
-            );
-            const resetGF = allGrandFinalsMatches.find(
-              (m) => m.isGrandFinalsReset === true && m.winner
-            );
-
-            // This logic is now primarily in handleSetWinner
-            if (firstGF) {
-              const wbPlayerInGF = firstGF.player1; 
-              if (firstGF.winner?.id === wbPlayerInGF?.id && !tournamentOver) {
-                // setOverallWinner(firstGF.winner!); // Handled by handleSetWinner
-                // setTournamentOver(true);           // Handled by handleSetWinner
-              } else if (firstGF.winner?.id !== wbPlayerInGF?.id) { // LB Player won first GF
-                if (resetGF && !tournamentOver) {
-                  // setOverallWinner(resetGF.winner!); // Handled by handleSetWinner
-                  // setTournamentOver(true);            // Handled by handleSetWinner
-                }
-                // Creation of reset match is now in handleSetWinner
-              }
-            }
-          }
-      */
-
       if (newMatchesToAdd.length > 0) {
         setMatches((prev) => {
           const existingMatchIds = new Set(prev.map((m: Match) => m.id));
@@ -1098,266 +1190,102 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
     setIsAdvanceModalVisible(true);
   };
 
-  const BracketViewButtons = () => {
-    if (
-      !tournamentType.startsWith("Double Elimination") ||
-      tournamentOver ||
-      matches.some((m) => m.bracket === "grandFinals")
-    ) {
-      return null;
-    }
-    return (
-      <View
-        style={{
-          flexDirection: "row",
-          justifyContent: "center",
-          marginVertical: 10,
-        }}
-      >
-        <Button
-          title="WB"
-          onPress={() => setActiveBracketForDisplay("winners")}
-          disabled={activeBracketForDisplay === "winners"}
-        />
-        <View style={{ width: 10 }} />
-        <Button
-          title="LB"
-          onPress={() => setActiveBracketForDisplay("losers")}
-          disabled={activeBracketForDisplay === "losers"}
-        />
-        <View style={{ width: 10 }} />
-        <Button
-          title="All"
-          onPress={() => setActiveBracketForDisplay("all")}
-          disabled={activeBracketForDisplay === "all"}
-        />
-      </View>
-    );
-  };
-
-  const renderMatchItem = ({ item }: { item: Match }) => {
-    const player1 = players.find((p) => p.id === item.player1?.id);
-    const player2 = players.find((p) => p.id === item.player2?.id);
-
-    const player1Name = player1
-      ? `${player1.name} (${player1.losses}L)`
-      : item.player1
-      ? "P1?"
-      : "TBD";
-    const player2Name = player2
-      ? `${player2.name} (${player2.losses}L)`
-      : item.player2
-      ? "P2?"
-      : "TBD / BYE";
-
-    const displayP1Name = tournamentType.startsWith("Single Knockout")
-      ? player1?.name || "TBD"
-      : player1Name;
-    const displayP2Name = tournamentType.startsWith("Single Knockout")
-      ? player2?.name || "TBD / BYE"
-      : player2Name;
-
-    const matchIsEffectivelyLocked = isMatchLocked(item);
-
-    if (item.player1 && !item.player2 && item.winner) {
-      return (
-        <View style={styles.matchContainer}>
-          <Text style={styles.bracketInfoText}>
-            {item.bracket.toUpperCase()} - R{item.round} M{item.matchNumber}
-          </Text>
-          <Text style={styles.matchText}>{displayP1Name} gets a BYE</Text>
-          {matchIsEffectivelyLocked && (
-            <Text style={styles.lockedMatchText}>Locked</Text>
-          )}
-        </View>
-      );
-    }
-
-    if (item.player1 && item.player2) {
-      return (
-        <View style={styles.matchContainer}>
-          <Text style={styles.bracketInfoText}>
-            {item.bracket.toUpperCase()} - R{item.round} M{item.matchNumber}
-          </Text>
-          <View style={styles.playerRow}>
-            <TouchableOpacity
-              style={[
-                styles.playerButton,
-                item.winner?.id === item.player1.id && styles.winnerButton,
-                matchIsEffectivelyLocked && styles.playerButtonDisabled,
-              ]}
-              onPress={() =>
-                item.player1 && handleSetWinner(item.id, item.player1)
-              }
-              disabled={matchIsEffectivelyLocked || !item.player1}
-            >
-              <Text style={styles.playerButtonText}>{displayP1Name}</Text>
-            </TouchableOpacity>
-            <Text style={styles.vsText}>vs</Text>
-            <TouchableOpacity
-              style={[
-                styles.playerButton,
-                item.winner?.id === item.player2.id && styles.winnerButton,
-                matchIsEffectivelyLocked && styles.playerButtonDisabled,
-              ]}
-              onPress={() =>
-                item.player2 && handleSetWinner(item.id, item.player2)
-              }
-              disabled={matchIsEffectivelyLocked || !item.player2}
-            >
-              <Text style={styles.playerButtonText}>{displayP2Name}</Text>
-            </TouchableOpacity>
-          </View>
-          {item.winner && (
-            <Text style={styles.winnerText}>
-              Winner: {players.find((p) => p.id === item.winner!.id)?.name}
-            </Text>
-          )}
-          {matchIsEffectivelyLocked && item.winner && (
-            <Text style={styles.lockedMatchText}>Locked</Text>
-          )}
-        </View>
-      );
-    }
-    return (
-      <View style={styles.matchContainer}>
-        <Text style={styles.bracketInfoText}>
-          {item.bracket.toUpperCase()} - R{item.round} M{item.matchNumber}
-        </Text>
-        <Text style={styles.matchText}>
-          {displayP1Name} vs {displayP2Name}
-        </Text>
-        {item.winner && (
-          <Text style={styles.winnerText}>
-            Winner: {players.find((p) => p.id === item.winner!.id)?.name}
-          </Text>
-        )}
-        {matchIsEffectivelyLocked && item.winner && (
-          <Text style={styles.lockedMatchText}>Locked</Text>
-        )}
-      </View>
-    );
-  };
-
+  // First, update the initial UI render to show the format selector prominently
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        <View style={styles.headerControls}>
-          <TouchableOpacity onPress={onGoBack} style={styles.backButton}>
-            <Text style={styles.backButtonText}>&lt; Home</Text>
-          </TouchableOpacity>
-        </View>
-        <Text style={styles.titleText}>TournaTrack - {tournamentType}</Text>
-        <Text style={styles.subTitle}>{displayTitle()}</Text>
-        <BracketViewButtons />
-        {tournamentOver && overallWinner ? (
-          <Text style={styles.tournamentWinner}>
-            🏆 Winner: {overallWinner.name}! 🏆
-          </Text>
-        ) : matchesForDisplay().length > 0 ? (
-          <FlatList
-            style={{ width: "100%" }}
-            data={matchesForDisplay()}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <MatchListItem
-                item={item}
-                players={players}
-                tournamentType={tournamentType}
-                isMatchLocked={isMatchLocked}
-                onSetWinner={handleSetWinner}
-              />
-            )}
-            extraData={{
-              playersVersion: players.map((p) => p.id + p.losses).join("-"),
-              matchesVersion: matches.map((m) => m.id + m.winner?.id).join("-"),
-              currentWinnersRound,
-              currentLosersRound,
-              activeBracketForDisplay,
-              tournamentOver,
-            }}
-          />
-        ) : (
-          <Text style={styles.infoText}>
-            {!tournamentOver
-              ? "Generating matches or no pending matches for current view..."
-              : "Tournament ended."}
-          </Text>
-        )}
+        <ScreenHeader
+          title={displayTitle()}
+          subtitle={`${numPlayers} Players`}
+          onBack={onGoBack}
+        />
+        <FlatList
+          data={matchesForDisplay()}
+          renderItem={({ item }) => (
+            <MatchListItem
+              item={item}
+              players={players}
+              tournamentType={tournamentType}
+              isMatchLocked={isMatchLocked}
+              onSetWinner={handleSetWinner}
+              onIncrementScore={handleIncrementScore}
+            />
+          )}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+        />
+
         {!tournamentOver && (
           <View style={styles.advanceButtonContainer}>
-            <Pressable
-              style={({ pressed }) => [
-                styles.pressableButton,
-                (!allCurrentRoundMatchesCompleted() || tournamentOver) &&
-                  styles.pressableButtonDisabled,
-                pressed && styles.pressableButtonPressed,
+            <TouchableOpacity
+              style={[
+                styles.advanceButton,
+                !allCurrentRoundMatchesCompleted() &&
+                  styles.advanceButtonDisabled,
               ]}
               onPress={handleAdvanceRoundPress}
-              disabled={!allCurrentRoundMatchesCompleted() || tournamentOver}
+              disabled={!allCurrentRoundMatchesCompleted()}
             >
-              <Text style={styles.pressableButtonText}>Advance Round(s)</Text>
-            </Pressable>
+              <Text style={styles.advanceButtonText}>Advance Round</Text>
+            </TouchableOpacity>
           </View>
         )}
-        <Modal
-          transparent={true}
-          animationType="slide"
+
+        <ConfirmActionModal
           visible={isAdvanceModalVisible}
-          onRequestClose={() => setIsAdvanceModalVisible(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Confirm Advancement</Text>
-              <Text style={styles.modalMessage}>
-                Advance to next round? Results will be locked.
-              </Text>
-              <View style={styles.modalButtonContainer}>
-                <Pressable
-                  style={[styles.modalButton, styles.modalButtonCancel]}
-                  onPress={() => setIsAdvanceModalVisible(false)}
-                >
-                  <Text style={styles.modalButtonText}>Cancel</Text>
-                </Pressable>
-                <Pressable
-                  style={[styles.modalButton, styles.modalButtonConfirm]}
-                  onPress={executeAdvanceRound}
-                >
-                  <Text style={styles.modalButtonText}>YES</Text>
-                </Pressable>
-              </View>
-            </View>
-          </View>
-        </Modal>
-        <StatusBar style="auto" />
+          title="Advance Round" // Add this line
+          message="Are you sure you want to advance to the next round? This cannot be undone."
+          onConfirm={executeAdvanceRound}
+          onCancel={() => setIsAdvanceModalVisible(false)}
+        />
       </View>
     </SafeAreaView>
   );
 };
 
+// Update styles to remove the ones now in components
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: COLORS.backgroundLight },
-  container: { flex: 1, padding: 10 },
-  headerControls: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 10,
+  safeArea: {
+    flex: 1,
+    backgroundColor: COLORS.backgroundLight,
   },
-  backButton: { padding: 10 },
-  backButtonText: { fontSize: 16, color: COLORS.primary },
-  titleText: {
-    fontSize: 20,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: 5,
-    color: COLORS.textDark, // Assuming you want a dark color for the title
+  container: {
+    flex: 1,
+    padding: 10,
+  },
+  listContent: {
+    flexGrow: 1,
+    paddingBottom: 10,
+  },
+  advanceButtonContainer: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    backgroundColor: COLORS.backgroundWhite,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.backgroundLight,
+  },
+  advanceButton: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  advanceButtonDisabled: {
+    backgroundColor: COLORS.backgroundLight,
+    opacity: 0.5,
+  },
+  advanceButtonText: {
+    color: COLORS.textWhite,
+    fontSize: 16,
+    fontWeight: "600",
   },
   subTitle: {
-    fontSize: 16,
+    fontSize: 18,
+    fontWeight: "600",
     textAlign: "center",
-    marginBottom: 10,
-    color: COLORS.textMedium,
+    marginBottom: 15,
+    color: COLORS.textDark,
   },
   tournamentWinner: {
     fontSize: 22,
@@ -1372,68 +1300,56 @@ const styles = StyleSheet.create({
     marginVertical: 20,
     color: COLORS.textLight,
   },
-  advanceButtonContainer: {
-    marginVertical: 15,
-    alignItems: "center",
-  },
-  pressableButton: {
-    backgroundColor: COLORS.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 30, // This was your original value
-    borderRadius: 5,
-    elevation: 2,
-  },
-  pressableButtonDisabled: {
-    backgroundColor: COLORS.secondary,
-  },
-  pressableButtonPressed: {
-    backgroundColor: COLORS.primaryDark,
-  },
-  pressableButtonText: {
-    color: COLORS.textWhite,
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.5)",
-  },
-  modalContent: {
-    backgroundColor: COLORS.backgroundWhite,
-    padding: 20,
-    borderRadius: 10,
-    width: "80%",
-    alignItems: "center",
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 10,
-    color: COLORS.textDark, // Assuming dark text for modal title
-  },
-  modalMessage: {
-    fontSize: 16,
-    marginBottom: 20,
-    textAlign: "center",
-    color: COLORS.textMedium, // Assuming medium text for modal message
-  },
-  modalButtonContainer: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    width: "100%",
-  },
-  modalButton: {
-    paddingVertical: 10,
+  formatSelectorContainer: {
+    marginVertical: 20,
     paddingHorizontal: 20,
-    borderRadius: 5,
-    minWidth: 100,
-    alignItems: "center",
+    width: "100%",
+    backgroundColor: COLORS.backgroundWhite,
+    borderRadius: 8,
+    padding: 15,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
-  modalButtonCancel: { backgroundColor: COLORS.secondary },
-  modalButtonConfirm: { backgroundColor: COLORS.primary },
-  modalButtonText: { color: COLORS.textWhite, fontSize: 16 },
+  debugText: {
+    fontSize: 12,
+    color: "gray",
+    textAlign: "center",
+    marginVertical: 5,
+  },
+  setupContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20,
+  },
+  formatSelectorWrapper: {
+    width: "100%",
+    marginBottom: 30,
+    backgroundColor: COLORS.backgroundWhite,
+    borderRadius: 12,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  sectionTitle: {
+    fontSize: 24,
+    fontWeight: "600",
+    color: COLORS.textDark,
+    textAlign: "center",
+    marginBottom: 20,
+  },
 });
 
 export default TournamentScreen;

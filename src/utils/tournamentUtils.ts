@@ -1,5 +1,5 @@
 // filepath: src/utils/tournamentUtils.ts
-import { Player, Match, BracketType } from "../types";
+import { Player, Match, BracketType, MatchFormat } from "../types";
 
 // --- Match Creation Utility ---
 // Define createMatch HERE, before it's used by other functions in this file.
@@ -10,7 +10,8 @@ export const createMatch = (
   player1: Player | null,
   player2: Player | null,
   bracket: BracketType,
-  isGrandFinalsReset?: boolean
+  isGrandFinalsReset?: boolean,
+  format: MatchFormat = { bestOf: 1, gamesNeededToWin: 1 } // Add default format
 ): Match => {
   let winner = null;
   // Automatically assign a winner if one player is present and the other is null (bye)
@@ -29,20 +30,46 @@ export const createMatch = (
     winner,
     bracket,
     isGrandFinalsReset: isGrandFinalsReset || false,
+    format, // Add format
+    games: [], // Add empty games array
   };
+};
+
+// Add after imports, before other functions
+export const shuffleArray = <T>(array: T[]): T[] => {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
 };
 
 // --- Player Generation ---
 export const generatePlayers = (count: number): Player[] => {
-  return Array.from({ length: count }, (_, i) => ({
+  // First create unshuffled players
+  const unshuffledPlayers = Array.from({ length: count }, (_, i) => ({
     id: `player-${i + 1}`,
     name: `Player ${i + 1}`,
     losses: 0,
+    seed: i + 1, // Initial sequential seeding
+  }));
+
+  // Shuffle the players
+  const shuffledPlayers = shuffleArray(unshuffledPlayers);
+
+  // Reassign seeds based on new random order
+  return shuffledPlayers.map((player, index) => ({
+    ...player,
+    seed: index + 1,
   }));
 };
 
 // --- Single Elimination (SE) Specific Functions ---
-export const createSEInitialMatches = (players: Player[]): Match[] => {
+export const createSEInitialMatches = (
+  players: Player[],
+  format: MatchFormat
+): Match[] => {
   const matches: Match[] = [];
   const numPlayers = players.length;
   if (numPlayers < 2) return [];
@@ -56,7 +83,9 @@ export const createSEInitialMatches = (players: Player[]): Match[] => {
         i + 1,
         players[i * 2],
         players[i * 2 + 1],
-        "winners"
+        "winners",
+        false,
+        format // Pass the format
       )
     );
   }
@@ -66,7 +95,8 @@ export const createSEInitialMatches = (players: Player[]): Match[] => {
 export const generateSENextRoundMatches = (
   winners: Player[],
   nextRoundNumber: number,
-  totalMatchesSoFar: number
+  totalMatchesSoFar: number,
+  format: MatchFormat = { bestOf: 1, gamesNeededToWin: 1 }
 ): Match[] => {
   const nextRoundMatches: Match[] = [];
   if (winners.length < 2) return [];
@@ -83,10 +113,12 @@ export const generateSENextRoundMatches = (
         // Use createMatch
         matchId,
         nextRoundNumber,
-        matchNumberInRound, // Or use totalMatchesSoFar + i + 1 for global uniqueness
+        matchNumberInRound,
         player1,
         player2,
-        "winners"
+        "winners",
+        false,
+        format // Add format parameter here
       )
     );
   }
@@ -95,7 +127,8 @@ export const generateSENextRoundMatches = (
 
 // --- Double Elimination (DE) Specific Functions ---
 export const createDoubleEliminationInitialMatches = (
-  players: Player[] // Assume players are sorted by seed (player[0] is seed 1)
+  players: Player[],
+  format: MatchFormat
 ): Match[] => {
   const numActualPlayers = players.length;
   const matches: Match[] = [];
@@ -143,7 +176,9 @@ export const createDoubleEliminationInitialMatches = (
           p.matchNum,
           getPlayerBySeed(p.p1Seed, players, numActualPlayers),
           getPlayerBySeed(p.p2Seed, players, numActualPlayers),
-          "winners"
+          "winners",
+          false,
+          format // Pass the format
         )
       );
     });
@@ -169,7 +204,9 @@ export const createDoubleEliminationInitialMatches = (
           p.matchNum,
           getPlayerBySeed(p.p1Seed, players, numActualPlayers),
           getPlayerBySeed(p.p2Seed, players, numActualPlayers),
-          "winners"
+          "winners",
+          false,
+          format // Pass the format
         )
       );
     });
@@ -181,7 +218,8 @@ export const createDoubleEliminationInitialMatches = (
 export const generateDEWinnersBracketNextRound = (
   winners: Player[],
   nextRoundNumber: number,
-  existingMatchCount: number
+  existingMatchCount: number,
+  format: MatchFormat = { bestOf: 1, gamesNeededToWin: 1 }
 ): Match[] => {
   const nextRoundWBMatches: Match[] = [];
   if (winners.length < 2) return [];
@@ -200,7 +238,9 @@ export const generateDEWinnersBracketNextRound = (
         matchNumberInRound, // Or existingMatchCount + i + 1
         player1,
         player2,
-        "winners"
+        "winners",
+        false,
+        format // Add format parameter here
       )
     );
   }
@@ -209,7 +249,8 @@ export const generateDEWinnersBracketNextRound = (
 
 export const generateDELosersBracketRound1Matches = (
   wbRound1Losers: Player[],
-  existingMatchCount: number
+  existingMatchCount: number,
+  format: MatchFormat = { bestOf: 1, gamesNeededToWin: 1 }
 ): Match[] => {
   const numLosers = wbRound1Losers.length;
   const matches: Match[] = [];
@@ -222,87 +263,86 @@ export const generateDELosersBracketRound1Matches = (
   if (numLosers === 0) {
     return []; // No losers, no LB R1 matches from WB R1.
   } else if (numLosers === 1) {
-    // 1 loser gets a bye in LB R1
     matchIdCounter++;
-    matches.push({
-      id: `match-lb1-${matchIdCounter}`,
-      round: 1,
-      matchNumber: 1, // Only one "match" which is a bye
-      player1: wbRound1Losers[0],
-      player2: null,
-      winner: wbRound1Losers[0], // Auto-winner for bye
-      bracket: "losers",
-      isGrandFinalsReset: false,
-    });
+    matches.push(
+      createMatch(
+        `match-lb1-${matchIdCounter}`,
+        1,
+        1,
+        wbRound1Losers[0],
+        null,
+        "losers",
+        false,
+        format
+      )
+    );
   } else if (numLosers === 2) {
-    // 2 losers play 1 match
     matchIdCounter++;
-    matches.push({
-      id: `match-lb1-${matchIdCounter}`,
-      round: 1,
-      matchNumber: 1,
-      player1: wbRound1Losers[0], // Simple pairing: 1st vs 2nd
-      player2: wbRound1Losers[1],
-      winner: null,
-      bracket: "losers",
-      isGrandFinalsReset: false,
-    });
+    matches.push(
+      createMatch(
+        `match-lb1-${matchIdCounter}`,
+        1,
+        1,
+        wbRound1Losers[0],
+        wbRound1Losers[1],
+        "losers",
+        false,
+        format
+      )
+    );
   } else if (numLosers === 3) {
-    // 3 losers: 1 match, 1 player gets a bye.
-    // For simplicity, let's assume the "last" loser (by original WB seeding or order in array) gets the bye.
-    // And the first two play. You might want more sophisticated seeding here.
-    // Match: Loser[0] vs Loser[1]
     matchIdCounter++;
-    matches.push({
-      id: `match-lb1-${matchIdCounter}`,
-      round: 1,
-      matchNumber: 1,
-      player1: wbRound1Losers[0],
-      player2: wbRound1Losers[1],
-      winner: null,
-      bracket: "losers",
-      isGrandFinalsReset: false,
-    });
-    // Bye for Loser[2]
+    matches.push(
+      createMatch(
+        `match-lb1-${matchIdCounter}`,
+        1,
+        1,
+        wbRound1Losers[0],
+        wbRound1Losers[1],
+        "losers",
+        false,
+        format
+      )
+    );
     matchIdCounter++;
-    matches.push({
-      id: `match-lb1-${matchIdCounter}`,
-      round: 1,
-      matchNumber: 2, // Second "match slot" in LB R1
-      player1: wbRound1Losers[2],
-      player2: null,
-      winner: wbRound1Losers[2], // Auto-winner
-      bracket: "losers",
-      isGrandFinalsReset: false,
-    });
+    matches.push(
+      createMatch(
+        `match-lb1-${matchIdCounter}`,
+        1,
+        2,
+        wbRound1Losers[2],
+        null,
+        "losers",
+        false,
+        format
+      )
+    );
   } else if (numLosers === 4) {
-    // 4 losers play 2 matches (original logic for DE-8)
-    // Standard pairing for 4 players: P1vP4, P2vP3 (using indices 0v3, 1v2)
     matchIdCounter++;
-    matches.push({
-      id: `match-lb1-${matchIdCounter}`,
-      round: 1,
-      matchNumber: 1,
-      player1: wbRound1Losers[0],
-      player2: wbRound1Losers[3],
-      winner: null,
-      bracket: "losers",
-      isGrandFinalsReset: false,
-    });
+    matches.push(
+      createMatch(
+        `match-lb1-${matchIdCounter}`,
+        1,
+        1,
+        wbRound1Losers[0],
+        wbRound1Losers[3],
+        "losers",
+        false,
+        format
+      )
+    );
     matchIdCounter++;
-    matches.push({
-      id: `match-lb1-${matchIdCounter}`,
-      round: 1,
-      matchNumber: 2,
-      player1: wbRound1Losers[1],
-      player2: wbRound1Losers[2],
-      winner: null,
-      bracket: "losers",
-      isGrandFinalsReset: false,
-    });
-  } else {
-    console.warn(
-      `generateDELosersBracketRound1Matches received an unexpected number of losers: ${numLosers}`
+    matches.push(
+      createMatch(
+        `match-lb1-${matchIdCounter}`,
+        1,
+        2,
+        wbRound1Losers[1],
+        wbRound1Losers[2],
+        "losers",
+        false,
+        format
+      )
     );
   }
 
@@ -313,8 +353,9 @@ export const generateDELosersBracketNextRoundMatches = (
   advancingLBPlayers: Player[],
   droppingWBPlayers: Player[],
   nextLBRoundNumber: number,
-  numActualPlayers: number, // Changed from numPlayersInTournament for clarity
-  existingMatchCount: number
+  numActualPlayers: number,
+  existingMatchCount: number,
+  format: MatchFormat = { bestOf: 1, gamesNeededToWin: 1 }
 ): Match[] => {
   const newMatches: Match[] = [];
   console.log(
@@ -358,7 +399,9 @@ export const generateDELosersBracketNextRoundMatches = (
               1,
               advancingLBPlayers[0],
               droppingWBPlayers[0],
-              "losers"
+              "losers",
+              false,
+              format
             )
           );
           newMatches.push(
@@ -368,7 +411,9 @@ export const generateDELosersBracketNextRoundMatches = (
               2,
               advancingLBPlayers[1],
               droppingWBPlayers[1],
-              "losers"
+              "losers",
+              false,
+              format
             )
           );
         } else {
@@ -387,7 +432,9 @@ export const generateDELosersBracketNextRoundMatches = (
               1,
               advancingLBPlayers[0],
               droppingWBPlayers[0],
-              "losers"
+              "losers",
+              false,
+              format
             )
           );
           // The second droppingWBPlayer gets a bye to the next applicable LB round.
@@ -400,7 +447,9 @@ export const generateDELosersBracketNextRoundMatches = (
               2,
               droppingWBPlayers[1],
               null,
-              "losers"
+              "losers",
+              false,
+              format
             )
           );
         } else {
@@ -422,7 +471,9 @@ export const generateDELosersBracketNextRoundMatches = (
               1,
               advancingLBPlayers[0],
               advancingLBPlayers[1],
-              "losers"
+              "losers",
+              false,
+              format
             )
           );
         } else {
@@ -440,7 +491,9 @@ export const generateDELosersBracketNextRoundMatches = (
               1,
               advancingLBPlayers[0],
               advancingLBPlayers[1],
-              "losers"
+              "losers",
+              false,
+              format
             )
           );
         } else {
@@ -461,7 +514,9 @@ export const generateDELosersBracketNextRoundMatches = (
             1,
             advancingLBPlayers[0],
             droppingWBPlayers[0],
-            "losers"
+            "losers",
+            false,
+            format
           )
         );
       } else {

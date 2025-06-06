@@ -3,9 +3,20 @@ export interface Player {
   id: string;
   name: string;
   losses: number;
+  seed: number; // Add this new field
 }
 
 export type BracketType = "winners" | "losers" | "grandFinals";
+
+export interface Game {
+  id: string;
+  winner: {
+    id: string;
+    name: string;
+    losses: number;
+    seed: number;
+  } | null;
+}
 
 export interface Match {
   id: string;
@@ -16,7 +27,14 @@ export interface Match {
   winner: Player | null;
   bracket: BracketType;
   isGrandFinalsReset?: boolean;
+  format: MatchFormat; // Add this
+  games: Game[]; // Add this
 }
+
+export type MatchFormat = {
+  bestOf: 1 | 3 | 5 | 7 | 9 | 11; // Added 11 as a valid option
+  gamesNeededToWin: number;
+};
 
 // Define TournamentType enum here
 export enum TournamentType {

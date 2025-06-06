@@ -1,8 +1,8 @@
 import { StatusBar } from "expo-status-bar";
 import { StyleSheet, Text, View, FlatList, SafeAreaView } from "react-native";
 import React, { useState } from "react";
-import HomeScreen from "./src/screens/HomeScreen"; // Corrected import
-import { TournamentType } from "./src/types"; // Corrected import
+import { TournamentType, MatchFormat } from "./src/types";
+import HomeScreen from "./src/screens/HomeScreen";
 import PlayerInputScreen from "./src/screens/PlayerInputScreen";
 import TournamentScreen from "./src/screens/TournamentScreen";
 
@@ -15,8 +15,9 @@ const isLaunchableTournamentType = (type: TournamentType): boolean => {
 };
 
 export default function App() {
+  // Define all state with proper types
   const [currentScreen, setCurrentScreen] = useState<
-    "home" | "playerInput" | "tournament" // Add "playerInput"
+    "home" | "playerInput" | "tournament"
   >("home");
   const [selectedTournamentType, setSelectedTournamentType] =
     useState<TournamentType | null>(null);
@@ -24,49 +25,26 @@ export default function App() {
     number | null
   >(null);
   const [playerNamesList, setPlayerNamesList] = useState<string[]>([]); // State for player names
+  const [selectedMatchFormat, setSelectedMatchFormat] =
+    useState<MatchFormat | null>(null);
 
-  // Called from HomeScreen
-  const handleNavigateToPlayerInput = (
-    type: TournamentType,
-    numPlayers: number
-  ) => {
-    console.log(
-      "App: Navigating to Player Input for:",
-      type,
-      "with",
-      numPlayers,
-      "players"
-    );
-    if (isLaunchableTournamentType(type) && numPlayers > 0) {
-      setSelectedTournamentType(type);
-      setNumPlayersForTournament(numPlayers);
-      setCurrentScreen("playerInput");
-    } else {
-      alert(
-        `${type} with ${numPlayers} players is not a valid configuration or is coming soon!`
-      );
-    }
-  };
-
-  // Called from PlayerInputScreen
+  // Navigation handlers
   const handleStartTournament = (
-    type: TournamentType,
-    numPlayers: number,
-    names: string[]
+    playerNames: string[],
+    format: MatchFormat
   ) => {
-    console.log("App: Starting tournament with names:", names);
-    setSelectedTournamentType(type); // Should already be set, but good to ensure
-    setNumPlayersForTournament(numPlayers); // Should already be set
-    setPlayerNamesList(names);
+    console.log("Starting tournament with format:", format); // Debug log
+    setPlayerNamesList(playerNames);
+    setSelectedMatchFormat(format);
     setCurrentScreen("tournament");
   };
 
   const handleGoBack = () => {
-    console.log("App: handleGoBack called, returning to home");
-    setCurrentScreen("home");
-    setSelectedTournamentType(null);
-    setNumPlayersForTournament(null);
-    setPlayerNamesList([]); // Clear player names
+    if (currentScreen === "tournament") {
+      setCurrentScreen("playerInput");
+    } else if (currentScreen === "playerInput") {
+      setCurrentScreen("home");
+    }
   };
 
   console.log(
@@ -78,60 +56,44 @@ export default function App() {
     numPlayersForTournament
   );
 
-  if (
-    currentScreen === "playerInput" &&
-    selectedTournamentType &&
-    numPlayersForTournament
-  ) {
-    console.log("Rendering PlayerInputScreen");
-    return (
-      <PlayerInputScreen
-        tournamentType={selectedTournamentType}
-        numPlayers={numPlayersForTournament}
-        onStartTournament={handleStartTournament}
-        onGoBack={handleGoBack} // Optional: if PlayerInputScreen needs a back button to Home
-      />
-    );
-  } else if (
-    currentScreen === "tournament" &&
-    selectedTournamentType &&
-    numPlayersForTournament &&
-    playerNamesList.length > 0 && // Ensure player names are set
-    isLaunchableTournamentType(selectedTournamentType)
-  ) {
-    console.log(
-      "Rendering TournamentScreen with type:",
-      selectedTournamentType,
-      "players:",
-      numPlayersForTournament,
-      "names:",
-      playerNamesList
-    );
-    return (
-      <TournamentScreen
-        tournamentType={selectedTournamentType}
-        numPlayers={numPlayersForTournament}
-        playerNames={playerNamesList} // Pass the names
-        onGoBack={handleGoBack}
-      />
-    );
-  } else {
-    // Default to HomeScreen
-    // This also handles resetting to home if state somehow becomes inconsistent.
-    if (currentScreen !== "home") {
-      console.warn(
-        "State indicated",
-        currentScreen,
-        "screen, but conditions not met. Reverting to home."
-      );
-      // setCurrentScreen("home"); // Already defaults here
-      // setSelectedTournamentType(null); // These are reset in handleGoBack
-      // setNumPlayersForTournament(null);
-      // setPlayerNamesList([]);
-    }
-    console.log("Rendering HomeScreen");
-    return <HomeScreen onNavigateToPlayerInput={handleNavigateToPlayerInput} />;
-  }
+  // Render the appropriate screen
+  return (
+    <>
+      {currentScreen === "home" && (
+        <HomeScreen
+          onTournamentSetup={(type: TournamentType, players: number) => {
+            setSelectedTournamentType(type);
+            setNumPlayersForTournament(players);
+            setCurrentScreen("playerInput");
+          }}
+        />
+      )}
+
+      {currentScreen === "playerInput" &&
+        selectedTournamentType &&
+        numPlayersForTournament && (
+          <PlayerInputScreen
+            tournamentType={selectedTournamentType}
+            numPlayers={numPlayersForTournament}
+            onStartTournament={handleStartTournament}
+            onGoBack={handleGoBack} // Optional: if PlayerInputScreen needs a back button to Home
+          />
+        )}
+
+      {currentScreen === "tournament" &&
+        selectedTournamentType &&
+        numPlayersForTournament && // This ensures numPlayers is not null
+        selectedMatchFormat && ( // Add this check for matchFormat
+          <TournamentScreen
+            tournamentType={selectedTournamentType}
+            numPlayers={numPlayersForTournament} // TypeScript now knows this can't be null
+            playerNames={playerNamesList}
+            matchFormat={selectedMatchFormat}
+            onGoBack={handleGoBack}
+          />
+        )}
+    </>
+  );
 }
 
 const styles = StyleSheet.create({

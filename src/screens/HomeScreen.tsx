@@ -9,13 +9,14 @@ import {
 } from "react-native";
 import { TournamentType } from "../types"; // Import from types.ts
 
+// Add this interface to define the component's props
 interface HomeScreenProps {
-  onNavigateToPlayerInput: (type: TournamentType, numPlayers: number) => void;
+  onTournamentSetup: (type: TournamentType, players: number) => void;
 }
 
-const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateToPlayerInput }) => {
+const HomeScreen: React.FC<HomeScreenProps> = ({ onTournamentSetup }) => {
   const handleTournamentSelect = (type: TournamentType, players: number) => {
-    onNavigateToPlayerInput(type, players);
+    onTournamentSetup(type, players);
   };
 
   return (
