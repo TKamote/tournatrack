@@ -1,34 +1,27 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { COLORS } from "../constants/colors";
+import { COLORS } from "../../constants/colors"; // Updated path with additional ../
 
 interface ScreenHeaderProps {
   title: string;
   subtitle?: string;
-  onBack?: () => void;
-  showBackButton?: boolean;
+  onBack?: () => void; // Keep this optional for other screens
+  showBack?: boolean; // Add this prop
 }
 
 const ScreenHeader: React.FC<ScreenHeaderProps> = ({
   title,
   subtitle,
   onBack,
-  showBackButton = true,
+  showBack = true,
 }) => {
   return (
     <View style={styles.container}>
       <View style={styles.headerControls}>
-        {showBackButton && (
-          <TouchableOpacity style={styles.backButton} onPress={onBack}>
-            <Text style={styles.backButtonText}>← Back</Text>
-          </TouchableOpacity>
-        )}
         <View style={styles.titleContainer}>
           <Text style={styles.titleText}>{title}</Text>
           {subtitle && <Text style={styles.subTitle}>{subtitle}</Text>}
         </View>
-        {/* Empty View for layout balance when back button is shown */}
-        {showBackButton && <View style={styles.backButton} />}
       </View>
     </View>
   );
@@ -37,24 +30,15 @@ const ScreenHeader: React.FC<ScreenHeaderProps> = ({
 const styles = StyleSheet.create({
   container: {
     width: "100%",
-    marginBottom: 10,
+    paddingVertical: 10,
+    // backgroundColor: COLORS.backgroundWhite,
   },
   headerControls: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+    width: "100%",
     alignItems: "center",
-    marginBottom: 10,
-  },
-  backButton: {
-    padding: 10,
-    width: 80, // Fixed width to ensure title stays centered
-  },
-  backButtonText: {
-    fontSize: 16,
-    color: COLORS.primary,
+    justifyContent: "center",
   },
   titleContainer: {
-    flex: 1,
     alignItems: "center",
   },
   titleText: {

@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Button } from "react-native";
-import { BracketType } from "../types";
+import { BracketType } from "../../types";
 
 interface BracketSelectionButtonsProps {
   activeBracket: BracketType | "all";

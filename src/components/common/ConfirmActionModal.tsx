@@ -1,6 +1,6 @@
 import React from "react";
 import { Modal, View, Text, Pressable, StyleSheet } from "react-native";
-import { COLORS } from "../constants/colors";
+import { COLORS } from "../../constants/colors";
 
 interface ConfirmActionModalProps {
   visible: boolean;

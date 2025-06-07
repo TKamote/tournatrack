@@ -15,6 +15,9 @@ const initialState: TournamentState = {
   currentLosersRound: 1,
   tournamentType: "",
   isInitialized: false,
+  winnersChampion: null,
+  losersChampion: null,
+  grandChampion: null,
 };
 
 const TournamentContext = createContext<TournamentContextType | undefined>(

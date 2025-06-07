@@ -1,8 +1,28 @@
 import { tournamentReducer } from "../TournamentReducer";
 import { TournamentState, TournamentAction } from "../TournamentTypes";
-import { Match, Player } from "../../../types";
+import { Match, Player, MatchFormat } from "../../../types";
 
 describe("TournamentReducer", () => {
+  const mockPlayer: Player = {
+    id: "1",
+    name: "Player 1",
+    seed: 1,
+    losses: 0,
+  };
+
+  const mockMatch: Match = {
+    id: "match-1",
+    round: 1,
+    matchNumber: 1,
+    player1: mockPlayer,
+    player2: { id: "2", name: "Player 2", seed: 2, losses: 0 },
+    winner: null,
+    bracket: "winners",
+    isGrandFinalsReset: false,
+    format: { type: "bo3", gamesNeededToWin: 2 },
+    games: [],
+  };
+
   const initialState: TournamentState = {
     matches: [],
     players: [],
@@ -21,7 +41,14 @@ describe("TournamentReducer", () => {
       type: "INITIALIZE_TOURNAMENT",
       payload: {
         tournamentType: "Double Elimination",
-        players: [{ id: "1", name: "Player 1" }],
+        players: [
+          {
+            id: "1",
+            name: "Player 1",
+            seed: 1,
+            losses: 0,
+          },
+        ],
       },
     };
 
@@ -32,21 +59,16 @@ describe("TournamentReducer", () => {
   });
 
   it("should handle SET_WINNER", () => {
-    const winner: Player = { id: "1", name: "Player 1" };
-    const match: Match = {
-      id: "match-1",
-      round: 1,
-      matchNumber: 1,
-      player1: winner,
-      player2: { id: "2", name: "Player 2" },
-      winner: null,
-      bracket: "winners",
-      format: "best-of-3",
+    const winner: Player = {
+      id: "1",
+      name: "Player 1",
+      seed: 1,
+      losses: 0,
     };
 
     const stateWithMatch: TournamentState = {
       ...initialState,
-      matches: [match],
+      matches: [mockMatch],
     };
 
     const action: TournamentAction = {

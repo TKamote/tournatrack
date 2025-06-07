@@ -1,5 +1,11 @@
 import { useTournament } from "../../contexts/tournament/TournamentContext";
-import { Match, Player } from "../../types";
+import { Match, Player, MatchFormat } from "../../types";
+import {
+  createMatch,
+  findNextMatch,
+  generateDEWinnersBracketNextRound,
+  generateDELosersBracketNextRoundMatches,
+} from "../../utils/tournament/tournamentUtils";
 
 export const useMatchActions = () => {
   const { dispatch } = useTournament();
@@ -40,10 +46,20 @@ export const useMatchActions = () => {
     });
   };
 
+  const handleMatchWinner = (match: Match, winner: Player) => {
+    // ...implementation
+  };
+
+  const advanceToNextRound = (currentMatches: Match[], format: MatchFormat) => {
+    // ...implementation
+  };
+
   return {
     initializeTournament,
     updateMatches,
     advanceRound,
     setMatchWinner,
+    handleMatchWinner,
+    advanceToNextRound,
   };
 };

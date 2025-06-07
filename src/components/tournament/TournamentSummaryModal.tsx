@@ -1,15 +1,15 @@
-import React from 'react';
-import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { COLORS } from '../constants/colors';
-import { Match, Player, TournamentType } from '../types';
+import React from "react";
+import { Modal, View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { COLORS } from "../../constants/colors";
+// Update the import path below if your types are located elsewhere, e.g. '../../types'
+import { Match, Player, TournamentType } from "../../types";
 
 interface TournamentSummaryModalProps {
   visible: boolean;
+  winner: Player | null; // Changed from Player
+  runnerUp: Player | null; // Changed from Player
+  finalMatch: Match | null; // Changed from Match
   onClose: () => void;
-  winner: Player;
-  runnerUp?: Player | null; // Update type to allow null
-  tournamentType: TournamentType;
-  finalMatch: Match;
 }
 
 const TournamentSummaryModal: React.FC<TournamentSummaryModalProps> = ({
@@ -17,15 +17,16 @@ const TournamentSummaryModal: React.FC<TournamentSummaryModalProps> = ({
   onClose,
   winner,
   runnerUp,
-  tournamentType,
   finalMatch,
 }) => {
   if (!winner || !finalMatch) return null;
 
-  const winnerScore = finalMatch.games.filter(g => g.winner?.id === winner.id).length;
-  const runnerUpScore = runnerUp ? 
-    finalMatch.games.filter(g => g.winner?.id === runnerUp.id).length : 
-    0;
+  const winnerScore = finalMatch.games.filter(
+    (g) => g.winner?.id === winner.id
+  ).length;
+  const runnerUpScore = runnerUp
+    ? finalMatch.games.filter((g) => g.winner?.id === runnerUp.id).length
+    : 0;
 
   return (
     <Modal
@@ -37,11 +38,11 @@ const TournamentSummaryModal: React.FC<TournamentSummaryModalProps> = ({
       <View style={styles.centeredView}>
         <View style={styles.modalView}>
           <Text style={styles.titleText}>Tournament Complete!</Text>
-          
+
           <View style={styles.resultContainer}>
             <Text style={styles.winnerText}>Champion</Text>
             <Text style={styles.playerName}>{winner.name}</Text>
-            
+
             {runnerUp && (
               <>
                 <Text style={styles.runnerUpText}>Runner-up</Text>
@@ -66,16 +67,16 @@ const TournamentSummaryModal: React.FC<TournamentSummaryModalProps> = ({
 const styles = StyleSheet.create({
   centeredView: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
   modalView: {
     backgroundColor: COLORS.backgroundWhite,
     borderRadius: 8,
     padding: 20,
-    alignItems: 'center',
-    shadowColor: '#000',
+    alignItems: "center",
+    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 2,
@@ -84,28 +85,28 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
     margin: 20,
-    minWidth: '80%',
+    minWidth: "80%",
   },
   titleText: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: COLORS.textDark,
     marginBottom: 20,
   },
   resultContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 20,
   },
   winnerText: {
     fontSize: 18,
     color: COLORS.success,
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: 5,
   },
   runnerUpText: {
     fontSize: 16,
     color: COLORS.textLight,
-    fontWeight: '500',
+    fontWeight: "500",
     marginTop: 10,
     marginBottom: 5,
   },
@@ -128,7 +129,7 @@ const styles = StyleSheet.create({
   buttonText: {
     color: COLORS.textWhite,
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: "500",
   },
 });
 

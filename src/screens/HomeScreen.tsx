@@ -7,76 +7,70 @@ import {
   TouchableOpacity,
   ScrollView,
 } from "react-native";
-import { TournamentType } from "../types"; // Import from types.ts
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../types/navigation.types";
+import { TournamentType } from "../types";
+import { COLORS } from "../constants/colors";
 
-// Add this interface to define the component's props
-interface HomeScreenProps {
-  onTournamentSetup: (type: TournamentType, players: number) => void;
-}
+type HomeScreenProps = NativeStackScreenProps<RootStackParamList, "Home">;
 
-const HomeScreen: React.FC<HomeScreenProps> = ({ onTournamentSetup }) => {
+const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const handleTournamentSelect = (type: TournamentType, players: number) => {
-    onTournamentSetup(type, players);
+    navigation.navigate("PlayerInput", {
+      tournamentType: type,
+      numPlayers: players,
+    });
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.title}>TournaTrack</Text>
-        <Text style={styles.subtitle}>Select Tournament Type & Players</Text>
+        <Text style={styles.subtitle}>Create and manage your tournaments</Text>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Single Elimination</Text>
-          <TouchableOpacity
-            style={styles.button}
-            onPress={() =>
-              handleTournamentSelect(TournamentType.SingleKnockout4, 4)
-            }
-          >
-            <Text style={styles.buttonText}>4 Players</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.button}
-            onPress={() =>
-              handleTournamentSelect(TournamentType.SingleKnockout8, 8)
-            }
-          >
-            <Text style={styles.buttonText}>8 Players</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.button}
-            onPress={() =>
-              handleTournamentSelect(TournamentType.SingleKnockout16, 16)
-            }
-          >
-            <Text style={styles.buttonText}>16 Players</Text>
-          </TouchableOpacity>
-          {/* Removed 32 Players button for Single Elimination */}
+        {/* Double Elimination Section - Featured */}
+        <View style={[styles.section, styles.featuredSection]}>
+          <Text style={styles.sectionTitle}>Double Elimination</Text>
+          <Text style={styles.featuredTag}>FEATURED</Text>
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={() => handleTournamentSelect("Double Elimination", 6)}
+            >
+              <Text style={styles.buttonText}>6 Players</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={() => handleTournamentSelect("Double Elimination", 8)}
+            >
+              <Text style={styles.buttonText}>8 Players</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
+        {/* Single Elimination Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Double Elimination</Text>
-          <TouchableOpacity
-            style={styles.button}
-            onPress={() =>
-              // Assuming TournamentType.DoubleElimination8 is a general type for DE
-              // and the number of players (6) correctly configures it.
-              // If you have specific types like TournamentType.DoubleElimination6, use that.
-              handleTournamentSelect(TournamentType.DoubleElimination8, 6)
-            }
-          >
-            <Text style={styles.buttonText}>6 Players</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.button}
-            onPress={() =>
-              handleTournamentSelect(TournamentType.DoubleElimination8, 8)
-            }
-          >
-            <Text style={styles.buttonText}>8 Players</Text>
-          </TouchableOpacity>
-          {/* Removed 12 Players button for Double Elimination */}
-          {/* Removed 16 Players button for Double Elimination */}
+          <Text style={styles.sectionTitle}>Single Knockout</Text>
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={() => handleTournamentSelect("Single Knockout", 4)}
+            >
+              <Text style={styles.buttonText}>4 Players</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={() => handleTournamentSelect("Single Knockout", 8)}
+            >
+              <Text style={styles.buttonText}>8 Players</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={() => handleTournamentSelect("Single Knockout", 16)}
+            >
+              <Text style={styles.buttonText}>16 Players</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -86,7 +80,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onTournamentSetup }) => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#2c3e50",
+    backgroundColor: COLORS.homeScreenBackground,
   },
   container: {
     flexGrow: 1,
@@ -95,52 +89,75 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
   },
   title: {
-    fontSize: 30, // Kept the smaller font size as per previous request
+    fontSize: 32,
     fontWeight: "bold",
-    marginBottom: 15,
-    color: "#ecf0f1",
+    color: COLORS.homeScreenTitleText,
+    marginBottom: 10,
   },
   subtitle: {
-    fontSize: 18,
-    marginBottom: 40,
-    color: "#bdc3c7",
+    fontSize: 16,
+    color: COLORS.homeScreenSubtitleText,
+    marginBottom: 30,
     textAlign: "center",
   },
   section: {
-    width: "95%",
-    marginBottom: 30,
-    padding: 20,
-    backgroundColor: "#34495e",
-    borderRadius: 10,
-    elevation: 3,
+    width: "100%",
+    marginBottom: 20,
+    backgroundColor: COLORS.homeScreenSectionBackground,
+    borderRadius: 12,
+    padding: 16,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+  },
+  featuredSection: {
+    borderWidth: 2,
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.homeScreenSectionBackground,
+  },
+  featuredTag: {
+    position: "absolute",
+    top: -10,
+    right: 10,
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    color: COLORS.textWhite,
+    fontSize: 12,
+    fontWeight: "bold",
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: "600",
-    marginBottom: 20,
-    color: "#1abc9c",
-    borderBottomWidth: 2,
-    borderBottomColor: "#2c3e50",
-    paddingBottom: 8,
+    color: COLORS.homeScreenAccent,
+    marginBottom: 16,
     textAlign: "center",
   },
+  buttonContainer: {
+    width: "100%",
+  },
   button: {
-    backgroundColor: "#1abc9c",
+    backgroundColor: COLORS.primary,
     paddingVertical: 15,
-    paddingHorizontal: 20,
     borderRadius: 8,
     marginBottom: 12,
-    alignItems: "center",
-    elevation: 2,
+    width: "100%",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
+    elevation: 3,
   },
   buttonText: {
-    color: "#ffffff",
+    color: COLORS.textWhite,
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: "600",
+    textAlign: "center",
   },
 });
 
