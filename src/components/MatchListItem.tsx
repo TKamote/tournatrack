@@ -76,6 +76,8 @@ const MatchListItem: React.FC<MatchListItemProps> = ({
 
   return (
     <View style={styles.matchContainer}>
+      <Text style={styles.helperText}>Tap Player to add win</Text>
+
       <Text style={styles.matchTitle}>
         {item.bracket.toUpperCase()} - R{item.round} M{item.matchNumber}
       </Text>
@@ -87,21 +89,13 @@ const MatchListItem: React.FC<MatchListItemProps> = ({
       <View style={styles.scoreContainer}>
         {/* Player 1 Side */}
         <View style={getPlayerSideStyle(true)}>
-          <Text style={styles.playerName}>{player1?.name || "TBD"}</Text>
           {!isByeMatch && (
             <TouchableOpacity
               style={getButtonStyle(true)}
-              onPress={() =>
-                item.player1 && onIncrementScore(item.id, item.player1.id)
-              }
-              disabled={
-                matchIsEffectivelyLocked ||
-                !item.player1 ||
-                isP1Winner ||
-                isP2Winner
-              }
+              onPress={() => item.player1 && onIncrementScore(item.id, item.player1.id)}
+              disabled={matchIsEffectivelyLocked || !item.player1 || isP1Winner || isP2Winner}
             >
-              <Text style={styles.scoreButtonText}>+1</Text>
+              <Text style={styles.scoreButtonText}>{player1?.name || "TBD"}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -113,21 +107,13 @@ const MatchListItem: React.FC<MatchListItemProps> = ({
 
         {/* Player 2 Side */}
         <View style={getPlayerSideStyle(false)}>
-          <Text style={styles.playerName}>{player2?.name || "BYE"}</Text>
           {!isByeMatch && (
             <TouchableOpacity
               style={getButtonStyle(false)}
-              onPress={() =>
-                item.player2 && onIncrementScore(item.id, item.player2.id)
-              }
-              disabled={
-                matchIsEffectivelyLocked ||
-                !item.player2 ||
-                isP1Winner ||
-                isP2Winner
-              }
+              onPress={() => item.player2 && onIncrementScore(item.id, item.player2.id)}
+              disabled={matchIsEffectivelyLocked || !item.player2 || isP1Winner || isP2Winner}
             >
-              <Text style={styles.scoreButtonText}>+1</Text>
+              <Text style={styles.scoreButtonText}>{player2?.name || "BYE"}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -190,25 +176,30 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 8,
   },
-  playerName: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 8,
-    color: COLORS.textDark,
+  helperText: {
+    fontSize: 12,
+    color: COLORS.textLight,
+    textAlign: "right",
+    marginBottom: 4,
+    fontStyle: "italic",
   },
   scoreDisplay: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 4,
+    flex: 1,
+    alignItems: "center",
+    maxWidth: "30%", // Reduced since we don't show names here anymore
   },
   scoreText: {
-    fontSize: 24,
+    fontSize: 20, // Reduced from 24
     fontWeight: "bold",
     color: COLORS.primary,
   },
   scoreButton: {
     backgroundColor: COLORS.primary,
     paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingHorizontal: 8, // Reduced padding for longer names
     borderRadius: 6,
+    minWidth: 80, // Add minimum width for consistency
   },
   winnerButton: {
     backgroundColor: COLORS.success,
@@ -218,8 +209,10 @@ const styles = StyleSheet.create({
   },
   scoreButtonText: {
     color: COLORS.textWhite,
-    fontSize: 16,
-    fontWeight: "bold",
+    fontSize: 14, // Reduced size for longer names
+    fontWeight: "600",
+    textAlign: 'center',
+    paddingHorizontal: 4,
   },
   buttonDisabled: {
     backgroundColor: COLORS.backgroundLight,

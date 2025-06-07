@@ -10,6 +10,8 @@ export const COLORS = {
   backgroundLight: "#f0f0f0", // Main screen background
   backgroundWhite: "#ffffff",
 
+  disabledButton: '#808080',
+
   textBlack: "#000000",
   textDark: "#343a40", // For primary text
   textMedium: "#555555", // For subtitles or less important text

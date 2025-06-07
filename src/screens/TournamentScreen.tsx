@@ -29,11 +29,11 @@ import {
   createMatch,
   shuffleArray,
 } from "../utils/tournamentUtils";
-import BracketSelectionButtons from "../components/BracketSelectionButtons";
 import ConfirmActionModal from "../components/ConfirmActionModal";
-import PrimaryButton from "../components/PrimaryButton";
 import ScreenHeader from "../components/ScreenHeader";
-import MatchFormatSelector from "../components/MatchFormatSelector";
+import IncompleteMatchesModal from "../components/IncompleteMatchesModal";
+import TournamentSummaryModal from "../components/TournamentSummaryModal";
+import { findNextMatch } from "../utils/matchAdvancementUtils";
 
 interface TournamentScreenProps {
   tournamentType: TournamentType;
@@ -52,8 +52,6 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
 }) => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
-  const [currentWinnersRound, setCurrentWinnersRound] = useState(1);
-  const [currentLosersRound, setCurrentLosersRound] = useState(1);
   const [tournamentOver, setTournamentOver] = useState(false);
   const [overallWinner, setOverallWinner] = useState<Player | null>(null);
   const [wbRound1Losers, setWbRound1Losers] = useState<Player[]>([]);
@@ -62,6 +60,14 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
   >("all");
   const [isAdvanceModalVisible, setIsAdvanceModalVisible] = useState(false);
   const [hasInitialized, setHasInitialized] = useState<boolean>(false);
+  const [showIncompleteModal, setShowIncompleteModal] = useState(false);
+  const [currentRound, setCurrentRound] = useState(1); // <-- Add this state
+  const [currentLosersRound, setCurrentLosersRound] = useState(1);
+  const [currentWinnersRound, setCurrentWinnersRound] = useState(1);
+  const [showSummaryModal, setShowSummaryModal] = useState(false);
+  const [runnerUp, setRunnerUp] = useState<Player | null>(null);
+  const [finalMatch, setFinalMatch] = useState<Match | null>(null);
+
   const defaultMatchFormats = {
     bo5: { bestOf: 5, gamesNeededToWin: 3 },
     bo7: { bestOf: 7, gamesNeededToWin: 4 },
@@ -74,6 +80,9 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
     setHasInitialized(false);
     setPlayers([]);
     setMatches([]);
+    setCurrentRound(1);
+    setCurrentLosersRound(1);
+    setCurrentWinnersRound(1);
   }, [numPlayers, tournamentType]); // Remove receivedPlayerNames from dependencies
 
   // Update the useEffect that handles initialization
@@ -118,208 +127,72 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
   const isMatchLocked = useCallback(
     (match: Match): boolean => {
       if (tournamentOver) return true;
-      if (match.bracket === "winners" && match.round < currentWinnersRound)
+      if (match.bracket === "winners" && match.round < currentRound)
         return true;
-      if (match.bracket === "losers" && match.round < currentLosersRound)
-        return true;
+      if (match.bracket === "losers" && match.round < currentRound) return true;
       if (match.bracket === "grandFinals" && overallWinner) return true;
       return false;
     },
-    [tournamentOver, currentWinnersRound, currentLosersRound, overallWinner]
+    [tournamentOver, currentRound, overallWinner]
   );
 
   const handleSetWinner = useCallback(
     (matchId: string, newWinningPlayer: Player) => {
-      const targetMatchIndex = matches.findIndex((m) => m.id === matchId);
-      if (targetMatchIndex === -1) return;
+      const currentTargetMatch = matches.find((m) => m.id === matchId);
+      if (!currentTargetMatch) return;
 
-      const currentTargetMatch = { ...matches[targetMatchIndex] }; // Use a different name to avoid conflict
-
-      if (isMatchLocked(currentTargetMatch)) {
-        Alert.alert("Match Locked", "This match's result cannot be changed.");
-        return;
-      }
-
-      const oldWinner = currentTargetMatch.winner;
-      if (oldWinner && oldWinner.id === newWinningPlayer.id) return;
-
-      let newLoserOfMatch: Player | null = null;
-      if (currentTargetMatch.player1 && currentTargetMatch.player2) {
-        newLoserOfMatch =
-          currentTargetMatch.player1.id === newWinningPlayer.id
-            ? currentTargetMatch.player2
-            : currentTargetMatch.player1;
-      }
-
-      // Prepare updated players list (for loss counting)
-      let tempUpdatedPlayers = [...players];
-      if (
-        oldWinner &&
-        currentTargetMatch.player1 &&
-        currentTargetMatch.player2
-      ) {
-        const oldLoser =
-          currentTargetMatch.player1.id === oldWinner.id
-            ? currentTargetMatch.player2
-            : currentTargetMatch.player1;
-        tempUpdatedPlayers = tempUpdatedPlayers.map((p) =>
-          p.id === oldLoser.id
-            ? { ...p, losses: Math.max(0, (p.losses || 0) - 1) }
-            : p
-        );
-      }
-      if (newLoserOfMatch) {
-        tempUpdatedPlayers = tempUpdatedPlayers.map((p) =>
-          p.id === newLoserOfMatch!.id
-            ? { ...p, losses: (p.losses || 0) + 1 }
-            : p
-        );
-      }
-
-      // Prepare updated matches list
-      let tempUpdatedMatches = matches.map((m) =>
-        m.id === currentTargetMatch.id ? { ...m, winner: newWinningPlayer } : m
-      );
-      let tempUpdatedWbRound1Losers = [...wbRound1Losers]; // Keep this if WB R1 logic is still here
-
-      // --- WB R1 Loser Collection (if still relevant in this function structure) ---
-      if (
-        tournamentType.startsWith("Double Elimination") &&
-        currentTargetMatch.bracket === "winners" &&
-        currentTargetMatch.round === 1
-      ) {
-        if (
-          oldWinner &&
-          currentTargetMatch.player1 &&
-          currentTargetMatch.player2
-        ) {
-          const oldLoser =
-            currentTargetMatch.player1.id === oldWinner.id
-              ? currentTargetMatch.player2
-              : currentTargetMatch.player1;
-          tempUpdatedWbRound1Losers = tempUpdatedWbRound1Losers.filter(
-            (l) => l.id !== oldLoser.id
-          );
-          tempUpdatedMatches = tempUpdatedMatches.filter((m) => {
-            // Remove old LB R1 match
-            if (m.bracket === "losers" && m.round === 1 && !m.winner) {
-              if (
-                (m.player1?.id === oldLoser.id && !m.player2) ||
-                (m.player2?.id === oldLoser.id && !m.player1) ||
-                (m.player1?.id === oldLoser.id && m.player2) ||
-                (m.player2?.id === oldLoser.id && m.player1)
-              ) {
-                return false;
-              }
-            }
-            return true;
-          });
+      // Update the match with the winner
+      const tempUpdatedMatches = matches.map((m) => {
+        if (m.id === matchId) {
+          return { ...m, winner: newWinningPlayer };
         }
-        if (newLoserOfMatch) {
-          const alreadyInList = tempUpdatedWbRound1Losers.some(
-            (l) => l.id === newLoserOfMatch!.id
-          );
-          if (!alreadyInList) {
-            tempUpdatedWbRound1Losers = [
-              ...tempUpdatedWbRound1Losers,
-              { ...newLoserOfMatch! },
-            ];
-          }
-        }
-      }
+        return m;
+      });
 
-      // --- Grand Finals Specific Logic ---
       if (currentTargetMatch.bracket === "grandFinals") {
-        const wbPlayerInGF = currentTargetMatch.player1; // Crucially assumes player1 is WB champ
-        const lbPlayerInGF = currentTargetMatch.player2; // Crucially assumes player2 is LB champ
+        const lbPlayerInGF = currentTargetMatch.player2;
+        const wbPlayerInGF = currentTargetMatch.player1;
 
         if (!currentTargetMatch.isGrandFinalsReset) {
-          // This is the FIRST Grand Finals match
           if (wbPlayerInGF && newWinningPlayer.id === wbPlayerInGF.id) {
-            // WB Champion (player1) wins the first GF match
+            // WB Champion wins - tournament over
             setOverallWinner(newWinningPlayer);
+            setRunnerUp(lbPlayerInGF);
+            setFinalMatch(currentTargetMatch);
             setTournamentOver(true);
-            setPlayers(tempUpdatedPlayers);
-            setMatches(tempUpdatedMatches);
-            setWbRound1Losers(tempUpdatedWbRound1Losers);
-            return; // Tournament ends
+            setShowSummaryModal(true);
           } else if (lbPlayerInGF && newWinningPlayer.id === lbPlayerInGF.id) {
-            // LB Champion (player2) wins the first GF match - a reset is needed
-            const resetMatchExists = tempUpdatedMatches.some(
-              (m) =>
-                m.bracket === "grandFinals" && m.isGrandFinalsReset === true
+            // Create reset match with same format
+            const gfResetMatch = createMatch(
+              `match-gf-reset-1`,
+              currentTargetMatch.round,
+              currentTargetMatch.matchNumber + 1,
+              wbPlayerInGF,
+              lbPlayerInGF,
+              "grandFinals",
+              true,
+              receivedMatchFormat
             );
-            if (!resetMatchExists && wbPlayerInGF && lbPlayerInGF) {
-              const gfResetMatch = createMatch(
-                `match-gf-reset-1`,
-                currentTargetMatch.round, // Keep same round or +1 for visual
-                currentTargetMatch.matchNumber + 1, // Increment match number
-                wbPlayerInGF, // WB Champ
-                lbPlayerInGF, // LB Champ
-                "grandFinals",
-                true // isGrandFinalsReset = true
-              );
-              tempUpdatedMatches.push(gfResetMatch);
-            }
-            // Tournament does NOT end here. UI will update to show the new reset match.
+            tempUpdatedMatches.push(gfResetMatch);
           }
         } else {
-          // This is the RESET Grand Finals match
-          // The winner of this match is the overall tournament winner.
+          // Reset match winner is tournament winner
           setOverallWinner(newWinningPlayer);
+          setRunnerUp(
+            newWinningPlayer.id === wbPlayerInGF?.id
+              ? lbPlayerInGF
+              : wbPlayerInGF
+          );
+          setFinalMatch(currentTargetMatch);
           setTournamentOver(true);
-          setPlayers(tempUpdatedPlayers);
-          setMatches(tempUpdatedMatches);
-          setWbRound1Losers(tempUpdatedWbRound1Losers);
-          return; // Tournament ends
+          setShowSummaryModal(true);
         }
       }
 
-      // Standard state updates if not a concluding GF match
-      setPlayers(tempUpdatedPlayers);
       setMatches(tempUpdatedMatches);
-      setWbRound1Losers(tempUpdatedWbRound1Losers);
     },
-    [
-      matches,
-      players,
-      wbRound1Losers,
-      isMatchLocked,
-      tournamentType,
-      // numPlayers, // numPlayers might not be needed directly here anymore
-      // createMatch is implicitly used, ensure it's stable or add if it's from component state/props
-    ]
+    [matches, receivedMatchFormat]
   );
-
-  // Add these helper functions
-  const findNextMatch = (
-    currentMatch: Match,
-    allMatches: Match[]
-  ): Match | null => {
-    if (currentMatch.bracket === "winners") {
-      // Find next winners bracket match
-      return (
-        allMatches.find(
-          (m) =>
-            (m.bracket === "winners" &&
-              m.round === currentMatch.round + 1 &&
-              !m.player1) ||
-            !m.player2
-        ) || null
-      );
-    } else {
-      // Find next losers bracket match
-      return (
-        allMatches.find(
-          (m) =>
-            (m.bracket === "losers" &&
-              m.round === currentMatch.round + 1 &&
-              !m.player1) ||
-            !m.player2
-        ) || null
-      );
-    }
-  };
 
   const advanceWinner = useCallback((match: Match) => {
     if (!match.winner) return;
@@ -467,18 +340,16 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
       }
     } else if (tournamentType.startsWith("Single Knockout")) {
       let currentRoundMatches = matches.filter(
-        (match) =>
-          match.bracket === "winners" && match.round === currentWinnersRound
+        (match) => match.bracket === "winners" && match.round === currentRound
       );
 
       if (currentRoundMatches.length > 0) {
         filteredMatches = currentRoundMatches;
       } else {
-        if (currentWinnersRound > 1) {
+        if (currentRound > 1) {
           filteredMatches = matches.filter(
             (match) =>
-              match.bracket === "winners" &&
-              match.round === currentWinnersRound - 1
+              match.bracket === "winners" && match.round === currentRound - 1
           );
         } else {
           filteredMatches = matches.filter(
@@ -498,37 +369,36 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
         filteredMatches = matches.filter((m) => m.bracket === "grandFinals");
       } else if (activeBracketForDisplay === "winners") {
         filteredMatches = matches.filter(
-          (m) => m.bracket === "winners" && m.round === currentWinnersRound
+          (m) => m.bracket === "winners" && m.round === currentRound
         );
         if (
           filteredMatches.length === 0 &&
-          currentWinnersRound > 1 &&
+          currentRound > 1 &&
           !tournamentOver
         ) {
           filteredMatches = matches.filter(
-            (m) =>
-              m.bracket === "winners" && m.round === currentWinnersRound - 1
+            (m) => m.bracket === "winners" && m.round === currentRound - 1
           );
         }
       } else if (activeBracketForDisplay === "losers") {
         filteredMatches = matches.filter(
-          (m) => m.bracket === "losers" && m.round === currentLosersRound
+          (m) => m.bracket === "losers" && m.round === currentRound
         );
         if (
           filteredMatches.length === 0 &&
-          currentLosersRound > 1 &&
+          currentRound > 1 &&
           !tournamentOver
         ) {
           filteredMatches = matches.filter(
-            (m) => m.bracket === "losers" && m.round === currentLosersRound - 1
+            (m) => m.bracket === "losers" && m.round === currentRound - 1
           );
         }
       } else {
         const wbCurrent = matches.filter(
-          (m) => m.bracket === "winners" && m.round === currentWinnersRound
+          (m) => m.bracket === "winners" && m.round === currentRound
         );
         const lbCurrent = matches.filter(
-          (m) => m.bracket === "losers" && m.round === currentLosersRound
+          (m) => m.bracket === "losers" && m.round === currentRound
         );
         filteredMatches = [...wbCurrent, ...lbCurrent].filter(Boolean);
 
@@ -558,18 +428,14 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
       return "Grand Finals";
 
     if (tournamentType.startsWith("Single Knockout"))
-      return `Round ${currentWinnersRound}`;
+      return `Round ${currentRound}`;
     if (tournamentType.startsWith("Double Elimination")) {
       let title = "";
       const wbHasPending = matches.some(
-        (m) =>
-          m.bracket === "winners" &&
-          m.round === currentWinnersRound &&
-          !m.winner
+        (m) => m.bracket === "winners" && m.round === currentRound && !m.winner
       );
       const lbHasPending = matches.some(
-        (m) =>
-          m.bracket === "losers" && m.round === currentLosersRound && !m.winner
+        (m) => m.bracket === "losers" && m.round === currentRound && !m.winner
       );
 
       if (
@@ -577,21 +443,21 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
         activeBracketForDisplay === "winners" ||
         (activeBracketForDisplay === "all" &&
           matches.some(
-            (m) => m.bracket === "winners" && m.round === currentWinnersRound
+            (m) => m.bracket === "winners" && m.round === currentRound
           ))
       ) {
-        title += `WB R${currentWinnersRound}`;
+        title += `WB R${currentRound}`;
       }
       if (
         lbHasPending ||
         activeBracketForDisplay === "losers" ||
         (activeBracketForDisplay === "all" &&
           matches.some(
-            (m) => m.bracket === "losers" && m.round === currentLosersRound
+            (m) => m.bracket === "losers" && m.round === currentRound
           ))
       ) {
         if (title) title += " / ";
-        title += `LB R${currentLosersRound}`;
+        title += `LB R${currentRound}`;
       }
       return title || "Double Elimination";
     }
@@ -620,14 +486,12 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
 
     if (tournamentType.startsWith("Single Knockout")) {
       const currentRoundSEMatches = matches.filter(
-        (match) =>
-          match.round === currentWinnersRound && match.bracket === "winners"
+        (match) => match.round === currentRound && match.bracket === "winners"
       );
       if (currentRoundSEMatches.length === 0) {
-        if (currentWinnersRound > 1) {
+        if (currentRound > 1) {
           const prevRoundMatches = matches.filter(
-            (m) =>
-              m.round === currentWinnersRound - 1 && m.bracket === "winners"
+            (m) => m.round === currentRound - 1 && m.bracket === "winners"
           );
           if (prevRoundMatches.length === 1 && prevRoundMatches[0].winner) {
             return true; // Tournament winner found
@@ -660,25 +524,24 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
 
       // --- Pre-Grand Finals ---
       let wbRoundCompleted = true;
-      if (currentWinnersRound <= expectedWbFinalRound && !wbChampionIsKnown) {
+      if (currentRound <= expectedWbFinalRound && !wbChampionIsKnown) {
         // Only check WB if it's not yet at/past its final
         const wbMatchesCurrent = matches.filter(
-          (m) => m.bracket === "winners" && m.round === currentWinnersRound
+          (m) => m.bracket === "winners" && m.round === currentRound
         );
         if (wbMatchesCurrent.length > 0) {
           wbRoundCompleted = wbMatchesCurrent.every((m) => !!m.winner);
         } else if (
-          currentWinnersRound > 1 &&
+          currentRound > 1 &&
           !matches.some(
-            (m) => m.bracket === "winners" && m.round === currentWinnersRound
+            (m) => m.bracket === "winners" && m.round === currentRound
           )
         ) {
-          // If currentWinnersRound has advanced past existing matches, consider it "done" for this check,
+          // If currentRound has advanced past existing matches, consider it "done" for this check,
           // assuming previous round led to a champion or advancement.
           // This case needs to be careful not to stall if WB champ is found but LB isn't ready.
           const prevWbMatches = matches.filter(
-            (m) =>
-              m.bracket === "winners" && m.round === currentWinnersRound - 1
+            (m) => m.bracket === "winners" && m.round === currentRound - 1
           );
           if (!prevWbMatches.some((m) => !m.winner))
             wbRoundCompleted = true; // if prev round fully done
@@ -689,34 +552,34 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
       }
 
       let lbRoundCompleted = true;
-      if (currentLosersRound <= expectedLbFinalRound && !lbChampionIsKnown) {
+      if (currentRound <= expectedLbFinalRound && !lbChampionIsKnown) {
         // Only check LB if it's not yet at/past its final
         const lbMatchesCurrent = matches.filter(
-          (m) => m.bracket === "losers" && m.round === currentLosersRound
+          (m) => m.bracket === "losers" && m.round === currentRound
         );
         if (lbMatchesCurrent.length > 0) {
           lbRoundCompleted = lbMatchesCurrent.every((m) => !!m.winner);
         } else if (
-          currentLosersRound > 1 &&
+          currentRound > 1 &&
           !matches.some(
-            (m) => m.bracket === "losers" && m.round === currentLosersRound
+            (m) => m.bracket === "losers" && m.round === currentRound
           )
         ) {
-          // Similar to WB: if currentLosersRound has advanced past existing matches.
+          // Similar to WB: if currentRound has advanced past existing matches.
           const prevLbMatches = matches.filter(
-            (m) => m.bracket === "losers" && m.round === currentLosersRound - 1
+            (m) => m.bracket === "losers" && m.round === currentRound - 1
           );
           if (!prevLbMatches.some((m) => !m.winner)) lbRoundCompleted = true;
           else lbRoundCompleted = false;
         } else if (
-          currentLosersRound === 1 &&
+          currentRound === 1 &&
           !matches.some((m) => m.bracket === "losers" && m.round === 1)
         ) {
           // Special case for LB R1: if no LB R1 matches exist (e.g. after WB R1, before LB R1 generated),
           // it's not "completed" in a way that should allow advancement if WB R1 isn't also done.
           // This is tricky. The main check should be if *playable* matches in current rounds are done.
           // If LB R1 hasn't been formed yet, but WB R1 is done, `executeAdvanceRound` should form LB R1.
-          // So, if `currentLosersRound` is 1 and no matches exist, it's "completed" for the purpose of `executeAdvanceRound`
+          // So, if `currentRound` is 1 and no matches exist, it's "completed" for the purpose of `executeAdvanceRound`
           // potentially creating them, *if* the WB side is also ready.
           lbRoundCompleted = true; // Let executeAdvanceRound decide if it can form LB R1
         } else {
@@ -725,12 +588,12 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
       }
 
       // If WB final is done, we only care about LB completion up to LB final
-      if (wbChampionIsKnown && currentWinnersRound >= expectedWbFinalRound) {
+      if (wbChampionIsKnown && currentRound >= expectedWbFinalRound) {
         return lbRoundCompleted; // Advance if current LB round is done (or if LB champ also known)
       }
 
       // If LB final is done, we only care about WB completion up to WB final
-      if (lbChampionIsKnown && currentLosersRound >= expectedLbFinalRound) {
+      if (lbChampionIsKnown && currentRound >= expectedLbFinalRound) {
         return wbRoundCompleted; // Advance if current WB round is done (or if WB champ also known)
       }
 
@@ -740,8 +603,7 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
     return false;
   }, [
     matches,
-    currentWinnersRound,
-    currentLosersRound,
+    currentRound,
     tournamentOver,
     tournamentType,
     numPlayers,
@@ -762,8 +624,15 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
     let wbChampionDeterminedThisCall: Player | null = null;
     let lbChampionDeterminedThisCall: Player | null = null;
 
-    const initialCurrentWinnersRound = currentWinnersRound;
-    const initialCurrentLosersRound = currentLosersRound;
+    const initialCurrentWinnersRound = currentRound;
+    const initialCurrentLosersRound = currentRound;
+
+    const currentWBMatches = matches.filter(
+      (m) => m.bracket === "winners" && m.round === currentWinnersRound
+    );
+    const currentLBMatches = matches.filter(
+      (m) => m.bracket === "losers" && m.round === currentLosersRound
+    );
 
     if (tournamentType.startsWith("Single Knockout")) {
       // ... (existing SE logic - assumed okay for now) ...
@@ -780,9 +649,9 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
 
       const nextRoundNumber = initialCurrentWinnersRound + 1;
       const generatedSEMatches = generateSENextRoundMatches(
-        winners,
+        currentRoundSECompletedMatches, // Pass the completed matches instead of just winners
         nextRoundNumber,
-        matches.length
+        receivedMatchFormat
       );
 
       if (generatedSEMatches.length === 0 && winners.length === 1) {
@@ -790,7 +659,7 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
         setTournamentOver(true);
       } else if (generatedSEMatches.length > 0) {
         setMatches((prev) => [...prev, ...generatedSEMatches]);
-        setCurrentWinnersRound(nextRoundNumber);
+        setCurrentRound(nextRoundNumber);
       }
     } else if (tournamentType.startsWith("Double Elimination")) {
       let newWBMatchesGeneratedThisCall: Match[] = [];
@@ -828,9 +697,9 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
           wbMatchesThisRound.every((m) => !!m.winner);
 
         if (allWbMatchesThisRoundCompleted) {
-          const wbWinners = wbMatchesThisRound
-            .map((m) => m.winner!)
-            .filter(Boolean) as Player[];
+          const wbWinners = currentWBMatches
+            .filter((m) => m.winner)
+            .map((m) => m.winner!);
           losersFromCurrentWBCompletion = getLosersOfRound(
             initialCurrentWinnersRound,
             "winners"
@@ -846,12 +715,12 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
           } else if (wbWinners.length >= 2) {
             const nextWBRoundNumber = initialCurrentWinnersRound + 1;
             newWBMatchesGeneratedThisCall = generateDEWinnersBracketNextRound(
-              wbWinners,
+              currentWBMatches, // Pass the matches array instead of winners array
               nextWBRoundNumber,
-              matches.length + newMatchesToAdd.length
+              receivedMatchFormat
             );
             if (newWBMatchesGeneratedThisCall.length > 0) {
-              setCurrentWinnersRound(nextWBRoundNumber);
+              setCurrentRound(nextWBRoundNumber);
               advancedWB = true;
             }
           }
@@ -880,10 +749,9 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
         // Use wbRound1Losers state as the source of truth for LB R1
         if (wbRound1Losers.length === expectedLoserCountForLBR1) {
           const generatedLbR1Matches = generateDELosersBracketRound1Matches(
-            [...wbRound1Losers],
-            matches.length +
-              newMatchesToAdd.length +
-              newWBMatchesGeneratedThisCall.length
+            wbRound1Losers,
+            matches.length,
+            receivedMatchFormat
           );
           if (generatedLbR1Matches.length > 0) {
             newLBMatchesGeneratedThisCall.push(...generatedLbR1Matches);
@@ -955,7 +823,7 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
                 ((initialCurrentWinnersRound === 2 &&
                   losersFromCurrentWBCompletion.length ===
                     (numPlayers === 6 ? 2 : 2)) ||
-                  ((currentWinnersRound > 2 || wbChampionDeterminedThisCall) &&
+                  ((currentRound > 2 || wbChampionDeterminedThisCall) &&
                     matches.some(
                       (m) =>
                         m.bracket === "winners" && m.round === 2 && m.winner
@@ -969,11 +837,10 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
                 if (wbR2Losers.length === (numPlayers === 6 ? 2 : 2)) {
                   generatedNextLbMatches =
                     generateDELosersBracketNextRoundMatches(
-                      lbWinnersFromThisRound,
-                      wbR2Losers,
+                      currentLBMatches, // This is already Match[]
+                      wbR2Losers, // This is Player[], which is correct
                       nextLBRoundNumberTarget,
-                      numPlayers,
-                      baseMatchCountForNewLB
+                      receivedMatchFormat
                     );
                 }
               }
@@ -987,11 +854,10 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
               ) {
                 generatedNextLbMatches =
                   generateDELosersBracketNextRoundMatches(
-                    lbWinnersFromThisRound,
-                    [],
+                    currentLBMatches, // This is Match[]
+                    [], // Empty array of new losers
                     nextLBRoundNumberTarget,
-                    numPlayers,
-                    baseMatchCountForNewLB
+                    receivedMatchFormat
                   );
               }
               // LB Round 4 (LB Final): Needs W(LBR3) and L(WBR3/Final)
@@ -1081,11 +947,13 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
                   if (!lbR4Exists) {
                     generatedNextLbMatches =
                       generateDELosersBracketNextRoundMatches(
-                        [winnerOfLBR3],
-                        [loserOfWBR3],
+                        matches.filter(
+                          (m) =>
+                            m.bracket === "losers" && m.round === currentRound
+                        ), // Get actual matches
+                        [loserOfWBR3], // Array of new losers
                         actualLbFinalRoundTarget,
-                        numPlayers,
-                        baseMatchCountForNewLB
+                        receivedMatchFormat
                       );
                   }
                 }
@@ -1150,7 +1018,8 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
           wbChampionDeterminedThisCall,
           lbChampionDeterminedThisCall,
           "grandFinals",
-          false
+          false,
+          receivedMatchFormat // Use the same format throughout
         );
         newMatchesToAdd.push(gfMatch);
       }
@@ -1179,16 +1048,25 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
       }
     }
   };
-  const handleAdvanceRoundPress = () => {
-    if (!allCurrentRoundMatchesCompleted() || tournamentOver) {
-      Alert.alert(
-        "Cannot Advance",
-        "All matches in the current round(s) must be completed, or the tournament is over."
+  const canAdvanceRound = useCallback(() => {
+    if (tournamentType.startsWith("Single Knockout")) {
+      const currentMatches = matches.filter(
+        (m) => m.round === currentRound && !m.isGrandFinalsReset
       );
+      return currentMatches.every((m) => m.winner !== null);
+    } else {
+      // For Double Elimination, use the existing allCurrentRoundMatchesCompleted logic
+      return allCurrentRoundMatchesCompleted();
+    }
+  }, [matches, currentRound, tournamentType, allCurrentRoundMatchesCompleted]);
+
+  const handleAdvanceRoundPress = useCallback(() => {
+    if (!allCurrentRoundMatchesCompleted()) {
+      setShowIncompleteModal(true);
       return;
     }
     setIsAdvanceModalVisible(true);
-  };
+  }, [allCurrentRoundMatchesCompleted]);
 
   // First, update the initial UI render to show the format selector prominently
   return (
@@ -1220,13 +1098,15 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
             <TouchableOpacity
               style={[
                 styles.advanceButton,
-                !allCurrentRoundMatchesCompleted() &&
-                  styles.advanceButtonDisabled,
+                !canAdvanceRound() && styles.advanceButtonDisabled,
               ]}
               onPress={handleAdvanceRoundPress}
-              disabled={!allCurrentRoundMatchesCompleted()}
             >
-              <Text style={styles.advanceButtonText}>Advance Round</Text>
+              <Text style={styles.advanceButtonText}>
+                {tournamentType.startsWith("Single Knockout")
+                  ? `Advance to Round ${currentRound + 1}`
+                  : "Advance Round"}
+              </Text>
             </TouchableOpacity>
           </View>
         )}
@@ -1237,6 +1117,20 @@ const TournamentScreen: React.FC<TournamentScreenProps> = ({
           message="Are you sure you want to advance to the next round? This cannot be undone."
           onConfirm={executeAdvanceRound}
           onCancel={() => setIsAdvanceModalVisible(false)}
+        />
+
+        <IncompleteMatchesModal
+          visible={showIncompleteModal}
+          onClose={() => setShowIncompleteModal(false)}
+        />
+
+        <TournamentSummaryModal
+          visible={showSummaryModal && !!overallWinner && !!finalMatch}
+          onClose={() => setShowSummaryModal(false)}
+          winner={overallWinner!}
+          runnerUp={runnerUp}
+          tournamentType={tournamentType}
+          finalMatch={finalMatch!}
         />
       </View>
     </SafeAreaView>
@@ -1266,14 +1160,15 @@ const styles = StyleSheet.create({
   },
   advanceButton: {
     backgroundColor: COLORS.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
+    padding: 12,
     borderRadius: 8,
     alignItems: "center",
+    marginHorizontal: 16,
+    marginVertical: 8,
   },
   advanceButtonDisabled: {
-    backgroundColor: COLORS.backgroundLight,
-    opacity: 0.5,
+    backgroundColor: COLORS.disabledButton,
+    opacity: 0.8, // increased from 0.5 for better visibility
   },
   advanceButtonText: {
     color: COLORS.textWhite,
