@@ -42,26 +42,63 @@ export const createDEInitialMatches = (
   const matches: Match[] = [];
   const shuffledPlayers = shuffleArray([...players]);
 
-  if (players.length === 6) {
-    // 6 players: 4 play matches, 2 get byes to round 2
-    const [p1, p2, p3, p4, bye1, bye2] = shuffledPlayers;
+ if (players.length === 6) {
+    // Destructure players for clarity
+    const [p1, p2, p3, p4, p5, p6] = shuffledPlayers;
 
+    // Round 1: Two matches + Two byes
     matches.push(
-      // First two matches are actual matches
-      createMatch("match-wb1-1", 1, 1, p1, p2, "winners", false, format),
-      createMatch("match-wb1-2", 1, 2, p3, p4, "winners", false, format)
-    );
-
-    // Create "virtual" matches for bye players that auto-advance to R2
-    matches.push(
-      createMatch("match-wb2-1", 2, 1, bye1, null, "winners", false, format),
-      createMatch("match-wb2-2", 2, 2, bye2, null, "winners", false, format)
+      // Two initial matches
+      createMatch(
+        "match-wb1-1",
+        1,
+        1,
+        p1,
+        p6,
+        "winners",
+        false,
+        format
+      ),
+      createMatch(
+        "match-wb1-2",
+        1,
+        2,
+        p2,
+        p5,
+        "winners",
+        false,
+        format
+      ),
+      // Two players get byes (directly to Round 2)
+      createMatch(  
+        "match-wb2-bye1",
+        2,
+        1,
+        p3,
+        null,
+        "winners",
+        false,
+        format
+      ),
+      createMatch(
+        "match-wb2-bye2",
+        2,
+        2,
+        p4,
+        null,
+        "winners",
+        false,
+        format
+      )
     );
 
     console.log("Created DE-6 bracket:", {
-      r1Matches: 2,
-      byeAdvances: 2,
-      players: shuffledPlayers.map((p) => p.name),
+      round1Matches: 2,
+      byePlayers: [p3.name, p4.name],
+      initialMatches: [
+        `${p1.name} vs ${p6.name}`,
+        `${p2.name} vs ${p5.name}`
+      ]
     });
   } else if (players.length === 8) {
     // Standard 8 player bracket - 4 first round matches
@@ -79,6 +116,12 @@ export const createDEInitialMatches = (
         )
       );
     }
+
+    console.log("Created DE-8 bracket:", {
+      actualMatches: 4,
+      totalPlayers: 8,
+      players: shuffledPlayers.map((p) => p.name),
+    });
   }
 
   return matches;

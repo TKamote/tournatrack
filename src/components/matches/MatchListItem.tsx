@@ -26,51 +26,75 @@ const MatchListItem: React.FC<MatchListItemProps> = ({
   onSetWinner,
 }) => {
   const handleScore = (player: Player, isPlayer1: boolean) => {
-    // Only allow scoring if match isn't locked and no winner yet
     if (isMatchLocked(item) || item.winner) return;
-
-    // Add game result
     onGameResult(item.id, player, isPlayer1 ? 1 : 0, isPlayer1 ? 0 : 1);
   };
 
-  const PlayerDisplay = ({ player }: { player: Player }) => (
-    <Text style={styles.playerName}>
-      {player.name} {player.losses > 0 ? `(L${player.losses})` : ""}
-    </Text>
-  );
+  // Handle bye match display
+  if (item.player1 && !item.player2) {
+    return (
+      <View style={styles.matchContainer}>
+        <MatchInfo
+          round={item.round}
+          bracket={item.bracket}
+          matchNumber={item.matchNumber}
+        />
+        <View style={styles.byeContainer}>
+          <Text style={styles.byeText}>
+            {item.player1.name} receives a bye
+          </Text>
+        </View>
+      </View>
+    );
+  }
 
+  // Regular match display
   return (
-    <View style={styles.container}>
+    <View style={styles.matchContainer}>
       <MatchInfo
         round={item.round}
-        matchNumber={item.matchNumber}
         bracket={item.bracket}
+        matchNumber={item.matchNumber}
       />
-      <MatchResults
-        match={item}
-        onScore={handleScore}
-        isLocked={isMatchLocked(item)}
-      />
+      {item.player1 && item.player2 ? (
+        <MatchResults
+          match={item}
+          onScore={handleScore}
+          onSetWinner={onSetWinner}
+          isLocked={isMatchLocked(item)}
+        />
+      ) : (
+        <Text style={styles.pendingText}>Waiting for players...</Text>
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  matchContainer: {
     backgroundColor: COLORS.backgroundWhite,
-    borderRadius: 12,
-    marginHorizontal: 16,
-    marginVertical: 8,
     padding: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    marginVertical: 8,
+    borderRadius: 8,
+    elevation: 2,
   },
-  playerName: {
-    // Add your styles for playerName here
+  byeContainer: {
+    padding: 12,
+    backgroundColor: COLORS.backgroundLight,
+    borderRadius: 4,
+    marginTop: 8,
   },
+  byeText: {
+    fontSize: 16,
+    color: COLORS.textPrimary,
+    textAlign: 'center',
+  },
+  pendingText: {
+    color: COLORS.textLight,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginTop: 8,
+  }
 });
 
 export default MatchListItem;

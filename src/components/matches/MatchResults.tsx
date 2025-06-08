@@ -7,12 +7,14 @@ import { COLORS } from '../../constants/colors';
 interface MatchResultsProps {
   match: Match;
   onScore: (player: Player, isPlayer1: boolean) => void;
+  onSetWinner: (matchId: string, winner: Player) => void;  // Add this prop
   isLocked: boolean;
 }
 
 export const MatchResults: React.FC<MatchResultsProps> = ({
   match,
   onScore,
+  onSetWinner, // Destructure the new prop
   isLocked,
 }) => {
   const handleScore = (player: Player | null, isPlayer1: boolean) => {
@@ -22,6 +24,20 @@ export const MatchResults: React.FC<MatchResultsProps> = ({
 
   const player1Score = match.games.filter(g => g.winner?.id === match.player1?.id).length;
   const player2Score = match.games.filter(g => g.winner?.id === match.player2?.id).length;
+
+  // Add check for bye matches
+  const isByeMatch = (match: Match): boolean => {
+    return Boolean(match.player1 && !match.player2);
+  };
+
+  // Use this check in render logic
+  if (isByeMatch(match)) {
+    return (
+      <View style={styles.byeMatchContainer}>
+        <Text>{match.player1?.name} advances with bye</Text>
+      </View>
+    );
+  }
 
   return (
     <View>
@@ -134,5 +150,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.primary,
     fontWeight: "600",
+  },
+  byeMatchContainer: {
+    padding: 16,
+    backgroundColor: COLORS.backgroundLight,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 8,
   },
 });

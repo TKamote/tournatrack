@@ -25,4 +25,5 @@ export interface Match {
   isGrandFinalsReset: boolean;
   format: MatchFormat;
   games: Game[];
+  isByeMatch?: boolean; // Optional field to indicate if this is a bye match
 }
