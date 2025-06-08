@@ -3,4 +3,5 @@ export interface Player {
   name: string;
   seed: number;
   losses: number;
+  isEliminated: boolean; // Add this property
 }

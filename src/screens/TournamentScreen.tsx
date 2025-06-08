@@ -21,7 +21,6 @@ import { COLORS } from "../constants/colors";
 import MatchListItem from "../components/matches/MatchListItem";
 import {
   generatePlayers as generateDefaultPlayers,
-  generateSENextRoundMatches,
   generateDEWinnersBracketNextRound,
   generateDELosersBracketRound1Matches,
   generateDELosersBracketNextRoundMatches,
@@ -36,6 +35,7 @@ import { findNextMatch } from "../utils/tournament/matchUtils";
 import { TournamentProvider } from "../contexts/tournament/TournamentContext";
 import { TournamentBrackets } from "../components/brackets/TournamentBrackets";
 import { TournamentScreenProps } from "../types/navigation.types";
+import { RoundSeparator } from "../components/tournament/RoundSeparator";
 
 export const TournamentScreen: React.FC<TournamentScreenProps> = ({
   route,
@@ -66,6 +66,10 @@ export const TournamentScreen: React.FC<TournamentScreenProps> = ({
   const [runnerUp, setRunnerUp] = useState<Player | null>(null);
   const [finalMatch, setFinalMatch] = useState<Match | null>(null);
 
+  // Add new state for tracking tournament progress
+  const [hasNextRound, setHasNextRound] = useState(true);
+  const [isTournamentComplete, setIsTournamentComplete] = useState(false);
+
   const defaultMatchFormats = {
     bo5: { bestOf: 5, gamesNeededToWin: 3 },
     bo7: { bestOf: 7, gamesNeededToWin: 4 },
@@ -91,54 +95,35 @@ export const TournamentScreen: React.FC<TournamentScreenProps> = ({
       numPlayers > 0 &&
       receivedMatchFormat
     ) {
-      // Initialize players with IDs and seeds
+      // Initialize players with IDs, seeds, and isEliminated property
       const initialPlayers = receivedPlayerNames.map((name, i) => ({
         id: `player-${i + 1}`,
         name,
         losses: 0,
         seed: i + 1,
+        isEliminated: false, // Add this required property
       }));
 
-      // Create initial matches based on tournament type
-      let initialMatches: Match[] = [];
+      // Shuffle players for random matchups
+      const shuffledPlayers = shuffleArray(initialPlayers);
 
-      if (tournamentType === "Single Knockout") {
-        // Create matches for first round
-        for (let i = 0; i < Math.floor(numPlayers / 2); i++) {
-          const match: Match = {
-            id: `match-r1-${i + 1}`,
-            round: 1,
-            matchNumber: i + 1,
-            player1: initialPlayers[i * 2],
-            player2: initialPlayers[i * 2 + 1],
-            winner: null,
-            games: [],
-            bracket: "winners",
-            isGrandFinalsReset: false,
-            format: receivedMatchFormat,
-          };
-          initialMatches.push(match);
-        }
-      } else if (tournamentType === "Double Elimination") {
-        // Create first round matches for winners bracket
-        for (let i = 0; i < Math.floor(numPlayers / 2); i++) {
-          const match: Match = {
-            id: `match-wb-r1-${i + 1}`,
-            round: 1,
-            matchNumber: i + 1,
-            player1: initialPlayers[i * 2],
-            player2: initialPlayers[i * 2 + 1],
-            winner: null,
-            games: [],
-            bracket: "winners",
-            isGrandFinalsReset: false,
-            format: receivedMatchFormat,
-          };
-          initialMatches.push(match);
-        }
+      // Create initial matches using our existing createMatch utility
+      let initialMatches: Match[] = [];
+      for (let i = 0; i < Math.floor(numPlayers / 2); i++) {
+        const match = createMatch(
+          `match-r1-${i + 1}`,
+          1,
+          i + 1,
+          shuffledPlayers[i * 2],
+          shuffledPlayers[i * 2 + 1],
+          "winners",
+          false,
+          receivedMatchFormat
+        );
+        initialMatches.push(match);
       }
 
-      setPlayers(initialPlayers);
+      setPlayers(shuffledPlayers);
       setMatches(initialMatches);
       setHasInitialized(true);
     }
@@ -146,72 +131,154 @@ export const TournamentScreen: React.FC<TournamentScreenProps> = ({
 
   const isMatchLocked = useCallback(
     (match: Match): boolean => {
-      if (tournamentOver) return true;
-      if (match.bracket === "winners" && match.round < currentRound)
-        return true;
-      if (match.bracket === "losers" && match.round < currentRound) return true;
-      if (match.bracket === "grandFinals" && overallWinner) return true;
+      // Lock if match has a winner
+      if (match.winner) return true;
+
+      // Lock if match players aren't set
+      if (!match.player1 || !match.player2) return true;
+
+      // Lock if previous round matches aren't complete
+      const previousRoundMatches = matches.filter(
+        (m) => m.round === match.round - 1 && m.bracket === match.bracket
+      );
+
+      if (previousRoundMatches.length > 0) {
+        return previousRoundMatches.some((m) => !m.winner);
+      }
+
       return false;
     },
-    [tournamentOver, currentRound, overallWinner]
+    [matches]
+  );
+
+  const getLosersOfRound = useCallback(
+    (roundNumber: number, bracketType: BracketType): Player[] => {
+      return matches
+        .filter(
+          (match) =>
+            match.round === roundNumber &&
+            match.bracket === bracketType &&
+            match.winner !== null
+        )
+        .reduce((acc: Player[], match) => {
+          if (match.player1 && match.player1.id !== match.winner?.id) {
+            acc.push(match.player1);
+          }
+          if (match.player2 && match.player2.id !== match.winner?.id) {
+            acc.push(match.player2);
+          }
+          return acc;
+        }, []);
+    },
+    [matches]
+  );
+
+  const handleAdvanceWinner = useCallback(
+    (match: Match) => {
+      if (!match.winner) return;
+
+      setMatches((prevMatches) => {
+        const nextMatch = findNextMatch(matches, currentRound, "winners");
+        if (!nextMatch) return prevMatches;
+
+        return prevMatches.map((m) => {
+          if (m.id === nextMatch.id) {
+            // Place winner in next available slot
+            if (!m.player1) {
+              return { ...m, player1: match.winner };
+            } else {
+              return { ...m, player2: match.winner };
+            }
+          }
+          return m;
+        });
+      });
+    },
+    [matches, currentRound]
   );
 
   const handleSetWinner = useCallback(
     (matchId: string, newWinningPlayer: Player) => {
-      const currentTargetMatch = matches.find((m) => m.id === matchId);
-      if (!currentTargetMatch) return;
+      setMatches((prevMatches) => {
+        const updatedMatches = [...prevMatches];
+        const currentTargetMatch = updatedMatches.find((m) => m.id === matchId);
+        if (!currentTargetMatch) return prevMatches;
 
-      // Update the match with the winner
-      const tempUpdatedMatches = matches.map((m) => {
-        if (m.id === matchId) {
-          return { ...m, winner: newWinningPlayer };
-        }
-        return m;
-      });
+        // Update players' loss count
+        const updatedPlayers = players.map((player) => {
+          if (
+            currentTargetMatch.player1?.id === player.id &&
+            player.id !== newWinningPlayer.id
+          ) {
+            return {
+              ...player,
+              losses: player.losses + 1,
+              isEliminated: player.losses + 1 >= 2,
+            };
+          }
+          if (
+            currentTargetMatch.player2?.id === player.id &&
+            player.id !== newWinningPlayer.id
+          ) {
+            return {
+              ...player,
+              losses: player.losses + 1,
+              isEliminated: player.losses + 1 >= 2,
+            };
+          }
+          return player;
+        });
+        setPlayers(updatedPlayers);
 
-      if (currentTargetMatch.bracket === "grandFinals") {
-        const lbPlayerInGF = currentTargetMatch.player2;
-        const wbPlayerInGF = currentTargetMatch.player1;
+        if (currentTargetMatch.bracket === "grandFinals") {
+          const lbPlayerInGF = currentTargetMatch.player2;
+          const wbPlayerInGF = currentTargetMatch.player1;
 
-        if (!currentTargetMatch.isGrandFinalsReset) {
-          if (wbPlayerInGF && newWinningPlayer.id === wbPlayerInGF.id) {
-            // WB Champion wins - tournament over
+          if (!currentTargetMatch.isGrandFinalsReset) {
+            if (wbPlayerInGF && newWinningPlayer.id === wbPlayerInGF.id) {
+              // WB Champion wins - tournament over
+              setOverallWinner(newWinningPlayer);
+              setRunnerUp(lbPlayerInGF);
+              setFinalMatch(currentTargetMatch);
+              setTournamentOver(true);
+              setShowSummaryModal(true);
+              return updatedMatches;
+            } else if (
+              lbPlayerInGF &&
+              newWinningPlayer.id === lbPlayerInGF.id
+            ) {
+              // Create reset match with same format
+              const gfResetMatch = createMatch(
+                `match-gf-reset-1`,
+                currentTargetMatch.round,
+                currentTargetMatch.matchNumber + 1,
+                wbPlayerInGF,
+                lbPlayerInGF,
+                "grandFinals",
+                true,
+                receivedMatchFormat
+              );
+              return [...updatedMatches, gfResetMatch];
+            }
+          } else {
+            // Reset match winner is tournament winner
             setOverallWinner(newWinningPlayer);
-            setRunnerUp(lbPlayerInGF);
+            setRunnerUp(
+              newWinningPlayer.id === wbPlayerInGF?.id
+                ? lbPlayerInGF
+                : wbPlayerInGF
+            );
             setFinalMatch(currentTargetMatch);
             setTournamentOver(true);
             setShowSummaryModal(true);
-          } else if (lbPlayerInGF && newWinningPlayer.id === lbPlayerInGF.id) {
-            // Create reset match with same format
-            const gfResetMatch = createMatch(
-              `match-gf-reset-1`,
-              currentTargetMatch.round,
-              currentTargetMatch.matchNumber + 1,
-              wbPlayerInGF,
-              lbPlayerInGF,
-              "grandFinals",
-              true,
-              receivedMatchFormat
-            );
-            tempUpdatedMatches.push(gfResetMatch);
+            return updatedMatches;
           }
-        } else {
-          // Reset match winner is tournament winner
-          setOverallWinner(newWinningPlayer);
-          setRunnerUp(
-            newWinningPlayer.id === wbPlayerInGF?.id
-              ? lbPlayerInGF
-              : wbPlayerInGF
-          );
-          setFinalMatch(currentTargetMatch);
-          setTournamentOver(true);
-          setShowSummaryModal(true);
         }
-      }
 
-      setMatches(tempUpdatedMatches);
+        return updatedMatches;
+      });
     },
-    [matches, receivedMatchFormat]
+    [matches, players, receivedMatchFormat]
   );
 
   const advanceWinner = useCallback((match: Match) => {
@@ -237,47 +304,60 @@ export const TournamentScreen: React.FC<TournamentScreenProps> = ({
 
   const handleIncrementScore = useCallback(
     (matchId: string, winner: Player, score1: number, score2: number) => {
-      setMatches((prevMatches: Match[]) => {
-        return prevMatches.map((match) => {
+      setMatches((prevMatches) => {
+        const updatedMatches = prevMatches.map((match) => {
           if (match.id !== matchId) return match;
 
-          const newGame: Game = {
+          // If match already has a winner, don't update
+          if (match.winner) return match;
+
+          const newGame = {
             id: `game-${match.games.length + 1}`,
             winner,
             score1,
             score2,
           };
 
-          return {
-            ...match,
-            games: [...match.games, newGame],
-          };
+          const updatedGames = [...match.games, newGame];
+          const playerScore = updatedGames.filter(
+            (g) => g.winner?.id === winner.id
+          ).length;
+
+          if (playerScore === match.format.gamesNeededToWin) {
+            const updatedMatch = {
+              ...match,
+              games: updatedGames,
+              winner,
+            };
+
+            // Handle Single Elimination finals
+            if (!tournamentType.startsWith("Double")) {
+              const isFinalMatch =
+                match.round === Math.ceil(Math.log2(numPlayers));
+              if (isFinalMatch) {
+                setOverallWinner(winner);
+                setRunnerUp(
+                  match.player1?.id === winner.id
+                    ? match.player2
+                    : match.player1
+                );
+                setFinalMatch(updatedMatch);
+                setTournamentOver(true);
+                setShowSummaryModal(true);
+              }
+            }
+
+            handleAdvanceWinner(updatedMatch);
+            return updatedMatch;
+          }
+
+          return { ...match, games: updatedGames };
         });
+
+        return updatedMatches;
       });
     },
-    [players]
-  );
-
-  const getLosersOfRound = useCallback(
-    (roundNumber: number, bracketType: BracketType): Player[] => {
-      return matches
-        .filter(
-          (match) =>
-            match.round === roundNumber &&
-            match.bracket === bracketType &&
-            match.winner !== null
-        )
-        .reduce((acc: Player[], match) => {
-          if (match.player1 && match.player1.id !== match.winner?.id) {
-            acc.push(match.player1);
-          }
-          if (match.player2 && match.player2.id !== match.winner?.id) {
-            acc.push(match.player2);
-          }
-          return acc;
-        }, []);
-    },
-    [matches]
+    [handleAdvanceWinner, tournamentType, numPlayers]
   );
 
   // Update matchesForDisplay to always return something
@@ -327,9 +407,158 @@ export const TournamentScreen: React.FC<TournamentScreenProps> = ({
 
   const executeAdvanceRound = useCallback(() => {
     setIsAdvanceModalVisible(false);
-    // Add your round advancement logic here
-    setCurrentRound((prev) => prev + 1);
-  }, []);
+
+    setMatches((prevMatches: Match[]): Match[] => {
+      if (!tournamentType.startsWith("Double")) {
+        // Check incomplete matches
+        const incompleteMatches = prevMatches.filter(
+          (m) => m.round === currentRound && !m.winner
+        );
+
+        if (incompleteMatches.length > 0) {
+          setShowIncompleteModal(true);
+          return prevMatches;
+        }
+
+        // Calculate final round number based on number of players
+        const finalRound = Math.ceil(Math.log2(numPlayers));
+
+        // Check if this is the final round
+        if (currentRound === finalRound - 1) {
+          // For 8 players, only generate one match for Round 3 (finals)
+          const winningPlayers = prevMatches
+            .filter(m => m.round === currentRound && m.winner)
+            .map(m => m.winner!);
+
+          const nextRoundMatchCount = Math.floor(winningPlayers.length / 2);
+          const nextRoundMatches: Match[] = [];
+
+          for (let i = 0; i < nextRoundMatchCount; i++) {
+            nextRoundMatches.push(
+              createMatch(
+                `match-r${currentRound + 1}-${i + 1}`,
+                currentRound + 1,
+                i + 1,
+                winningPlayers[i * 2],
+                winningPlayers[i * 2 + 1],
+                "winners",
+                false,
+                receivedMatchFormat
+              )
+            );
+          }
+
+          setCurrentRound((prev) => prev + 1);
+          return [...prevMatches, ...nextRoundMatches];
+        }
+
+        if (currentRound === finalRound) {
+          const finalMatch = prevMatches.find(
+            (m) => m.round === currentRound && m.winner
+          );
+          if (finalMatch?.winner) {
+            setOverallWinner(finalMatch.winner);
+            setRunnerUp(
+              finalMatch.player1?.id === finalMatch.winner.id
+                ? finalMatch.player2
+                : finalMatch.player1
+            );
+            setFinalMatch(finalMatch);
+            setTournamentOver(true);
+            setShowSummaryModal(true);
+          }
+          return prevMatches;
+        }
+
+        // For non-final, non-penultimate rounds, generate next round matches
+        const winningPlayers = prevMatches
+          .filter(m => m.round === currentRound && m.winner)
+          .map(m => m.winner!);
+
+        const nextRoundMatchCount = Math.floor(winningPlayers.length / 2);
+        const nextRoundMatches: Match[] = [];
+
+        for (let i = 0; i < nextRoundMatchCount; i++) {
+          nextRoundMatches.push(
+            createMatch(
+              `match-r${currentRound + 1}-${i + 1}`,
+              currentRound + 1,
+              i + 1,
+              winningPlayers[i * 2],
+              winningPlayers[i * 2 + 1],
+              "winners",
+              false,
+              receivedMatchFormat
+            )
+          );
+        }
+
+        setCurrentRound((prev) => prev + 1);
+        return [...prevMatches, ...nextRoundMatches];
+      }
+
+      // Double Elimination logic - keep existing code
+      if (tournamentType.startsWith("Double Elimination")) {
+        // Check incomplete matches
+        const currentRoundWinners = prevMatches.filter(
+          (m) =>
+            m.round === currentRound && m.bracket === "winners" && !m.winner
+        );
+        const currentRoundLosers = prevMatches.filter(
+          (m) => m.round === currentRound && m.bracket === "losers" && !m.winner
+        );
+
+        // Filter only unique matches for the winners bracket
+        const nextWinnersMatches = generateDEWinnersBracketNextRound(
+          prevMatches.filter(
+            (m) => m.bracket === "winners" && m.round === currentRound // Only use current round matches
+          ),
+          currentRound + 1,
+          receivedMatchFormat
+        );
+
+        // Get losers only from current round
+        const losers = getLosersOfRound(currentRound, "winners").filter(
+          (player) => player.losses < 2
+        );
+
+        let losersMatches: Match[] = [];
+        if (currentRound === 1) {
+          // First round losers handling stays the same
+          losersMatches = generateDELosersBracketRound1Matches(
+            losers,
+            prevMatches.length,
+            receivedMatchFormat
+          );
+        } else {
+          // For subsequent rounds, only use active losers from current round
+          const activeLosersPlayers = players.filter(
+            (p) => p.losses === 1 && !p.isEliminated
+          );
+          losersMatches = generateDELosersBracketNextRoundMatches(
+            prevMatches.filter(
+              (m) => m.bracket === "losers" && m.round === currentRound // Only use current round matches
+            ),
+            activeLosersPlayers,
+            currentRound,
+            receivedMatchFormat
+          );
+        }
+
+        setCurrentRound((prev) => prev + 1);
+        return [...prevMatches, ...nextWinnersMatches, ...losersMatches];
+      }
+
+      return prevMatches; // Ensure we always return Match[]
+    });
+  }, [
+    currentRound,
+    tournamentType,
+    numPlayers,
+    receivedMatchFormat,
+    getLosersOfRound,
+    players,
+  ]);
 
   // Add return statement for the component
   return (
@@ -351,22 +580,36 @@ export const TournamentScreen: React.FC<TournamentScreenProps> = ({
           {/* Matches List */}
           <FlatList
             data={matchesForDisplay()}
-            renderItem={({ item }) => (
-              <MatchListItem
-                item={item}
-                players={players}
-                tournamentType={tournamentType}
-                isMatchLocked={isMatchLocked}
-                onSetWinner={handleSetWinner}
-                onGameResult={handleIncrementScore}
-              />
-            )}
+            renderItem={({ item, index }) => {
+              const prevItem =
+                index > 0 ? matchesForDisplay()[index - 1] : null;
+              const showSeparator =
+                !prevItem ||
+                prevItem.round !== item.round ||
+                prevItem.bracket !== item.bracket;
+
+              return (
+                <>
+                  {showSeparator && (
+                    <RoundSeparator round={item.round} bracket={item.bracket} />
+                  )}
+                  <MatchListItem
+                    item={item}
+                    players={players}
+                    tournamentType={tournamentType}
+                    isMatchLocked={isMatchLocked}
+                    onSetWinner={handleSetWinner}
+                    onGameResult={handleIncrementScore}
+                  />
+                </>
+              );
+            }}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.listContent}
           />
 
           {/* Advance Round Button */}
-          {!tournamentOver && matches.length > 0 && (
+          {!tournamentOver && (
             <TouchableOpacity
               style={styles.advanceButton}
               onPress={() => setIsAdvanceModalVisible(true)}
@@ -437,5 +680,21 @@ const styles = StyleSheet.create({
   advanceButtonText: {
     color: COLORS.backgroundWhite,
     fontWeight: "bold",
+  },
+  roundSeparator: {
+    backgroundColor: COLORS.backgroundLight,
+    padding: 8,
+    marginVertical: 8,
+    borderRadius: 4,
+    borderLeftWidth: 4,
+    borderLeftColor: COLORS.primary,
+  },
+  roundSeparatorText: {
+    color: COLORS.textPrimary,
+    fontWeight: "bold",
+    fontSize: 14,
+  },
+  playerWithLosses: {
+    color: COLORS.textLight,
   },
 });

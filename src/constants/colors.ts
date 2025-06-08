@@ -27,6 +27,8 @@ export const COLORS = {
   successBackground: "#d4edda",
   successBorder: "#c3e6cb",
 
+   separatorBackground: '#F0F0F0',
+
   error: "#e74c3c", // Error red
   warning: "#f1c40f", // Warning yellow
 
