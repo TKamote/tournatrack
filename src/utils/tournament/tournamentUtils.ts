@@ -40,88 +40,74 @@ export const createDEInitialMatches = (
   format: MatchFormat
 ): Match[] => {
   const matches: Match[] = [];
-  const shuffledPlayers = shuffleArray([...players]);
+  const shuffledPlayers = shuffleArray(players);
 
- if (players.length === 6) {
-    // Destructure players for clarity
+  if (players.length === 6) {
+    // Handle 6 players: 2 actual matches + 2 bye matches in Round 1
     const [p1, p2, p3, p4, p5, p6] = shuffledPlayers;
 
-    // Round 1: Two matches + Two byes
     matches.push(
-      // Two initial matches
+      // First bye match
       createMatch(
         "match-wb1-1",
         1,
         1,
-        p1,
-        p6,
+        p1, // Player 1 gets a bye
+        null,
         "winners",
         false,
         format
       ),
+      // Second bye match
       createMatch(
         "match-wb1-2",
         1,
         2,
-        p2,
-        p5,
-        "winners",
-        false,
-        format
-      ),
-      // Two players get byes (directly to Round 2)
-      createMatch(  
-        "match-wb2-bye1",
-        2,
-        1,
-        p3,
+        p2, // Player 2 gets a bye
         null,
         "winners",
         false,
         format
       ),
+      // First actual match
       createMatch(
-        "match-wb2-bye2",
-        2,
-        2,
-        p4,
-        null,
+        "match-wb1-3",
+        1,
+        3,
+        p3, // Player 3
+        p6, // Player 6
+        "winners",
+        false,
+        format
+      ),
+      // Second actual match
+      createMatch(
+        "match-wb1-4",
+        1,
+        4,
+        p4, // Player 4
+        p5, // Player 5
         "winners",
         false,
         format
       )
     );
-
-    console.log("Created DE-6 bracket:", {
-      round1Matches: 2,
-      byePlayers: [p3.name, p4.name],
-      initialMatches: [
-        `${p1.name} vs ${p6.name}`,
-        `${p2.name} vs ${p5.name}`
-      ]
-    });
   } else if (players.length === 8) {
-    // Standard 8 player bracket - 4 first round matches
-    for (let i = 0; i < 8; i += 2) {
+    // Handle 8 players: 4 actual matches in Round 1
+    for (let i = 0; i < 4; i++) {
       matches.push(
         createMatch(
-          `match-wb1-${i / 2 + 1}`,
+          `match-wb1-${i + 1}`,
           1,
-          i / 2 + 1,
-          shuffledPlayers[i],
-          shuffledPlayers[i + 1],
+          i + 1,
+          shuffledPlayers[i * 2],
+          shuffledPlayers[i * 2 + 1],
           "winners",
           false,
           format
         )
       );
     }
-
-    console.log("Created DE-8 bracket:", {
-      actualMatches: 4,
-      totalPlayers: 8,
-      players: shuffledPlayers.map((p) => p.name),
-    });
   }
 
   return matches;
@@ -239,20 +225,17 @@ export const generateDELosersBracketNextRoundMatches = (
   nextRound: number,
   format: MatchFormat
 ): Match[] => {
-  const matches: Match[] = [];
-  console.log(`LB R${nextRound}: Processing next round`);
-
-  // Get winners from previous LB round
   const lbWinners = previousMatches
     .filter(
       (m) => m.bracket === "losers" && m.round === nextRound - 1 && m.winner
     )
     .map((m) => m.winner!);
 
+  const matches: Match[] = [];
+
   if (nextRound === 2) {
-    // LB R2: LB R1 winner vs WB R2 losers
+    // 6-player case: 1 LB winner + 2 new losers = only 1 match possible
     if (lbWinners.length === 1 && newLosers.length === 2) {
-      // 6 players case
       matches.push(
         createMatch(
           "match-lb2-1",
@@ -263,20 +246,12 @@ export const generateDELosersBracketNextRoundMatches = (
           "losers",
           false,
           format
-        ),
-        createMatch(
-          "match-lb2-2",
-          2,
-          2,
-          newLosers[1],
-          null,
-          "losers",
-          false,
-          format
         )
       );
-    } else if (lbWinners.length === 2 && newLosers.length === 2) {
-      // 8 players case
+      // The second new loser (newLosers[1]) waits for LB R3
+    }
+    // 8-player case: 2 LB winners + 2 new losers = 2 matches
+    else if (lbWinners.length === 2 && newLosers.length === 2) {
       matches.push(
         createMatch(
           "match-lb2-1",
@@ -301,8 +276,23 @@ export const generateDELosersBracketNextRoundMatches = (
       );
     }
   } else if (nextRound === 3) {
-    // LB R3: LB R2 winners face each other
-    if (lbWinners.length === 2) {
+    // LB R3: LB R2 winners + waiting players
+    if (lbWinners.length === 1 && newLosers.length >= 1) {
+      // 6-player case: LB R2 winner vs waiting player from LB R2 + new loser
+      matches.push(
+        createMatch(
+          "match-lb3-1",
+          3,
+          1,
+          lbWinners[0],
+          newLosers[0], // This could be the waiting player or new loser
+          "losers",
+          false,
+          format
+        )
+      );
+    } else if (lbWinners.length === 2) {
+      // 8-player case: LB R2 winners face each other
       matches.push(
         createMatch(
           "match-lb3-1",
@@ -316,22 +306,10 @@ export const generateDELosersBracketNextRoundMatches = (
         )
       );
     }
-  } else if (nextRound === 4) {
-    // LB Final: LB R3 winner vs WB Final loser
-    if (lbWinners.length === 1 && newLosers.length === 1) {
-      matches.push(
-        createMatch(
-          "match-lb4-1",
-          4,
-          1,
-          lbWinners[0],
-          newLosers[0],
-          "losers",
-          false,
-          format
-        )
-      );
-    }
+  }
+
+  if (matches.length > 0) {
+    console.log(`LB R${nextRound}: Created ${matches.length} matches`);
   }
 
   return matches;
@@ -358,4 +336,134 @@ export const findNextMatch = (
     (match) =>
       match.round === currentRound && match.bracket === bracket && !match.winner
   );
+};
+
+// New function to handle match creation for a given round
+export const createMatchesForRound = (
+  round: number,
+  currentWinnersMatches: Match[],
+  receivedMatchFormat: MatchFormat
+): Match[] => {
+  let newMatches: Match[] = [];
+
+  // Winners bracket: just generate normally
+  newMatches = generateDEWinnersBracketNextRound(
+    currentWinnersMatches,
+    round,
+    receivedMatchFormat
+  );
+
+  if (round === 1) {
+    // Get losers from Winners Bracket Round 1
+    const actualMatchLosers = currentWinnersMatches
+      .filter((m) => m.player1 && m.player2 && m.winner)
+      .map((m) => (m.player1!.id === m.winner!.id ? m.player2! : m.player1!));
+
+    console.log(`LB R1: Got ${actualMatchLosers.length} losers from WB R1`);
+
+    // Create Losers Bracket Round 1 matches dynamically
+    const losersNextRound: Match[] = [];
+    for (let i = 0; i < Math.floor(actualMatchLosers.length / 2); i++) {
+      losersNextRound.push(
+        createMatch(
+          `match-lb1-${i + 1}`,
+          1,
+          i + 1,
+          actualMatchLosers[i * 2],
+          actualMatchLosers[i * 2 + 1],
+          "losers",
+          false,
+          receivedMatchFormat
+        )
+      );
+    }
+
+    // If there’s an odd number of losers, the last player gets a bye
+    if (actualMatchLosers.length % 2 === 1) {
+      losersNextRound.push(
+        createMatch(
+          `match-lb1-${losersNextRound.length + 1}`,
+          1,
+          losersNextRound.length + 1,
+          actualMatchLosers[actualMatchLosers.length - 1],
+          null, // Bye match
+          "losers",
+          false,
+          receivedMatchFormat
+        )
+      );
+    }
+
+    newMatches = [...newMatches, ...losersNextRound];
+  }
+
+  return newMatches;
+};
+
+export const generateGrandFinalsMatch = (
+  allMatches: Match[],
+  currentRound: number,
+  currentLosersRound: number,
+  format: MatchFormat
+): Match[] => {
+  // Find Winners Bracket Champion
+  const wbChampion = allMatches.find(
+    (m) => m.bracket === "winners" && m.round === currentRound && m.winner
+  )?.winner;
+
+  // Find Losers Bracket Champion
+  const lbChampion = allMatches.find(
+    (m) => m.bracket === "losers" && m.round === currentLosersRound && m.winner
+  )?.winner;
+
+  if (wbChampion && lbChampion) {
+    console.log(
+      `Creating Grand Finals: ${wbChampion.name} vs ${lbChampion.name}`
+    );
+
+    return [
+      createMatch(
+        "match-gf-1",
+        currentRound + 1,
+        1,
+        wbChampion,
+        lbChampion,
+        "grandFinals",
+        false,
+        format
+      ),
+    ];
+  }
+
+  return [];
+};
+
+export const generateGrandFinalsReset = (
+  grandFinalsMatch: Match,
+  format: MatchFormat
+): Match[] => {
+  // If LB Champion won the first Grand Finals match, create reset match
+  if (
+    grandFinalsMatch.winner &&
+    grandFinalsMatch.player2?.id === grandFinalsMatch.winner.id
+  ) {
+    console.log(
+      `Grand Finals Reset: ${grandFinalsMatch.winner.name} forces reset!`
+    );
+
+    return [
+      createMatch(
+        "match-gf-2",
+        grandFinalsMatch.round,
+        2,
+        grandFinalsMatch.player1!, // Original WB Champion
+        grandFinalsMatch.winner, // LB Champion who won GF1
+        "grandFinals",
+        true, // This is the reset match
+        format
+      ),
+    ];
+  }
+
+  return [];
 };

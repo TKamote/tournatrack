@@ -8,13 +8,31 @@ interface RoundSeparatorProps {
   bracket: BracketType;
 }
 
-export const RoundSeparator = ({ round, bracket }: RoundSeparatorProps) => (
-  <View style={styles.roundSeparator}>
-    <Text style={styles.roundSeparatorText}>
-      {`Round ${round}${bracket !== 'winners' ? ` - ${bracket.toUpperCase()}` : ''}`}
-    </Text>
-  </View>
-);
+export const RoundSeparator: React.FC<{
+  round: number;
+  bracket: BracketType;
+}> = ({ round, bracket }) => {
+  const getBracketDisplay = () => {
+    switch (bracket) {
+      case "winners":
+        return `Winners Bracket - Round ${round}`;
+      case "losers":
+        return `Losers Bracket - Round ${round}`;
+      case "grandFinals":
+        return "Grand Finals";
+      default:
+        return `Round ${round}`;
+    }
+  };
+
+  return (
+    <View style={styles.roundSeparator}>
+      <Text style={styles.roundSeparatorText}>
+        {getBracketDisplay()}
+      </Text>
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
   roundSeparator: {
