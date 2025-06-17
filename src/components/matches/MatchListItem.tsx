@@ -40,9 +40,7 @@ const MatchListItem: React.FC<MatchListItemProps> = ({
           matchNumber={item.matchNumber}
         />
         <View style={styles.byeContainer}>
-          <Text style={styles.byeText}>
-            {item.player1.name} receives a bye
-          </Text>
+          <Text style={styles.byeText}>{item.player1.name} receives a bye</Text>
         </View>
       </View>
     );
@@ -87,14 +85,14 @@ const styles = StyleSheet.create({
   byeText: {
     fontSize: 16,
     color: COLORS.textPrimary,
-    textAlign: 'center',
+    textAlign: "center",
   },
   pendingText: {
     color: COLORS.textLight,
-    fontStyle: 'italic',
-    textAlign: 'center',
+    fontStyle: "italic",
+    textAlign: "center",
     marginTop: 8,
-  }
+  },
 });
 
 export default MatchListItem;

@@ -1,7 +1,7 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { COLORS } from '../../constants/colors';
-import { BracketType } from '../../types';
+import React from "react";
+import { View, Text, StyleSheet } from "react-native";
+import { COLORS } from "../../constants/colors";
+import { BracketType } from "../../types";
 
 interface RoundSeparatorProps {
   round: number;
@@ -27,9 +27,7 @@ export const RoundSeparator: React.FC<{
 
   return (
     <View style={styles.roundSeparator}>
-      <Text style={styles.roundSeparatorText}>
-        {getBracketDisplay()}
-      </Text>
+      <Text style={styles.roundSeparatorText}>{getBracketDisplay()}</Text>
     </View>
   );
 };
@@ -47,5 +45,5 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary,
     fontWeight: "bold",
     fontSize: 14,
-  }
+  },
 });

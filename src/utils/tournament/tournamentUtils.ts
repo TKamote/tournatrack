@@ -34,6 +34,17 @@ export const createMatch = (
   games: [],
 });
 
+// Player generation
+export const generatePlayers = (count: number): Player[] => {
+  return Array.from({ length: count }, (_, i) => ({
+    id: `player-${i + 1}`,
+    name: `Player ${i + 1}`,
+    seed: i + 1,
+    losses: 0, // Start with 0 losses (L0)
+    isEliminated: false,
+  }));
+};
+
 // Initial match creation for double elimination
 export const createDEInitialMatches = (
   players: Player[],
@@ -113,9 +124,7 @@ export const createDEInitialMatches = (
   return matches;
 };
 
-// Match advancement utils (from matchAdvancementUtils.ts)
-
-// Double elimination utils (from doubleEliminationUtils.ts)
+// Winners Bracket advancement
 export const generateDEWinnersBracketNextRound = (
   previousMatches: Match[],
   nextRound: number,
@@ -168,57 +177,7 @@ export const generateDEWinnersBracketNextRound = (
   return matches;
 };
 
-export const generateDELosersBracketRound1Matches = (
-  losers: Player[],
-  existingMatchCount: number,
-  format: MatchFormat
-): Match[] => {
-  const matches: Match[] = [];
-  console.log(`LB R1: Got ${losers.length} losers from WB R1`);
-
-  if (losers.length === 2) {
-    // 6 players case: 2 losers from 2 WB R1 matches
-    matches.push(
-      createMatch(
-        "match-lb1-1",
-        1,
-        1,
-        losers[0],
-        losers[1],
-        "losers",
-        false,
-        format
-      )
-    );
-  } else if (losers.length === 4) {
-    // 8 players case: 2 matches with 4 losers
-    matches.push(
-      createMatch(
-        "match-lb1-1",
-        1,
-        1,
-        losers[0],
-        losers[1],
-        "losers",
-        false,
-        format
-      ),
-      createMatch(
-        "match-lb1-2",
-        1,
-        2,
-        losers[2],
-        losers[3],
-        "losers",
-        false,
-        format
-      )
-    );
-  }
-
-  return matches;
-};
-
+// Losers Bracket advancement
 export const generateDELosersBracketNextRoundMatches = (
   previousMatches: Match[],
   newLosers: Player[],
@@ -277,22 +236,8 @@ export const generateDELosersBracketNextRoundMatches = (
     }
   } else if (nextRound === 3) {
     // LB R3: LB R2 winners + waiting players
-    if (lbWinners.length === 1 && newLosers.length >= 1) {
-      // 6-player case: LB R2 winner vs waiting player from LB R2 + new loser
-      matches.push(
-        createMatch(
-          "match-lb3-1",
-          3,
-          1,
-          lbWinners[0],
-          newLosers[0], // This could be the waiting player or new loser
-          "losers",
-          false,
-          format
-        )
-      );
-    } else if (lbWinners.length === 2) {
-      // 8-player case: LB R2 winners face each other
+    if (lbWinners.length === 2) {
+      // LB R2 winners face each other (both 6-player and 8-player)
       matches.push(
         createMatch(
           "match-lb3-1",
@@ -300,6 +245,37 @@ export const generateDELosersBracketNextRoundMatches = (
           1,
           lbWinners[0],
           lbWinners[1],
+          "losers",
+          false,
+          format
+        )
+      );
+    } else if (lbWinners.length === 1 && newLosers.length === 1) {
+      // Special case: only 1 LB R2 winner + 1 new loser (6-player edge case)
+      matches.push(
+        createMatch(
+          "match-lb3-1",
+          3,
+          1,
+          lbWinners[0],
+          newLosers[0],
+          "losers",
+          false,
+          format
+        )
+      );
+    }
+  } else if (nextRound === 4) {
+    // LB R4: 8-player Double Elimination only
+    // LB R3 winner vs loser from Winners Bracket Final (WB R3)
+    if (lbWinners.length === 1 && newLosers.length === 1) {
+      matches.push(
+        createMatch(
+          "match-lb4-1",
+          4,
+          1,
+          lbWinners[0], // LB R3 winner
+          newLosers[0], // Loser from WB R3 (Winners Bracket Final)
           "losers",
           false,
           format
@@ -315,91 +291,7 @@ export const generateDELosersBracketNextRoundMatches = (
   return matches;
 };
 
-// Update generatePlayers function
-export const generatePlayers = (count: number): Player[] => {
-  return Array.from({ length: count }, (_, i) => ({
-    id: `player-${i + 1}`,
-    name: `Player ${i + 1}`,
-    seed: i + 1,
-    losses: 0,
-    isEliminated: false, // Add this property
-  }));
-};
-
-// Add the findNextMatch function export
-export const findNextMatch = (
-  matches: Match[],
-  currentRound: number,
-  bracket: BracketType
-): Match | undefined => {
-  return matches.find(
-    (match) =>
-      match.round === currentRound && match.bracket === bracket && !match.winner
-  );
-};
-
-// New function to handle match creation for a given round
-export const createMatchesForRound = (
-  round: number,
-  currentWinnersMatches: Match[],
-  receivedMatchFormat: MatchFormat
-): Match[] => {
-  let newMatches: Match[] = [];
-
-  // Winners bracket: just generate normally
-  newMatches = generateDEWinnersBracketNextRound(
-    currentWinnersMatches,
-    round,
-    receivedMatchFormat
-  );
-
-  if (round === 1) {
-    // Get losers from Winners Bracket Round 1
-    const actualMatchLosers = currentWinnersMatches
-      .filter((m) => m.player1 && m.player2 && m.winner)
-      .map((m) => (m.player1!.id === m.winner!.id ? m.player2! : m.player1!));
-
-    console.log(`LB R1: Got ${actualMatchLosers.length} losers from WB R1`);
-
-    // Create Losers Bracket Round 1 matches dynamically
-    const losersNextRound: Match[] = [];
-    for (let i = 0; i < Math.floor(actualMatchLosers.length / 2); i++) {
-      losersNextRound.push(
-        createMatch(
-          `match-lb1-${i + 1}`,
-          1,
-          i + 1,
-          actualMatchLosers[i * 2],
-          actualMatchLosers[i * 2 + 1],
-          "losers",
-          false,
-          receivedMatchFormat
-        )
-      );
-    }
-
-    // If there’s an odd number of losers, the last player gets a bye
-    if (actualMatchLosers.length % 2 === 1) {
-      losersNextRound.push(
-        createMatch(
-          `match-lb1-${losersNextRound.length + 1}`,
-          1,
-          losersNextRound.length + 1,
-          actualMatchLosers[actualMatchLosers.length - 1],
-          null, // Bye match
-          "losers",
-          false,
-          receivedMatchFormat
-        )
-      );
-    }
-
-    newMatches = [...newMatches, ...losersNextRound];
-  }
-
-  return newMatches;
-};
-
+// Grand Finals functions
 export const generateGrandFinalsMatch = (
   allMatches: Match[],
   currentRound: number,
@@ -466,4 +358,9 @@ export const generateGrandFinalsReset = (
   }
 
   return [];
+};
+
+// Add this function at the end of your tournamentUtils.ts file
+export const getPlayerDisplayName = (player: Player): string => {
+  return `${player.name.replace(/ L[0-2]$/, "")} L${player.losses}`;
 };
