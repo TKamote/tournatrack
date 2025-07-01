@@ -196,12 +196,28 @@ export const TournamentScreen: React.FC<TournamentScreenProps> = ({
             `Match ${matchId}: ${winner.name} now has ${playerScore}/${match.format.gamesNeededToWin} games`
           );
 
-          // ✅ Only update games, winner is set separately by handleSetWinner
-          return { ...match, games: updatedGames };
+          // ✅ AUTO-DECLARE WINNER when race target is reached
+          let updatedMatch = { ...match, games: updatedGames };
+
+          if (playerScore >= match.format.gamesNeededToWin) {
+            console.log(
+              `🏆 AUTO-WINNER: ${winner.name} wins match ${matchId}!`
+            );
+            updatedMatch.winner = winner;
+
+            // ✅ Update losing player losses immediately
+            const losingPlayer =
+              match.player1?.id === winner.id ? match.player2 : match.player1;
+            if (losingPlayer) {
+              setTimeout(() => updatePlayerLosses(losingPlayer.id), 0);
+            }
+          }
+
+          return updatedMatch;
         });
       });
     },
-    []
+    [updatePlayerLosses]
   );
 
   // ✅ Simplified handleSetWinner - handles winner logic and loss updates

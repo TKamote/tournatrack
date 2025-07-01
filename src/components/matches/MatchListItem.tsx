@@ -21,10 +21,24 @@ interface MatchListItemProps {
 
 const MatchListItem: React.FC<MatchListItemProps> = ({
   item,
+  players, // ✅ ADD THIS!
   isMatchLocked,
   onGameResult,
   onSetWinner,
 }) => {
+  // ✅ Helper function to get updated player data
+  const getCurrentPlayer = (playerId: string): Player | null => {
+    return players.find((p) => p.id === playerId) || null;
+  };
+
+  // ✅ Get updated player references
+  const currentPlayer1 = item.player1
+    ? getCurrentPlayer(item.player1.id) || item.player1
+    : null;
+  const currentPlayer2 = item.player2
+    ? getCurrentPlayer(item.player2.id) || item.player2
+    : null;
+
   const handleScore = (player: Player, isPlayer1: boolean) => {
     if (isMatchLocked(item) || item.winner) return;
     onGameResult(item.id, player, isPlayer1 ? 1 : 0, isPlayer1 ? 0 : 1);
