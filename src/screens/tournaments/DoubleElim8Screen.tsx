@@ -8,11 +8,7 @@ import {
   TouchableOpacity,
   Alert,
 } from "react-native";
-import {
-  Player,
-  Match,
-  MatchFormat,
-} from "../../types";
+import { Player, Match, MatchFormat } from "../../types";
 import { COLORS } from "../../constants/colors";
 import MatchListItem from "../../components/matches/MatchListItem";
 import {
@@ -36,10 +32,9 @@ interface DoubleElimination8ScreenProps {
   navigation: any;
 }
 
-export const DoubleElimination8Screen: React.FC<DoubleElimination8ScreenProps> = ({
-  route,
-  navigation,
-}) => {
+export const DoubleElimination8Screen: React.FC<
+  DoubleElimination8ScreenProps
+> = ({ route, navigation }) => {
   const { playerNames, matchFormat } = route.params;
 
   // State
@@ -57,7 +52,12 @@ export const DoubleElimination8Screen: React.FC<DoubleElimination8ScreenProps> =
 
   // Initialize tournament
   useEffect(() => {
-    if (playerNames && playerNames.length === 8 && matchFormat && !hasInitialized) {
+    if (
+      playerNames &&
+      playerNames.length === 8 &&
+      matchFormat &&
+      !hasInitialized
+    ) {
       const initialPlayers = playerNames.map((name, i) => ({
         id: `player-${i + 1}`,
         name: `${name} L0`,
@@ -67,16 +67,14 @@ export const DoubleElimination8Screen: React.FC<DoubleElimination8ScreenProps> =
       }));
 
       const shuffledPlayers = shuffleArray(initialPlayers);
-      const initialMatches = createDEInitialMatches(shuffledPlayers, matchFormat);
+      const initialMatches = createDEInitialMatches(
+        shuffledPlayers,
+        matchFormat
+      );
 
       setPlayers(shuffledPlayers);
       setMatches(initialMatches);
       setHasInitialized(true);
-      
-      console.log("DE-8 Tournament initialized:", {
-        players: shuffledPlayers.length,
-        matches: initialMatches.length,
-      });
     }
   }, [playerNames, matchFormat, hasInitialized]);
 
@@ -96,7 +94,6 @@ export const DoubleElimination8Screen: React.FC<DoubleElimination8ScreenProps> =
             name: `${baseName} L${newLossCount}`,
           };
 
-          console.log(`DE-8 Updated: ${player.name} → ${updatedPlayer.name}`);
           return updatedPlayer;
         }
         return player;
@@ -123,21 +120,77 @@ export const DoubleElimination8Screen: React.FC<DoubleElimination8ScreenProps> =
             (g) => g.winner?.id === winner.id
           ).length;
 
-          console.log(
-            `DE-8 Match ${matchId}: ${winner.name} now has ${playerScore}/${matchFormat.gamesNeededToWin} games`
-          );
-
           // Auto-declare winner when race target is reached
           let updatedMatch = { ...match, games: updatedGames };
-          
+
           if (playerScore >= matchFormat.gamesNeededToWin) {
-            console.log(`🏆 DE-8 AUTO-WINNER: ${winner.name} wins match ${matchId}!`);
             updatedMatch.winner = winner;
-            
-            // Update losing player losses
-            const losingPlayer = match.player1?.id === winner.id ? match.player2 : match.player1;
-            if (losingPlayer) {
-              setTimeout(() => updatePlayerLosses(losingPlayer.id), 0);
+
+            // ✅ GRAND FINALS SPECIAL LOGIC - CHECK FIRST!
+            if (match.bracket === "grandFinals") {
+              // Get updated player data for winner
+              const updatedWinner =
+                players.find((p) => p.id === winner.id) || winner;
+              const wbPlayer =
+                match.player1?.losses === 0 ? match.player1 : match.player2;
+              const lbPlayer =
+                match.player1?.losses === 1 ? match.player1 : match.player2;
+
+              if (winner.id === wbPlayer?.id) {
+                // L0 player wins → Tournament over immediately
+                setTimeout(() => {
+                  setTournamentOver(true);
+                  setOverallWinner(winner);
+                  setRunnerUp(lbPlayer);
+                  setFinalMatch(updatedMatch);
+                  setShowSummaryModal(true);
+                  Alert.alert(
+                    "Tournament Complete! 🏆",
+                    `${winner.name} is the Champion!`,
+                    [{ text: "OK" }]
+                  );
+                }, 100);
+              } else if (winner.id === lbPlayer?.id) {
+                // L1 player wins → Bracket Reset
+                if (!match.isGrandFinalsReset) {
+                  // Create the bracket reset match
+                  setTimeout(() => {
+                    const resetMatch = createMatch(
+                      `gf-reset-${Date.now()}`,
+                      match.round,
+                      2,
+                      wbPlayer!,
+                      lbPlayer,
+                      "grandFinals",
+                      true, // This is the reset match
+                      matchFormat
+                    );
+
+                    setMatches((prev) => [...prev, resetMatch]);
+                  }, 100);
+                } else {
+                  // This WAS the reset match → Tournament over
+                  setTimeout(() => {
+                    setTournamentOver(true);
+                    setOverallWinner(winner);
+                    setRunnerUp(wbPlayer);
+                    setFinalMatch(updatedMatch);
+                    setShowSummaryModal(true);
+                    Alert.alert(
+                      "Tournament Complete! 🏆",
+                      `${winner.name} is the Champion!`,
+                      [{ text: "OK" }]
+                    );
+                  }, 100);
+                }
+              }
+            } else {
+              // Regular match logic
+              const losingPlayer =
+                match.player1?.id === winner.id ? match.player2 : match.player1;
+              if (losingPlayer) {
+                setTimeout(() => updatePlayerLosses(losingPlayer.id), 0);
+              }
             }
           }
 
@@ -154,18 +207,264 @@ export const DoubleElimination8Screen: React.FC<DoubleElimination8ScreenProps> =
       setMatches((prevMatches) => {
         return prevMatches.map((match) => {
           if (match.id === matchId) {
-            const losingPlayer = match.player1?.id === winner.id ? match.player2 : match.player1;
-            if (losingPlayer) {
-              setTimeout(() => updatePlayerLosses(losingPlayer.id), 0);
+            // ✅ GRAND FINALS SPECIAL LOGIC
+            if (match.bracket === "grandFinals") {
+              const wbPlayer =
+                match.player1?.losses === 0 ? match.player1 : match.player2;
+              const lbPlayer =
+                match.player1?.losses === 1 ? match.player1 : match.player2;
+
+              if (winner.id === wbPlayer?.id) {
+                // L0 player wins → Tournament over
+                setTimeout(() => {
+                  setTournamentOver(true);
+                  setOverallWinner(winner);
+                  setRunnerUp(lbPlayer);
+                  setFinalMatch({ ...match, winner });
+                  setShowSummaryModal(true);
+                  Alert.alert(
+                    "Tournament Complete! 🏆",
+                    `${winner.name} is the Champion!`,
+                    [{ text: "OK" }]
+                  );
+                }, 100);
+              } else if (
+                winner.id === lbPlayer?.id &&
+                !match.isGrandFinalsReset
+              ) {
+                // L1 player wins first GF → Bracket Reset
+                setTimeout(() => {
+                  const resetMatch = createMatch(
+                    `gf-reset-${Date.now()}`,
+                    match.round,
+                    2,
+                    wbPlayer!,
+                    lbPlayer,
+                    "grandFinals",
+                    true,
+                    matchFormat
+                  );
+
+                  setMatches((prev) => [...prev, resetMatch]);
+                }, 100);
+              } else if (match.isGrandFinalsReset) {
+                // Reset match completed → Tournament over
+                const runnerUp =
+                  winner.id === wbPlayer?.id ? lbPlayer : wbPlayer;
+                setTimeout(() => {
+                  setTournamentOver(true);
+                  setOverallWinner(winner);
+                  setRunnerUp(runnerUp);
+                  setFinalMatch({ ...match, winner });
+                  setShowSummaryModal(true);
+                  Alert.alert(
+                    "Tournament Complete! 🏆",
+                    `${winner.name} is the Champion!`,
+                    [{ text: "OK" }]
+                  );
+                }, 100);
+              }
+            } else {
+              // Regular match - Update losing player losses
+              const losingPlayer =
+                match.player1?.id === winner.id ? match.player2 : match.player1;
+              if (losingPlayer) {
+                setTimeout(() => updatePlayerLosses(losingPlayer.id), 0);
+              }
             }
+
             return { ...match, winner };
           }
           return match;
         });
       });
     },
-    [updatePlayerLosses]
+    [updatePlayerLosses, matchFormat]
   );
+
+  // Check if we can advance to next round
+  const canAdvanceRound = useCallback((): boolean => {
+    const currentRoundMatches = matches.filter(
+      (match) =>
+        match.round === currentRound && !match.bracket.includes("grandFinals")
+    );
+    return (
+      currentRoundMatches.length > 0 &&
+      currentRoundMatches.every((match) => match.winner)
+    );
+  }, [matches, currentRound]);
+
+  // Handle advance round
+  const handleAdvanceRound = useCallback(() => {
+    if (canAdvanceRound()) {
+      setShowAdvanceModal(true);
+    } else {
+      setShowIncompleteModal(true);
+    }
+  }, [canAdvanceRound]);
+
+  // Execute advance round (called by modal)
+  const executeAdvanceRound = useCallback(() => {
+    setShowAdvanceModal(false);
+
+    const currentRoundMatches = matches.filter(
+      (match) => match.round === currentRound && match.winner
+    );
+
+    if (currentRoundMatches.length === 0) return;
+
+    const nextRoundMatches: Match[] = [];
+    const nextRound = currentRound + 1;
+
+    // Get Winners and Losers bracket matches separately
+    const wbMatches = currentRoundMatches.filter(
+      (m) => m.bracket === "winners"
+    );
+    const lbMatches = currentRoundMatches.filter((m) => m.bracket === "losers");
+
+    const wbWinners = wbMatches.map((m) => m.winner!);
+    const wbLosers = wbMatches.map((m) =>
+      m.player1?.id === m.winner?.id ? m.player2! : m.player1!
+    );
+
+    const lbWinners = lbMatches.map((m) => m.winner!);
+
+    // **WINNERS BRACKET LOGIC**
+    // Create next WB matches if there are enough winners
+    if (wbWinners.length >= 2) {
+      for (let i = 0; i < wbWinners.length; i += 2) {
+        if (wbWinners[i + 1]) {
+          nextRoundMatches.push(
+            createMatch(
+              `match-wb${nextRound}-${Math.floor(i / 2) + 1}`,
+              nextRound,
+              Math.floor(i / 2) + 1,
+              wbWinners[i],
+              wbWinners[i + 1],
+              "winners",
+              false,
+              matchFormat
+            )
+          );
+        }
+      }
+    }
+
+    // **LOSERS BRACKET LOGIC**
+    if (currentRound === 1) {
+      // Round 2: WB R1 losers enter LB
+      for (let i = 0; i < wbLosers.length; i += 2) {
+        if (wbLosers[i + 1]) {
+          nextRoundMatches.push(
+            createMatch(
+              `match-lb${nextRound}-${Math.floor(i / 2) + 1}`,
+              nextRound,
+              Math.floor(i / 2) + 1,
+              wbLosers[i],
+              wbLosers[i + 1],
+              "losers",
+              false,
+              matchFormat
+            )
+          );
+        }
+      }
+    } else if (currentRound === 2) {
+      // Round 3: LB R2 winners + WB R2 losers
+      const allLbPlayers = [...lbWinners, ...wbLosers];
+      for (let i = 0; i < allLbPlayers.length; i += 2) {
+        if (allLbPlayers[i + 1]) {
+          nextRoundMatches.push(
+            createMatch(
+              `match-lb${nextRound}-${Math.floor(i / 2) + 1}`,
+              nextRound,
+              Math.floor(i / 2) + 1,
+              allLbPlayers[i],
+              allLbPlayers[i + 1],
+              "losers",
+              false,
+              matchFormat
+            )
+          );
+        }
+      }
+    } else if (currentRound === 3) {
+      // Round 4: LB R3 winners only (LB semifinals)
+      for (let i = 0; i < lbWinners.length; i += 2) {
+        if (lbWinners[i + 1]) {
+          nextRoundMatches.push(
+            createMatch(
+              `match-lb${nextRound}-${Math.floor(i / 2) + 1}`,
+              nextRound,
+              Math.floor(i / 2) + 1,
+              lbWinners[i],
+              lbWinners[i + 1],
+              "losers",
+              false,
+              matchFormat
+            )
+          );
+        }
+      }
+    } else if (currentRound === 4) {
+      // Round 5: LB Final (WB R3 loser vs LB R4 winner)
+
+      // Get the WB R3 loser (from previous round)
+      const wbR3Match = matches.find(
+        (m) => m.bracket === "winners" && m.round === 3 && m.winner
+      );
+      const wbR3Loser = wbR3Match
+        ? wbR3Match.player1?.id === wbR3Match.winner?.id
+          ? wbR3Match.player2
+          : wbR3Match.player1
+        : null;
+
+      // LB R4 winner is in lbWinners array
+      if (wbR3Loser && lbWinners.length === 1) {
+        nextRoundMatches.push(
+          createMatch(
+            `match-lbf-${nextRound}`,
+            nextRound,
+            1,
+            wbR3Loser, // WB R3 loser from previous round
+            lbWinners[0], // LB R4 winner from current round
+            "losers",
+            false,
+            matchFormat
+          )
+        );
+      }
+    } else if (currentRound === 5) {
+      // Round 6: Grand Finals (WB Champion vs LB Champion)
+      const wbChampion =
+        wbWinners.length === 1
+          ? wbWinners[0]
+          : matches.find(
+              (m) => m.bracket === "winners" && m.round === 3 && m.winner
+            )?.winner;
+
+      if (wbChampion && lbWinners.length === 1) {
+        nextRoundMatches.push(
+          createMatch(
+            `match-gf-1`,
+            nextRound,
+            1,
+            wbChampion, // Undefeated WB champion
+            lbWinners[0], // LB champion
+            "grandFinals",
+            false,
+            matchFormat
+          )
+        );
+      }
+    }
+
+    // Add matches and advance
+    if (nextRoundMatches.length > 0) {
+      setMatches((prev) => [...prev, ...nextRoundMatches]);
+      setCurrentRound(nextRound);
+    }
+  }, [matches, currentRound, matchFormat]);
 
   // Display functions
   const matchesForDisplay = useCallback((): Match[] => {
@@ -209,7 +508,8 @@ export const DoubleElimination8Screen: React.FC<DoubleElimination8ScreenProps> =
               index === 0 ||
               !prevItem ||
               prevItem.round !== item.round ||
-              (prevItem.round === item.round && prevItem.bracket !== item.bracket);
+              (prevItem.round === item.round &&
+                prevItem.bracket !== item.bracket);
 
             return (
               <>
@@ -221,7 +521,6 @@ export const DoubleElimination8Screen: React.FC<DoubleElimination8ScreenProps> =
                   players={players}
                   tournamentType="Double Elimination (8)"
                   isMatchLocked={isMatchLocked}
-                  onSetWinner={handleSetWinner}
                   onGameResult={handleIncrementScore}
                 />
               </>
@@ -232,11 +531,25 @@ export const DoubleElimination8Screen: React.FC<DoubleElimination8ScreenProps> =
           showsVerticalScrollIndicator={true}
         />
 
+        {/* Add the Advance Button - DEBUG VERSION */}
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity
+            style={[
+              styles.advanceButton,
+              !canAdvanceRound() && styles.advanceButtonDisabled,
+            ]}
+            onPress={handleAdvanceRound}
+            disabled={!canAdvanceRound()}
+          >
+            <Text style={styles.advanceButtonText}>Advance to Next Round</Text>
+          </TouchableOpacity>
+        </View>
+
         <ConfirmActionModal
           visible={showAdvanceModal}
           title="Advance to Next Round"
           message="Are you sure you want to advance to the next round?"
-          onConfirm={() => {}} // Will implement advance logic later
+          onConfirm={executeAdvanceRound} // Change from () => {}
           onCancel={() => setShowAdvanceModal(false)}
         />
 
@@ -279,5 +592,29 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: 80,
+  },
+  buttonContainer: {
+    padding: 16,
+    backgroundColor: COLORS.backgroundLight, // Change from COLORS.background
+  },
+  advanceButton: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: 16,
+    borderRadius: 8,
+  },
+  advanceButtonDisabled: {
+    backgroundColor: COLORS.textLight,
+  },
+  advanceButtonText: {
+    color: COLORS.textWhite,
+    fontSize: 16,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  debugText: {
+    color: COLORS.textDark,
+    fontSize: 14,
+    marginTop: 8,
+    textAlign: "center",
   },
 });

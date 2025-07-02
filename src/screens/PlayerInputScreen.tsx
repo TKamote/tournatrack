@@ -23,7 +23,19 @@ const PlayerInputScreen: React.FC<PlayerInputScreenProps> = ({
   navigation,
   route,
 }) => {
-  const { tournamentType, numPlayers } = route.params;
+  const { tournamentType, matchFormat } = route.params;
+
+  // Determine number of players based on tournament type
+  const getNumPlayers = (tournamentType: string): number => {
+    if (tournamentType.includes("8")) return 8;
+    if (tournamentType.includes("16")) return 16;
+    if (tournamentType.includes("4")) return 4;
+    return 8; // default
+  };
+
+  const numPlayers = getNumPlayers(tournamentType);
+
+  // Now we can use numPlayers to initialize playerNames
   const [playerNames, setPlayerNames] = useState<string[]>(
     Array(numPlayers).fill("")
   );
@@ -67,12 +79,32 @@ const PlayerInputScreen: React.FC<PlayerInputScreenProps> = ({
       return;
     }
 
-    navigation.navigate("Tournament", {
-      tournamentType,
-      numPlayers,
-      playerNames,
-      matchFormat: selectedFormat,
-    });
+    // New navigation logic based on tournament type and player count
+    if (tournamentType === "Double Elimination" && playerNames.length === 8) {
+      navigation.navigate("DoubleElim8", {
+        playerNames,
+        matchFormat: selectedFormat,
+      });
+    } else if (
+      tournamentType === "Single Elimination" &&
+      playerNames.length === 8
+    ) {
+      navigation.navigate("SingleElim8", {
+        playerNames,
+        matchFormat: selectedFormat,
+      });
+    } else if (
+      tournamentType === "Single Elimination" &&
+      playerNames.length === 16
+    ) {
+      navigation.navigate("SingleElim16", {
+        playerNames,
+        matchFormat: selectedFormat,
+      });
+    } else {
+      // Handle other cases or show an error
+      Alert.alert("Error", "Invalid tournament type or number of players");
+    }
   };
 
   const renderPlayerInputs = () => {

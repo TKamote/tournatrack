@@ -10,7 +10,6 @@ interface MatchListItemProps {
   players: Player[];
   tournamentType: string;
   isMatchLocked: (match: Match) => boolean;
-  onSetWinner: (matchId: string, winner: Player) => void;
   onGameResult: (
     matchId: string,
     winner: Player,
@@ -21,10 +20,9 @@ interface MatchListItemProps {
 
 const MatchListItem: React.FC<MatchListItemProps> = ({
   item,
-  players, // ✅ ADD THIS!
+  players,
   isMatchLocked,
   onGameResult,
-  onSetWinner,
 }) => {
   // ✅ Helper function to get updated player data
   const getCurrentPlayer = (playerId: string): Player | null => {
@@ -54,7 +52,9 @@ const MatchListItem: React.FC<MatchListItemProps> = ({
           matchNumber={item.matchNumber}
         />
         <View style={styles.byeContainer}>
-          <Text style={styles.byeText}>{item.player1.name} receives a bye</Text>
+          <Text style={styles.byeText}>
+            {currentPlayer1?.name} receives a bye
+          </Text>
         </View>
       </View>
     );
@@ -68,11 +68,21 @@ const MatchListItem: React.FC<MatchListItemProps> = ({
         bracket={item.bracket}
         matchNumber={item.matchNumber}
       />
-      {item.player1 && item.player2 ? (
+      {currentPlayer1 && currentPlayer2 ? (
         <MatchResults
-          match={item}
+          match={{
+            ...item,
+            player1: currentPlayer1,
+            player2: currentPlayer2,
+            winner: item.winner
+              ? currentPlayer1.id === item.winner.id
+                ? currentPlayer1
+                : currentPlayer2.id === item.winner.id
+                ? currentPlayer2
+                : item.winner
+              : null,
+          }}
           onScore={handleScore}
-          onSetWinner={onSetWinner}
           isLocked={isMatchLocked(item)}
         />
       ) : (

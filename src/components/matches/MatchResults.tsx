@@ -1,20 +1,17 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Match, Player } from '../../types';
-import { COLORS } from '../../constants/colors';
-
+import React from "react";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { Match, Player } from "../../types";
+import { COLORS } from "../../constants/colors";
 
 interface MatchResultsProps {
   match: Match;
   onScore: (player: Player, isPlayer1: boolean) => void;
-  onSetWinner: (matchId: string, winner: Player) => void;  // Add this prop
   isLocked: boolean;
 }
 
 export const MatchResults: React.FC<MatchResultsProps> = ({
   match,
   onScore,
-  onSetWinner, // Destructure the new prop
   isLocked,
 }) => {
   const handleScore = (player: Player | null, isPlayer1: boolean) => {
@@ -22,8 +19,12 @@ export const MatchResults: React.FC<MatchResultsProps> = ({
     onScore(player, isPlayer1);
   };
 
-  const player1Score = match.games.filter(g => g.winner?.id === match.player1?.id).length;
-  const player2Score = match.games.filter(g => g.winner?.id === match.player2?.id).length;
+  const player1Score = match.games.filter(
+    (g) => g.winner?.id === match.player1?.id
+  ).length;
+  const player2Score = match.games.filter(
+    (g) => g.winner?.id === match.player2?.id
+  ).length;
 
   // Add check for bye matches
   const isByeMatch = (match: Match): boolean => {
@@ -48,10 +49,12 @@ export const MatchResults: React.FC<MatchResultsProps> = ({
           onPress={() => handleScore(match.player1, true)}
           disabled={isLocked}
         >
-          <Text style={[
-            styles.playerName,
-            match.winner?.id === match.player1?.id && styles.winnerName
-          ]}>
+          <Text
+            style={[
+              styles.playerName,
+              match.winner?.id === match.player1?.id && styles.winnerName,
+            ]}
+          >
             {match.player1?.name}
           </Text>
           <Text style={styles.score}>{player1Score}</Text>
@@ -66,21 +69,20 @@ export const MatchResults: React.FC<MatchResultsProps> = ({
           disabled={isLocked}
         >
           <Text style={styles.score}>{player2Score}</Text>
-          <Text style={[
-            styles.playerName,
-            match.winner?.id === match.player2?.id && styles.winnerName
-          ]}>
+          <Text
+            style={[
+              styles.playerName,
+              match.winner?.id === match.player2?.id && styles.winnerName,
+            ]}
+          >
             {match.player2?.name}
           </Text>
         </TouchableOpacity>
       </View>
-      
-      
+
       {match.winner && (
         <View style={styles.winnerContainer}>
-          <Text style={styles.winnerText}>
-            Winner: {match.winner.name}
-          </Text>
+          <Text style={styles.winnerText}>Winner: {match.winner.name}</Text>
         </View>
       )}
     </View>
@@ -89,9 +91,9 @@ export const MatchResults: React.FC<MatchResultsProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingVertical: 12,
     paddingHorizontal: 2,
     backgroundColor: COLORS.backgroundWhite,
@@ -99,9 +101,9 @@ const styles = StyleSheet.create({
   },
   playerContainer: {
     flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 2,
   },
   playerName: {
@@ -110,17 +112,17 @@ const styles = StyleSheet.create({
     flex: 1,
     // paddingHorizontal: 2,
     paddingVertical: 4,
-    textAlign: 'center',
+    textAlign: "center",
     borderRadius: 6,
   },
   winnerName: {
     color: COLORS.primary,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     backgroundColor: COLORS.primaryLight, // Using theme color instead of hard-coded
     paddingVertical: 4,
     borderRadius: 6,
     elevation: 1, // Add subtle shadow on Android
-    shadowColor: '#000', // iOS shadow
+    shadowColor: "#000", // iOS shadow
     shadowOffset: {
       width: 0,
       height: 1,
@@ -130,20 +132,20 @@ const styles = StyleSheet.create({
   },
   score: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: COLORS.textDark,
     minWidth: 26,
-    textAlign: 'center',
+    textAlign: "center",
     marginHorizontal: 4,
   },
   separator: {
     fontSize: 24,
     color: COLORS.textLight,
     marginHorizontal: 8, // Reduced from 16
-    fontWeight: '300',
+    fontWeight: "300",
   },
   winnerContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 4,
   },
   winnerText: {
@@ -155,7 +157,7 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: COLORS.backgroundLight,
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 8,
   },
 });

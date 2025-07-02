@@ -133,18 +133,6 @@ export const SingleElim16Screen: React.FC<SingleElim16ScreenProps> = ({
     [matchFormat]
   );
 
-  // Handle set winner
-  const handleSetWinner = useCallback((matchId: string, winner: Player) => {
-    setMatches((prevMatches) => {
-      return prevMatches.map((match) => {
-        if (match.id === matchId) {
-          return { ...match, winner };
-        }
-        return match;
-      });
-    });
-  }, []);
-
   // Advance to next round
   const executeAdvanceRound = useCallback(() => {
     setShowAdvanceModal(false);
@@ -282,7 +270,6 @@ export const SingleElim16Screen: React.FC<SingleElim16ScreenProps> = ({
                   players={players}
                   tournamentType="Single Elimination (16)"
                   isMatchLocked={isMatchLocked}
-                  onSetWinner={handleSetWinner}
                   onGameResult={handleIncrementScore}
                 />
               </>

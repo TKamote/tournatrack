@@ -4,7 +4,9 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../types/navigation.types";
 import HomeScreen from "../screens/HomeScreen";
 import PlayerInputScreen from "../screens/PlayerInputScreen";
-import { TournamentScreen } from "../screens/TournamentScreen";
+import { DoubleElimination8Screen } from "../screens/tournaments/DoubleElim8Screen";
+import { SingleElim8Screen } from "../screens/tournaments/SingleElim8Screen";
+import { SingleElim16Screen } from "../screens/tournaments/SingleElim16Screen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -23,11 +25,19 @@ export const AppNavigator = () => {
           options={{ title: "Enter Players" }}
         />
         <Stack.Screen
-          name="Tournament"
-          component={TournamentScreen}
-          options={({ route }) => ({
-            title: `${route.params.tournamentType} - ${route.params.numPlayers} Players`,
-          })}
+          name="DoubleElim8"
+          component={DoubleElimination8Screen}
+          options={{ title: "Double Elimination - 8 Players" }}
+        />
+        <Stack.Screen
+          name="SingleElim8"
+          component={SingleElim8Screen}
+          options={{ title: "Single Elimination - 8 Players" }}
+        />
+        <Stack.Screen
+          name="SingleElim16"
+          component={SingleElim16Screen}
+          options={{ title: "Single Elimination - 16 Players" }}
         />
       </Stack.Navigator>
     </NavigationContainer>

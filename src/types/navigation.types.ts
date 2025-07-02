@@ -1,15 +1,21 @@
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { TournamentType, MatchFormat } from "./";
+import { MatchFormat } from "./match.types";
 
 export type RootStackParamList = {
   Home: undefined;
   PlayerInput: {
-    tournamentType: TournamentType;
-    numPlayers: number;
+    tournamentType: string;
+    matchFormat: MatchFormat;
   };
-  Tournament: {
-    tournamentType: TournamentType;
-    numPlayers: number;
+  DoubleElim8: {
+    playerNames: string[];
+    matchFormat: MatchFormat;
+  };
+  SingleElim8: {
+    playerNames: string[];
+    matchFormat: MatchFormat;
+  };
+  SingleElim16: {
     playerNames: string[];
     matchFormat: MatchFormat;
   };
@@ -23,7 +29,15 @@ export type PlayerInputScreenProps = NativeStackScreenProps<
   RootStackParamList,
   "PlayerInput"
 >;
-export type TournamentScreenProps = NativeStackScreenProps<
+export type DoubleElim8ScreenProps = NativeStackScreenProps<
   RootStackParamList,
-  "Tournament"
+  "DoubleElim8"
+>;
+export type SingleElim8ScreenProps = NativeStackScreenProps<
+  RootStackParamList,
+  "SingleElim8"
+>;
+export type SingleElim16ScreenProps = NativeStackScreenProps<
+  RootStackParamList,
+  "SingleElim16"
 >;

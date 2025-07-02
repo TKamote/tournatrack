@@ -266,7 +266,6 @@ export const SingleElim8Screen: React.FC<SingleElim8ScreenProps> = ({
                   players={players}
                   tournamentType="Single Elimination (8)"
                   isMatchLocked={isMatchLocked}
-                  onSetWinner={handleSetWinner}
                   onGameResult={handleIncrementScore}
                 />
               </>
