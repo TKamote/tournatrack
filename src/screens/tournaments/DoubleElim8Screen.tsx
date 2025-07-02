@@ -137,7 +137,11 @@ export const DoubleElimination8Screen: React.FC<
                 match.player1?.losses === 1 ? match.player1 : match.player2;
 
               if (winner.id === wbPlayer?.id) {
-                // L0 player wins → Tournament over immediately
+                // L0 player wins → LB player gets 2nd loss + Tournament over
+                if (lbPlayer) {
+                  setTimeout(() => updatePlayerLosses(lbPlayer.id), 0); // ✅ ADD THIS!
+                }
+
                 setTimeout(() => {
                   setTournamentOver(true);
                   setOverallWinner(winner);
@@ -151,7 +155,11 @@ export const DoubleElimination8Screen: React.FC<
                   );
                 }, 100);
               } else if (winner.id === lbPlayer?.id) {
-                // L1 player wins → Bracket Reset
+                // L1 player wins → WB player gets 1st loss + Bracket Reset
+                if (wbPlayer) {
+                  setTimeout(() => updatePlayerLosses(wbPlayer.id), 0); // ✅ ADD THIS TOO!
+                }
+
                 if (!match.isGrandFinalsReset) {
                   // Create the bracket reset match
                   setTimeout(() => {
@@ -215,7 +223,11 @@ export const DoubleElimination8Screen: React.FC<
                 match.player1?.losses === 1 ? match.player1 : match.player2;
 
               if (winner.id === wbPlayer?.id) {
-                // L0 player wins → Tournament over
+                // L0 player wins → LB player gets 2nd loss + Tournament over
+                if (lbPlayer) {
+                  setTimeout(() => updatePlayerLosses(lbPlayer.id), 0); // ✅ ADD THIS!
+                }
+
                 setTimeout(() => {
                   setTournamentOver(true);
                   setOverallWinner(winner);
@@ -232,7 +244,11 @@ export const DoubleElimination8Screen: React.FC<
                 winner.id === lbPlayer?.id &&
                 !match.isGrandFinalsReset
               ) {
-                // L1 player wins first GF → Bracket Reset
+                // L1 player wins first GF → WB player gets 1st loss + Bracket Reset
+                if (wbPlayer) {
+                  setTimeout(() => updatePlayerLosses(wbPlayer.id), 0); // ✅ ADD THIS!
+                }
+
                 setTimeout(() => {
                   const resetMatch = createMatch(
                     `gf-reset-${Date.now()}`,

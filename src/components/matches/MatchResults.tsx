@@ -116,9 +116,9 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   winnerName: {
-    color: COLORS.primary,
+    color: COLORS.textWhite, // ← WHITE TEXT instead of dark blue
     fontWeight: "bold",
-    backgroundColor: COLORS.primaryLight, // Using theme color instead of hard-coded
+    backgroundColor: COLORS.primary, // ← DARK BLUE BACKGROUND instead of light blue
     paddingVertical: 4,
     borderRadius: 6,
     elevation: 1, // Add subtle shadow on Android
