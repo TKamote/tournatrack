@@ -7,6 +7,7 @@ import PlayerInputScreen from "../screens/PlayerInputScreen";
 import { DoubleElimination8Screen } from "../screens/tournaments/DoubleElim8Screen";
 import { SingleElim8Screen } from "../screens/tournaments/SingleElim8Screen";
 import { SingleElim16Screen } from "../screens/tournaments/SingleElim16Screen";
+import PlayerInput6Screen from "../screens/PlayerInput6Screen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -38,6 +39,11 @@ export const AppNavigator = () => {
           name="SingleElim16"
           component={SingleElim16Screen}
           options={{ title: "Single Elimination - 16 Players" }}
+        />
+        <Stack.Screen
+          name="PlayerInput6"
+          component={PlayerInput6Screen}
+          options={{ title: "DE-6 Setup" }}
         />
       </Stack.Navigator>
     </NavigationContainer>

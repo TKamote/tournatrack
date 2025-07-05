@@ -30,6 +30,7 @@ const PlayerInputScreen: React.FC<PlayerInputScreenProps> = ({
     if (tournamentType.includes("8")) return 8;
     if (tournamentType.includes("16")) return 16;
     if (tournamentType.includes("4")) return 4;
+    if (tournamentType.includes("6")) return 6; // ← ADD THIS LINE!
     return 8; // default
   };
 

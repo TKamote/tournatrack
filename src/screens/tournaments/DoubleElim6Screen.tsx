@@ -20,16 +20,7 @@ import ScreenHeader from "../../components/common/ScreenHeader";
 import IncompleteMatchesModal from "../../components/tournament/IncompleteMatchesModal";
 import TournamentSummaryModal from "../../components/tournament/TournamentSummaryModal";
 import { RoundSeparator } from "../../components/tournament/RoundSeparator";
-
-interface DoubleElim6ScreenProps {
-  route: {
-    params: {
-      playerNames: string[];
-      matchFormat: MatchFormat;
-    };
-  };
-  navigation: any;
-}
+import { DoubleElim6ScreenProps } from "../../types/navigation.types";
 
 export const DoubleElim6Screen: React.FC<DoubleElim6ScreenProps> = ({
   route,
@@ -188,10 +179,70 @@ export const DoubleElim6Screen: React.FC<DoubleElim6ScreenProps> = ({
       setMatches((prevMatches) => {
         return prevMatches.map((match) => {
           if (match.id === matchId) {
-            const losingPlayer =
-              match.player1?.id === winner.id ? match.player2 : match.player1;
-            if (losingPlayer) {
-              setTimeout(() => updatePlayerLosses(losingPlayer.id), 0);
+            if (match.bracket === "grandFinals") {
+              // **GRAND FINALS LOGIC (same as handleIncrementScore)**
+              const wbPlayer =
+                match.player1?.losses === 0 ? match.player1 : match.player2;
+              const lbPlayer =
+                match.player1?.losses === 1 ? match.player1 : match.player2;
+
+              if (winner.id === wbPlayer?.id) {
+                if (lbPlayer) {
+                  setTimeout(() => updatePlayerLosses(lbPlayer.id), 0);
+                }
+                setTimeout(() => {
+                  setTournamentOver(true);
+                  setOverallWinner(winner);
+                  setRunnerUp(lbPlayer);
+                  setFinalMatch({ ...match, winner });
+                  setShowSummaryModal(true);
+                  Alert.alert(
+                    "Tournament Complete! 🏆",
+                    `${winner.name} is the Champion!`,
+                    [{ text: "OK" }]
+                  );
+                }, 100);
+              } else if (
+                winner.id === lbPlayer?.id &&
+                !match.isGrandFinalsReset
+              ) {
+                if (wbPlayer) {
+                  setTimeout(() => updatePlayerLosses(wbPlayer.id), 0);
+                }
+                setTimeout(() => {
+                  const resetMatch = createMatch(
+                    `de6-gf-reset-${Date.now()}`,
+                    match.round,
+                    2,
+                    wbPlayer!,
+                    lbPlayer,
+                    "grandFinals",
+                    true,
+                    matchFormat
+                  );
+                  setMatches((prev) => [...prev, resetMatch]);
+                }, 100);
+              } else if (match.isGrandFinalsReset) {
+                setTimeout(() => {
+                  setTournamentOver(true);
+                  setOverallWinner(winner);
+                  setRunnerUp(winner.id === wbPlayer?.id ? lbPlayer : wbPlayer);
+                  setFinalMatch({ ...match, winner });
+                  setShowSummaryModal(true);
+                  Alert.alert(
+                    "Tournament Complete! 🏆",
+                    `${winner.name} is the Champion!`,
+                    [{ text: "OK" }]
+                  );
+                }, 100);
+              }
+            } else {
+              // Regular match
+              const losingPlayer =
+                match.player1?.id === winner.id ? match.player2 : match.player1;
+              if (losingPlayer) {
+                setTimeout(() => updatePlayerLosses(losingPlayer.id), 0);
+              }
             }
             return { ...match, winner };
           }
@@ -199,7 +250,7 @@ export const DoubleElim6Screen: React.FC<DoubleElim6ScreenProps> = ({
         });
       });
     },
-    [updatePlayerLosses]
+    [updatePlayerLosses, matchFormat]
   );
 
   // Display functions
@@ -224,6 +275,199 @@ export const DoubleElim6Screen: React.FC<DoubleElim6ScreenProps> = ({
   const isMatchLocked = useCallback((match: Match): boolean => {
     return match.winner !== null || !match.player1 || !match.player2;
   }, []);
+
+  // Check if we can advance to next round
+  const canAdvanceRound = useCallback((): boolean => {
+    const currentRoundMatches = matches.filter(
+      (match) =>
+        match.round === currentRound && !match.bracket.includes("grandFinals")
+    );
+    return (
+      currentRoundMatches.length > 0 &&
+      currentRoundMatches.every((match) => match.winner)
+    );
+  }, [matches, currentRound]);
+
+  // Handle advance round
+  const handleAdvanceRound = useCallback(() => {
+    if (canAdvanceRound()) {
+      setShowAdvanceModal(true);
+    } else {
+      setShowIncompleteModal(true);
+    }
+  }, [canAdvanceRound]);
+
+  // **DE-6 COMPLETE ADVANCE ROUND LOGIC**
+  const executeAdvanceRound = useCallback(() => {
+    setShowAdvanceModal(false);
+
+    const currentRoundMatches = matches.filter(
+      (match) => match.round === currentRound && match.winner
+    );
+
+    if (currentRoundMatches.length === 0) return;
+
+    const nextRoundMatches: Match[] = [];
+    const nextRound = currentRound + 1;
+
+    const wbMatches = currentRoundMatches.filter(
+      (m) => m.bracket === "winners"
+    );
+    const lbMatches = currentRoundMatches.filter((m) => m.bracket === "losers");
+
+    const wbWinners = wbMatches.map((m) => m.winner!);
+    const wbLosers = wbMatches.map((m) =>
+      m.player1?.id === m.winner?.id ? m.player2! : m.player1!
+    );
+    const lbWinners = lbMatches.map((m) => m.winner!);
+
+    if (currentRound === 1) {
+      // **Round 2: BYE players (seeds 1,2) + WB R1 winners in WB semifinals**
+      const [seed1, seed2] = players.slice(0, 2); // BYE players
+      const allWBPlayers = [...wbWinners, seed1, seed2]; // 4 total
+
+      // Create 2 WB semifinals
+      for (let i = 0; i < allWBPlayers.length; i += 2) {
+        if (allWBPlayers[i + 1]) {
+          nextRoundMatches.push(
+            createMatch(
+              `de6-wb${nextRound}-${Math.floor(i / 2) + 1}`,
+              nextRound,
+              Math.floor(i / 2) + 1,
+              allWBPlayers[i],
+              allWBPlayers[i + 1],
+              "winners",
+              false,
+              matchFormat
+            )
+          );
+        }
+      }
+
+      // **LB Round 1: WB R1 losers**
+      for (let i = 0; i < wbLosers.length; i += 2) {
+        if (wbLosers[i + 1]) {
+          nextRoundMatches.push(
+            createMatch(
+              `de6-lb${nextRound}-${Math.floor(i / 2) + 1}`,
+              nextRound,
+              Math.floor(i / 2) + 1,
+              wbLosers[i],
+              wbLosers[i + 1],
+              "losers",
+              false,
+              matchFormat
+            )
+          );
+        }
+      }
+    } else if (currentRound === 2) {
+      // **Round 3: WB Finals + LB matches**
+      // WB Finals
+      if (wbWinners.length === 2) {
+        nextRoundMatches.push(
+          createMatch(
+            `de6-wb${nextRound}-1`,
+            nextRound,
+            1,
+            wbWinners[0],
+            wbWinners[1],
+            "winners",
+            false,
+            matchFormat
+          )
+        );
+      }
+
+      // LB: LB R1 winners + WB R2 losers
+      const allLbPlayers = [...lbWinners, ...wbLosers];
+      for (let i = 0; i < allLbPlayers.length; i += 2) {
+        if (allLbPlayers[i + 1]) {
+          nextRoundMatches.push(
+            createMatch(
+              `de6-lb${nextRound}-${Math.floor(i / 2) + 1}`,
+              nextRound,
+              Math.floor(i / 2) + 1,
+              allLbPlayers[i],
+              allLbPlayers[i + 1],
+              "losers",
+              false,
+              matchFormat
+            )
+          );
+        }
+      }
+    } else if (currentRound === 3) {
+      // **Round 4: LB Finals**
+      for (let i = 0; i < lbWinners.length; i += 2) {
+        if (lbWinners[i + 1]) {
+          nextRoundMatches.push(
+            createMatch(
+              `de6-lb${nextRound}-${Math.floor(i / 2) + 1}`,
+              nextRound,
+              Math.floor(i / 2) + 1,
+              lbWinners[i],
+              lbWinners[i + 1],
+              "losers",
+              false,
+              matchFormat
+            )
+          );
+        }
+      }
+    } else if (currentRound === 4) {
+      // **Round 5: LB Final (WB R3 loser vs LB R4 winner)**
+      const wbR3Match = matches.find(
+        (m) => m.bracket === "winners" && m.round === 3 && m.winner
+      );
+      const wbR3Loser = wbR3Match
+        ? wbR3Match.player1?.id === wbR3Match.winner?.id
+          ? wbR3Match.player2
+          : wbR3Match.player1
+        : null;
+
+      if (wbR3Loser && lbWinners.length === 1) {
+        nextRoundMatches.push(
+          createMatch(
+            `de6-lbf-${nextRound}`,
+            nextRound,
+            1,
+            wbR3Loser,
+            lbWinners[0],
+            "losers",
+            false,
+            matchFormat
+          )
+        );
+      }
+    } else if (currentRound === 5) {
+      // **Round 6: Grand Finals**
+      const wbChampion = matches.find(
+        (m) => m.bracket === "winners" && m.round === 3 && m.winner
+      )?.winner;
+
+      if (wbChampion && lbWinners.length === 1) {
+        nextRoundMatches.push(
+          createMatch(
+            `de6-gf-1`,
+            nextRound,
+            1,
+            wbChampion,
+            lbWinners[0],
+            "grandFinals",
+            false,
+            matchFormat
+          )
+        );
+      }
+    }
+
+    if (nextRoundMatches.length > 0) {
+      setMatches((prev) => [...prev, ...nextRoundMatches]);
+      setCurrentRound(nextRound);
+      console.log(`DE-6 Advanced to Round ${nextRound}:`, nextRoundMatches);
+    }
+  }, [matches, currentRound, matchFormat, players]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -257,7 +501,6 @@ export const DoubleElim6Screen: React.FC<DoubleElim6ScreenProps> = ({
                   players={players}
                   tournamentType="Double Elimination (6)"
                   isMatchLocked={isMatchLocked}
-                  onSetWinner={handleSetWinner}
                   onGameResult={handleIncrementScore}
                 />
               </>
@@ -268,11 +511,25 @@ export const DoubleElim6Screen: React.FC<DoubleElim6ScreenProps> = ({
           showsVerticalScrollIndicator={true}
         />
 
+        {/* Add the Advance Button */}
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity
+            style={[
+              styles.advanceButton,
+              !canAdvanceRound() && styles.advanceButtonDisabled,
+            ]}
+            onPress={handleAdvanceRound}
+            disabled={!canAdvanceRound()}
+          >
+            <Text style={styles.advanceButtonText}>Advance to Next Round</Text>
+          </TouchableOpacity>
+        </View>
+
         <ConfirmActionModal
           visible={showAdvanceModal}
           title="Advance to Next Round"
           message="Are you sure you want to advance to the next round?"
-          onConfirm={() => {}} // Will implement advance logic later
+          onConfirm={executeAdvanceRound} // Replace the empty function
           onCancel={() => setShowAdvanceModal(false)}
         />
 
@@ -315,5 +572,23 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: 80,
+  },
+  buttonContainer: {
+    padding: 16,
+    backgroundColor: COLORS.backgroundLight,
+  },
+  advanceButton: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: 16,
+    borderRadius: 8,
+  },
+  advanceButtonDisabled: {
+    backgroundColor: COLORS.textLight,
+  },
+  advanceButtonText: {
+    color: COLORS.textWhite,
+    fontSize: 16,
+    fontWeight: "600",
+    textAlign: "center",
   },
 });

@@ -5,9 +5,15 @@ export type RootStackParamList = {
   Home: undefined;
   PlayerInput: {
     tournamentType: string;
+    matchFormat?: MatchFormat;
+    numPlayers?: number;
+  };
+  PlayerInput6: undefined; // ← ADD THIS
+  DoubleElim8: {
+    playerNames: string[];
     matchFormat: MatchFormat;
   };
-  DoubleElim8: {
+  DoubleElim6: {
     playerNames: string[];
     matchFormat: MatchFormat;
   };
@@ -29,9 +35,17 @@ export type PlayerInputScreenProps = NativeStackScreenProps<
   RootStackParamList,
   "PlayerInput"
 >;
+export type PlayerInput6ScreenProps = NativeStackScreenProps<
+  RootStackParamList,
+  "PlayerInput6"
+>;
 export type DoubleElim8ScreenProps = NativeStackScreenProps<
   RootStackParamList,
   "DoubleElim8"
+>;
+export type DoubleElim6ScreenProps = NativeStackScreenProps<
+  RootStackParamList,
+  "DoubleElim6"
 >;
 export type SingleElim8ScreenProps = NativeStackScreenProps<
   RootStackParamList,

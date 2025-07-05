@@ -35,7 +35,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           <View style={styles.buttonContainer}>
             <TouchableOpacity
               style={styles.button}
-              onPress={() => handleTournamentSelect("Double Elimination", 6)}
+              onPress={() => navigation.navigate("PlayerInput6")} // ← DIRECT TO DEDICATED SCREEN
             >
               <Text style={styles.buttonText}>6 Players</Text>
             </TouchableOpacity>
