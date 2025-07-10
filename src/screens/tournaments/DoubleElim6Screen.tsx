@@ -14,6 +14,7 @@ import MatchListItem from "../../components/matches/MatchListItem";
 import {
   createMatch,
   shuffleArray,
+  createDEInitialMatches,
 } from "../../utils/tournament/tournamentUtils";
 import ConfirmActionModal from "../../components/common/ConfirmActionModal";
 import ScreenHeader from "../../components/common/ScreenHeader";
@@ -59,35 +60,10 @@ export const DoubleElim6Screen: React.FC<DoubleElim6ScreenProps> = ({
 
       const shuffledPlayers = shuffleArray(initialPlayers);
 
-      // DE-6 specific bracket: Top 2 seeds get byes, bottom 4 play
-      const round1Matches: Match[] = [];
-
-      // Match 1: Seed 3 vs Seed 6
-      round1Matches.push(
-        createMatch(
-          "de6-wb1-1",
-          1,
-          1,
-          shuffledPlayers[2], // Seed 3
-          shuffledPlayers[5], // Seed 6
-          "winners",
-          false,
-          matchFormat
-        )
-      );
-
-      // Match 2: Seed 4 vs Seed 5
-      round1Matches.push(
-        createMatch(
-          "de6-wb1-2",
-          1,
-          2,
-          shuffledPlayers[3], // Seed 4
-          shuffledPlayers[4], // Seed 5
-          "winners",
-          false,
-          matchFormat
-        )
+      // Use the proper 6-player bracket creation function
+      const round1Matches = createDEInitialMatches(
+        shuffledPlayers,
+        matchFormat
       );
 
       setPlayers(shuffledPlayers);
@@ -276,7 +252,7 @@ export const DoubleElim6Screen: React.FC<DoubleElim6ScreenProps> = ({
     return match.winner !== null || !match.player1 || !match.player2;
   }, []);
 
-  // Check if we can advance to next round
+  // Update canAdvanceRound to only check for matches that actually exist in the current round
   const canAdvanceRound = useCallback((): boolean => {
     const currentRoundMatches = matches.filter(
       (match) =>
@@ -322,38 +298,85 @@ export const DoubleElim6Screen: React.FC<DoubleElim6ScreenProps> = ({
     const lbWinners = lbMatches.map((m) => m.winner!);
 
     if (currentRound === 1) {
-      // **Round 2: BYE players (seeds 1,2) + WB R1 winners in WB semifinals**
-      const [seed1, seed2] = players.slice(0, 2); // BYE players
-      const allWBPlayers = [...wbWinners, seed1, seed2]; // 4 total
+      // Find BYE players: those who did not play in any Round 1 match
+      const round1Matches = matches.filter(
+        (m) => m.round === 1 && m.bracket === "winners"
+      );
+      const playedIds = new Set<string>();
+      round1Matches.forEach((m) => {
+        if (m.player1) playedIds.add(m.player1.id);
+        if (m.player2) playedIds.add(m.player2.id);
+      });
+      const byePlayers = players.filter((p) => !playedIds.has(p.id));
+      // The two actual match winners from Round 1
+      const actualWinners = wbWinners.filter((w) => playedIds.has(w.id));
+      // Build the 4 unique players for WB Round 2
+      const allWBPlayers = [...byePlayers, ...actualWinners];
 
-      // Create 2 WB semifinals
-      for (let i = 0; i < allWBPlayers.length; i += 2) {
-        if (allWBPlayers[i + 1]) {
+      // Create 2 WB semifinals (WB R2)
+      nextRoundMatches.push(
+        createMatch(
+          `de6-wb${nextRound}-1`,
+          nextRound,
+          1,
+          allWBPlayers[0],
+          allWBPlayers[1],
+          "winners",
+          false,
+          matchFormat
+        )
+      );
+      nextRoundMatches.push(
+        createMatch(
+          `de6-wb${nextRound}-2`,
+          nextRound,
+          2,
+          allWBPlayers[2],
+          allWBPlayers[3],
+          "winners",
+          false,
+          matchFormat
+        )
+      );
+
+      // GUARANTEE: The two R1 losers ALWAYS play each other in LB R1 (not R2)
+      if (wbLosers.length === 2) {
+        nextRoundMatches.push(
+          createMatch(
+            `de6-lb1-1`, // round 1 for LB
+            1, // round 1 for LB
+            1,
+            wbLosers[0],
+            wbLosers[1],
+            "losers",
+            false,
+            matchFormat
+          )
+        );
+      } else if (wbLosers.length === 1) {
+        // Defensive: give a bye if only one loser (should not happen in 6-player)
+        nextRoundMatches.push(
+          createMatch(
+            `de6-lb1-1`,
+            1,
+            1,
+            wbLosers[0],
+            null,
+            "losers",
+            false,
+            matchFormat
+          )
+        );
+      } else if (wbLosers.length > 2) {
+        // Defensive: pair up all losers if more than 2 (should not happen in 6-player)
+        for (let i = 0; i < wbLosers.length; i += 2) {
           nextRoundMatches.push(
             createMatch(
-              `de6-wb${nextRound}-${Math.floor(i / 2) + 1}`,
-              nextRound,
-              Math.floor(i / 2) + 1,
-              allWBPlayers[i],
-              allWBPlayers[i + 1],
-              "winners",
-              false,
-              matchFormat
-            )
-          );
-        }
-      }
-
-      // **LB Round 1: WB R1 losers**
-      for (let i = 0; i < wbLosers.length; i += 2) {
-        if (wbLosers[i + 1]) {
-          nextRoundMatches.push(
-            createMatch(
-              `de6-lb${nextRound}-${Math.floor(i / 2) + 1}`,
-              nextRound,
+              `de6-lb1-${Math.floor(i / 2) + 1}`,
+              1,
               Math.floor(i / 2) + 1,
               wbLosers[i],
-              wbLosers[i + 1],
+              wbLosers[i + 1] || null,
               "losers",
               false,
               matchFormat
@@ -362,8 +385,7 @@ export const DoubleElim6Screen: React.FC<DoubleElim6ScreenProps> = ({
         }
       }
     } else if (currentRound === 2) {
-      // **Round 3: WB Finals + LB matches**
-      // WB Finals
+      // Round 3: WB Final (2 WB winners)
       if (wbWinners.length === 2) {
         nextRoundMatches.push(
           createMatch(
@@ -378,15 +400,20 @@ export const DoubleElim6Screen: React.FC<DoubleElim6ScreenProps> = ({
           )
         );
       }
-
-      // LB: LB R1 winners + WB R2 losers
+      // LB: Always create matches for the two R2 losers and any LB R1 winner(s)
+      // Find the latest LB round number so we can increment properly
+      const latestLbRound = Math.max(
+        1,
+        ...matches.filter((m) => m.bracket === "losers").map((m) => m.round)
+      );
+      const lbNextRound = latestLbRound + 1;
       const allLbPlayers = [...lbWinners, ...wbLosers];
       for (let i = 0; i < allLbPlayers.length; i += 2) {
         if (allLbPlayers[i + 1]) {
           nextRoundMatches.push(
             createMatch(
-              `de6-lb${nextRound}-${Math.floor(i / 2) + 1}`,
-              nextRound,
+              `de6-lb${lbNextRound}-${Math.floor(i / 2) + 1}`,
+              lbNextRound,
               Math.floor(i / 2) + 1,
               allLbPlayers[i],
               allLbPlayers[i + 1],
@@ -395,10 +422,23 @@ export const DoubleElim6Screen: React.FC<DoubleElim6ScreenProps> = ({
               matchFormat
             )
           );
+        } else {
+          nextRoundMatches.push(
+            createMatch(
+              `de6-lb${lbNextRound}-${Math.floor(i / 2) + 1}`,
+              lbNextRound,
+              Math.floor(i / 2) + 1,
+              allLbPlayers[i],
+              null,
+              "losers",
+              false,
+              matchFormat
+            )
+          );
         }
       }
     } else if (currentRound === 3) {
-      // **Round 4: LB Finals**
+      // LB Final: pair up remaining LB players
       for (let i = 0; i < lbWinners.length; i += 2) {
         if (lbWinners[i + 1]) {
           nextRoundMatches.push(
@@ -413,10 +453,24 @@ export const DoubleElim6Screen: React.FC<DoubleElim6ScreenProps> = ({
               matchFormat
             )
           );
+        } else {
+          // Odd player gets a bye
+          nextRoundMatches.push(
+            createMatch(
+              `de6-lb${nextRound}-${Math.floor(i / 2) + 1}`,
+              nextRound,
+              Math.floor(i / 2) + 1,
+              lbWinners[i],
+              null,
+              "losers",
+              false,
+              matchFormat
+            )
+          );
         }
       }
     } else if (currentRound === 4) {
-      // **Round 5: LB Final (WB R3 loser vs LB R4 winner)**
+      // LB Final: WB R3 loser vs LB R4 winner
       const wbR3Match = matches.find(
         (m) => m.bracket === "winners" && m.round === 3 && m.winner
       );
@@ -425,7 +479,6 @@ export const DoubleElim6Screen: React.FC<DoubleElim6ScreenProps> = ({
           ? wbR3Match.player2
           : wbR3Match.player1
         : null;
-
       if (wbR3Loser && lbWinners.length === 1) {
         nextRoundMatches.push(
           createMatch(
@@ -441,11 +494,10 @@ export const DoubleElim6Screen: React.FC<DoubleElim6ScreenProps> = ({
         );
       }
     } else if (currentRound === 5) {
-      // **Round 6: Grand Finals**
+      // Grand Finals: WB Champion vs LB Champion
       const wbChampion = matches.find(
         (m) => m.bracket === "winners" && m.round === 3 && m.winner
       )?.winner;
-
       if (wbChampion && lbWinners.length === 1) {
         nextRoundMatches.push(
           createMatch(

@@ -35,9 +35,15 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           <View style={styles.buttonContainer}>
             <TouchableOpacity
               style={styles.button}
-              onPress={() => navigation.navigate("PlayerInput6")} // ← DIRECT TO DEDICATED SCREEN
+              onPress={() => navigation.navigate("PlayerInput6")}
             >
               <Text style={styles.buttonText}>6 Players</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={() => navigation.navigate("PlayerInput7")}
+            >
+              <Text style={styles.buttonText}>7 Players</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.button}

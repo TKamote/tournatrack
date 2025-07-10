@@ -103,6 +103,37 @@ export const createDEInitialMatches = (
         format
       )
     );
+  } else if (players.length === 7) {
+    // Handle 7 players: 1 bye, 3 actual matches in Round 1
+    const shuffled = shuffleArray(players);
+    // Pair up first 6 players for 3 matches
+    for (let i = 0; i < 6; i += 2) {
+      matches.push(
+        createMatch(
+          `match-wb1-${i / 2 + 1}`,
+          1,
+          i / 2 + 1,
+          shuffled[i],
+          shuffled[i + 1],
+          "winners",
+          false,
+          format
+        )
+      );
+    }
+    // 7th player gets a bye
+    matches.push(
+      createMatch(
+        "match-wb1-bye",
+        1,
+        4,
+        shuffled[6],
+        null,
+        "winners",
+        false,
+        format
+      )
+    );
   } else if (players.length === 8) {
     // Handle 8 players: 4 actual matches in Round 1
     for (let i = 0; i < 4; i++) {

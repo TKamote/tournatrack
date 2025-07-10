@@ -9,11 +9,16 @@ export type RootStackParamList = {
     numPlayers?: number;
   };
   PlayerInput6: undefined; // ← ADD THIS
+  PlayerInput7: undefined;
   DoubleElim8: {
     playerNames: string[];
     matchFormat: MatchFormat;
   };
   DoubleElim6: {
+    playerNames: string[];
+    matchFormat: MatchFormat;
+  };
+  DoubleElim7: {
     playerNames: string[];
     matchFormat: MatchFormat;
   };
