@@ -85,13 +85,23 @@ export const SingleElim16Screen: React.FC<SingleElim16ScreenProps> = ({
       setPlayers(shuffledPlayers);
       setMatches(round1Matches);
       setHasInitialized(true);
-
-      console.log("SE-16 Tournament initialized:", {
-        players: shuffledPlayers.length,
-        matches: round1Matches.length,
-      });
     }
   }, [playerNames, matchFormat, hasInitialized]);
+
+  // Update player elimination status
+  const updatePlayerElimination = useCallback((playerId: string) => {
+    setPlayers((prevPlayers) => {
+      return prevPlayers.map((player) => {
+        if (player.id === playerId) {
+          return {
+            ...player,
+            isEliminated: true,
+          };
+        }
+        return player;
+      });
+    });
+  }, []);
 
   // Handle game result
   const handleIncrementScore = useCallback(
@@ -112,25 +122,39 @@ export const SingleElim16Screen: React.FC<SingleElim16ScreenProps> = ({
             (g) => g.winner?.id === winner.id
           ).length;
 
-          console.log(
-            `SE-16 Match ${matchId}: ${winner.name} now has ${playerScore}/${matchFormat.gamesNeededToWin} games`
-          );
-
           // Auto-declare winner when race target is reached
           let updatedMatch = { ...match, games: updatedGames };
 
           if (playerScore >= matchFormat.gamesNeededToWin) {
-            console.log(
-              `🏆 SE-16 AUTO-WINNER: ${winner.name} wins match ${matchId}!`
-            );
             updatedMatch.winner = winner;
+
+            // Mark the losing player as eliminated
+            const losingPlayer =
+              match.player1?.id === winner.id ? match.player2 : match.player1;
+            if (losingPlayer) {
+              setTimeout(() => updatePlayerElimination(losingPlayer.id), 0);
+            }
+
+            // Check if this is the final match (round 4, match 1)
+            if (match.round === 4 && match.matchNumber === 1) {
+              setTimeout(() => {
+                setTournamentOver(true);
+                setOverallWinner(winner);
+                setShowSummaryModal(true);
+                Alert.alert(
+                  "Tournament Complete! 🏆",
+                  `${winner.name} is the Champion!`,
+                  [{ text: "OK" }]
+                );
+              }, 100);
+            }
           }
 
           return updatedMatch;
         });
       });
     },
-    [matchFormat]
+    [matchFormat, updatePlayerElimination]
   );
 
   // Advance to next round
@@ -219,7 +243,6 @@ export const SingleElim16Screen: React.FC<SingleElim16ScreenProps> = ({
     if (newMatches.length > 0) {
       setMatches((prev) => [...prev, ...newMatches]);
       setCurrentRound((prev) => prev + 1);
-      console.log(`SE-16 Advanced to Round ${currentRound + 1}`);
     }
   }, [currentRound, matches, matchFormat]);
 
@@ -245,7 +268,12 @@ export const SingleElim16Screen: React.FC<SingleElim16ScreenProps> = ({
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        <ScreenHeader title={displayTitle()} subtitle="16 Players" />
+        <ScreenHeader
+          title={displayTitle()}
+          subtitle="16 Players"
+          titleColor={COLORS.textWhite}
+          subtitleColor={COLORS.textLight}
+        />
 
         <View style={styles.formatBanner}>
           <Text style={styles.formatText}>

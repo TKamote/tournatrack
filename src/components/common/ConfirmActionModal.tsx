@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   modalButtonCancel: {
-    backgroundColor: COLORS.secondary,
+    backgroundColor: COLORS.primaryLight,
   },
   modalButtonConfirm: {
     backgroundColor: COLORS.primary,

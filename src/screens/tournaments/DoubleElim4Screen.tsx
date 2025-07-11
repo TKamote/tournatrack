@@ -117,13 +117,25 @@ export const DoubleElim4Screen: React.FC<DoubleElim4ScreenProps> = ({
                   setTimeout(() => updatePlayerLosses(lbPlayer.id), 0);
                 setTimeout(() => {
                   setTournamentOver(true);
-                  setOverallWinner(winner);
-                  setRunnerUp(lbPlayer);
+                  // Clean winner name by removing loss record
+                  const cleanWinner = {
+                    ...winner,
+                    name: winner.name.replace(/ L[0-2]$/, ""),
+                  };
+                  setOverallWinner(cleanWinner);
+                  // Clean runner-up name by removing loss record
+                  const cleanRunnerUp = lbPlayer
+                    ? {
+                        ...lbPlayer,
+                        name: lbPlayer.name.replace(/ L[0-2]$/, ""),
+                      }
+                    : lbPlayer;
+                  setRunnerUp(cleanRunnerUp);
                   setFinalMatch(updatedMatch);
                   setShowSummaryModal(true);
                   Alert.alert(
                     "Tournament Complete! 🏆",
-                    `${winner.name} is the Champion!`,
+                    `${cleanWinner.name} is the Champion!`,
                     [{ text: "OK" }]
                   );
                 }, 100);
@@ -147,13 +159,25 @@ export const DoubleElim4Screen: React.FC<DoubleElim4ScreenProps> = ({
                 } else {
                   setTimeout(() => {
                     setTournamentOver(true);
-                    setOverallWinner(winner);
-                    setRunnerUp(wbPlayer);
+                    // Clean winner name by removing loss record
+                    const cleanWinner = {
+                      ...winner,
+                      name: winner.name.replace(/ L[0-2]$/, ""),
+                    };
+                    setOverallWinner(cleanWinner);
+                    // Clean runner-up name by removing loss record
+                    const cleanRunnerUp = wbPlayer
+                      ? {
+                          ...wbPlayer,
+                          name: wbPlayer.name.replace(/ L[0-2]$/, ""),
+                        }
+                      : wbPlayer;
+                    setRunnerUp(cleanRunnerUp);
                     setFinalMatch(updatedMatch);
                     setShowSummaryModal(true);
                     Alert.alert(
                       "Tournament Complete! 🏆",
-                      `${winner.name} is the Champion!`,
+                      `${cleanWinner.name} is the Champion!`,
                       [{ text: "OK" }]
                     );
                   }, 100);
@@ -231,14 +255,38 @@ export const DoubleElim4Screen: React.FC<DoubleElim4ScreenProps> = ({
         );
       }
     } else if (currentRound === 2) {
-      // Round 2 → Round 3: WB final winner + LB winner → Grand Finals
-      if (wbWinners.length === 1 && lbWinners.length === 1) {
+      // Round 2 → Round 3: WB final loser vs LB winner → Losers Final
+      const wbLosers = wbMatches.map((m) =>
+        m.player1?.id === m.winner?.id ? m.player2! : m.player1!
+      );
+
+      if (wbLosers.length === 1 && lbWinners.length === 1) {
+        nextRoundMatches.push(
+          createMatch(
+            `de4-lb${nextRound}-1`,
+            nextRound,
+            1,
+            wbLosers[0],
+            lbWinners[0],
+            "losers",
+            false,
+            matchFormat
+          )
+        );
+      }
+    } else if (currentRound === 3) {
+      // Round 3 → Grand Finals: WB final winner + LB final winner
+      // Find the WB winner from round 2 (the undefeated player)
+      const wbWinner = players.find((p) => p.losses === 0);
+      const lbWinners = lbMatches.map((m) => m.winner!);
+
+      if (wbWinner && lbWinners.length === 1) {
         nextRoundMatches.push(
           createMatch(
             `de4-gf-1`,
             nextRound,
             1,
-            wbWinners[0],
+            wbWinner,
             lbWinners[0],
             "grandFinals",
             false,

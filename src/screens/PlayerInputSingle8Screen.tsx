@@ -15,15 +15,15 @@ import { COLORS } from "../constants/colors";
 import { MatchFormat } from "../types";
 import ScreenHeader from "../components/common/ScreenHeader";
 
-type PlayerInput16ScreenProps = NativeStackScreenProps<
+type PlayerInputSingle8ScreenProps = NativeStackScreenProps<
   RootStackParamList,
-  "PlayerInput16"
+  "PlayerInputSingle8"
 >;
 
-const PlayerInput16Screen: React.FC<PlayerInput16ScreenProps> = ({
+const PlayerInputSingle8Screen: React.FC<PlayerInputSingle8ScreenProps> = ({
   navigation,
 }) => {
-  const [playerNames, setPlayerNames] = useState<string[]>(Array(16).fill(""));
+  const [playerNames, setPlayerNames] = useState<string[]>(Array(8).fill(""));
   const [selectedFormat, setSelectedFormat] = useState<MatchFormat>({
     type: "raceTo",
     gamesNeededToWin: 3,
@@ -57,14 +57,14 @@ const PlayerInput16Screen: React.FC<PlayerInput16ScreenProps> = ({
 
   const handleStartTournament = () => {
     const validNames = playerNames.filter((name) => name.trim() !== "");
-    if (validNames.length !== 16) {
-      Alert.alert("Invalid Input", "Please enter exactly 16 player names.", [
+    if (validNames.length !== 8) {
+      Alert.alert("Invalid Input", "Please enter exactly 8 player names.", [
         { text: "OK" },
       ]);
       return;
     }
 
-    navigation.navigate("DoubleElim16", {
+    navigation.navigate("SingleElim8", {
       playerNames: validNames,
       matchFormat: selectedFormat,
     });
@@ -74,15 +74,15 @@ const PlayerInput16Screen: React.FC<PlayerInput16ScreenProps> = ({
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <ScreenHeader
-          title="Double Elimination (16)"
-          subtitle="Enter 16 Players"
-          titleColor={COLORS.singleElimText}
-          subtitleColor={COLORS.singleElimSubtitleText}
+          title="Single Knockout (8)"
+          subtitle="Enter 8 Players"
+          titleColor={COLORS.doubleElimText}
+          subtitleColor={COLORS.doubleElimSubtitleText}
         />
 
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <Text style={styles.instruction}>
-            Enter the names of the 16 players:
+            Enter the names of the 8 players:
           </Text>
 
           <View style={styles.playerGrid}>
@@ -151,7 +151,7 @@ const PlayerInput16Screen: React.FC<PlayerInput16ScreenProps> = ({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.singleElimBackground,
+    backgroundColor: COLORS.doubleElimBackground,
   },
   container: {
     flex: 1,
@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
   instruction: {
     fontSize: 18,
     fontWeight: "600",
-    color: COLORS.singleElimText,
+    color: COLORS.doubleElimText,
     marginBottom: 24,
     textAlign: "center",
   },
@@ -180,17 +180,17 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: "500",
-    color: COLORS.singleElimText,
+    color: COLORS.doubleElimText,
     marginBottom: 4,
   },
   input: {
-    backgroundColor: COLORS.singleElimSectionBackground,
+    backgroundColor: COLORS.doubleElimSectionBackground,
     borderWidth: 1,
-    borderColor: COLORS.singleElimPrimary,
+    borderColor: COLORS.doubleElimPrimary,
     borderRadius: 6,
     padding: 8,
     fontSize: 14,
-    color: COLORS.singleElimText,
+    color: COLORS.doubleElimText,
   },
   formatSection: {
     marginTop: 24,
@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
   formatTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: COLORS.singleElimText,
+    color: COLORS.doubleElimText,
     marginBottom: 12,
     textAlign: "center",
   },
@@ -211,9 +211,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   formatButton: {
-    backgroundColor: COLORS.singleElimSectionBackground,
+    backgroundColor: COLORS.doubleElimSectionBackground,
     borderWidth: 1,
-    borderColor: COLORS.singleElimPrimary,
+    borderColor: COLORS.doubleElimPrimary,
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -221,20 +221,20 @@ const styles = StyleSheet.create({
     minWidth: 80,
   },
   formatButtonSelected: {
-    backgroundColor: COLORS.singleElimPrimary,
-    borderColor: COLORS.singleElimPrimary,
+    backgroundColor: COLORS.doubleElimPrimary,
+    borderColor: COLORS.doubleElimPrimary,
   },
   formatButtonText: {
     fontSize: 14,
     fontWeight: "500",
-    color: COLORS.singleElimText,
+    color: COLORS.doubleElimText,
     textAlign: "center",
   },
   formatButtonTextSelected: {
     color: COLORS.textWhite,
   },
   startButton: {
-    backgroundColor: COLORS.singleElimPrimary,
+    backgroundColor: COLORS.doubleElimPrimary,
     paddingVertical: 16,
     borderRadius: 8,
     marginTop: 32,
@@ -252,4 +252,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default PlayerInput16Screen;
+export default PlayerInputSingle8Screen;

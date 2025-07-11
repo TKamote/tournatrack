@@ -7,11 +7,15 @@ import PlayerInputScreen from "../screens/PlayerInputScreen";
 import { DoubleElimination8Screen } from "../screens/tournaments/DoubleElim8Screen";
 import { DoubleElim4Screen } from "../screens/tournaments/DoubleElim4Screen";
 import DoubleElim16Screen from "../screens/tournaments/DoubleElim16Screen";
+import { SingleElim4Screen } from "../screens/tournaments/SingleElim4Screen";
 import { SingleElim8Screen } from "../screens/tournaments/SingleElim8Screen";
 import { SingleElim16Screen } from "../screens/tournaments/SingleElim16Screen";
 import PlayerInput4Screen from "../screens/PlayerInput4Screen";
 import PlayerInput8Screen from "../screens/PlayerInput8Screen";
 import PlayerInput16Screen from "../screens/PlayerInput16Screen";
+import PlayerInputSingle4Screen from "../screens/PlayerInputSingle4Screen";
+import PlayerInputSingle8Screen from "../screens/PlayerInputSingle8Screen";
+import PlayerInputSingle16Screen from "../screens/PlayerInputSingle16Screen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -63,6 +67,26 @@ export const AppNavigator = () => {
           name="PlayerInput16"
           component={PlayerInput16Screen}
           options={{ title: "DE-16 Setup" }}
+        />
+        <Stack.Screen
+          name="PlayerInputSingle4"
+          component={PlayerInputSingle4Screen}
+          options={{ title: "SE-4 Setup" }}
+        />
+        <Stack.Screen
+          name="PlayerInputSingle8"
+          component={PlayerInputSingle8Screen}
+          options={{ title: "SE-8 Setup" }}
+        />
+        <Stack.Screen
+          name="PlayerInputSingle16"
+          component={PlayerInputSingle16Screen}
+          options={{ title: "SE-16 Setup" }}
+        />
+        <Stack.Screen
+          name="SingleElim4"
+          component={SingleElim4Screen}
+          options={{ title: "Single Elimination - 4 Players" }}
         />
         <Stack.Screen
           name="DoubleElim16"

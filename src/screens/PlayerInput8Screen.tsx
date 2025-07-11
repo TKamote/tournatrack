@@ -76,6 +76,8 @@ const PlayerInput8Screen: React.FC<PlayerInput8ScreenProps> = ({
         <ScreenHeader
           title="Double Elimination (8)"
           subtitle="Enter 8 Players"
+          titleColor={COLORS.singleElimText}
+          subtitleColor={COLORS.singleElimSubtitleText}
         />
 
         <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -149,7 +151,7 @@ const PlayerInput8Screen: React.FC<PlayerInput8ScreenProps> = ({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.backgroundLight,
+    backgroundColor: COLORS.singleElimBackground,
   },
   container: {
     flex: 1,
@@ -162,7 +164,7 @@ const styles = StyleSheet.create({
   instruction: {
     fontSize: 18,
     fontWeight: "600",
-    color: COLORS.textDark,
+    color: COLORS.singleElimText,
     marginBottom: 24,
     textAlign: "center",
   },
@@ -178,17 +180,17 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: "500",
-    color: COLORS.textDark,
+    color: COLORS.singleElimText,
     marginBottom: 4,
   },
   input: {
-    backgroundColor: COLORS.backgroundWhite,
+    backgroundColor: COLORS.singleElimSectionBackground,
     borderWidth: 1,
-    borderColor: COLORS.borderMedium,
+    borderColor: COLORS.singleElimPrimary,
     borderRadius: 6,
     padding: 8,
     fontSize: 14,
-    color: COLORS.textDark,
+    color: COLORS.singleElimText,
   },
   formatSection: {
     marginTop: 24,
@@ -197,7 +199,7 @@ const styles = StyleSheet.create({
   formatTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: COLORS.textDark,
+    color: COLORS.singleElimText,
     marginBottom: 12,
     textAlign: "center",
   },
@@ -209,9 +211,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   formatButton: {
-    backgroundColor: COLORS.backgroundWhite,
+    backgroundColor: COLORS.singleElimSectionBackground,
     borderWidth: 1,
-    borderColor: COLORS.borderMedium,
+    borderColor: COLORS.singleElimPrimary,
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -219,20 +221,20 @@ const styles = StyleSheet.create({
     minWidth: 80,
   },
   formatButtonSelected: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
+    backgroundColor: COLORS.singleElimPrimary,
+    borderColor: COLORS.singleElimPrimary,
   },
   formatButtonText: {
     fontSize: 14,
     fontWeight: "500",
-    color: COLORS.textDark,
+    color: COLORS.singleElimText,
     textAlign: "center",
   },
   formatButtonTextSelected: {
     color: COLORS.textWhite,
   },
   startButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.singleElimPrimary,
     paddingVertical: 16,
     borderRadius: 8,
     marginTop: 32,

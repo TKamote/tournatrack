@@ -60,19 +60,19 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           <View style={styles.buttonContainer}>
             <TouchableOpacity
               style={styles.button}
-              onPress={() => handleTournamentSelect("Single Knockout", 4)}
+              onPress={() => navigation.navigate("PlayerInputSingle4")}
             >
               <Text style={styles.buttonText}>4 Players</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.button}
-              onPress={() => handleTournamentSelect("Single Knockout", 8)}
+              onPress={() => navigation.navigate("PlayerInputSingle8")}
             >
               <Text style={styles.buttonText}>8 Players</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.button}
-              onPress={() => handleTournamentSelect("Single Knockout", 16)}
+              onPress={() => navigation.navigate("PlayerInputSingle16")}
             >
               <Text style={styles.buttonText}>16 Players</Text>
             </TouchableOpacity>

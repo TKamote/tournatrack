@@ -7,6 +7,8 @@ interface ScreenHeaderProps {
   subtitle?: string;
   onBack?: () => void; // Keep this optional for other screens
   showBack?: boolean; // Add this prop
+  titleColor?: string;
+  subtitleColor?: string;
 }
 
 const ScreenHeader: React.FC<ScreenHeaderProps> = ({
@@ -14,13 +16,26 @@ const ScreenHeader: React.FC<ScreenHeaderProps> = ({
   subtitle,
   onBack,
   showBack = true,
+  titleColor,
+  subtitleColor,
 }) => {
   return (
     <View style={styles.container}>
       <View style={styles.headerControls}>
         <View style={styles.titleContainer}>
-          <Text style={styles.titleText}>{title}</Text>
-          {subtitle && <Text style={styles.subTitle}>{subtitle}</Text>}
+          <Text style={[styles.titleText, titleColor && { color: titleColor }]}>
+            {title}
+          </Text>
+          {subtitle && (
+            <Text
+              style={[
+                styles.subTitle,
+                subtitleColor && { color: subtitleColor },
+              ]}
+            >
+              {subtitle}
+            </Text>
+          )}
         </View>
       </View>
     </View>

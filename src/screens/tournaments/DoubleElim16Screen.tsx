@@ -114,13 +114,25 @@ const DoubleElim16Screen: React.FC<DoubleElim16ScreenProps> = ({
                   setTimeout(() => updatePlayerLosses(lbPlayer.id), 0);
                 setTimeout(() => {
                   setTournamentOver(true);
-                  setOverallWinner(winner);
-                  setRunnerUp(lbPlayer);
+                  // Clean winner name by removing loss record
+                  const cleanWinner = {
+                    ...winner,
+                    name: winner.name.replace(/ L[0-2]$/, ""),
+                  };
+                  setOverallWinner(cleanWinner);
+                  // Clean runner-up name by removing loss record
+                  const cleanRunnerUp = lbPlayer
+                    ? {
+                        ...lbPlayer,
+                        name: lbPlayer.name.replace(/ L[0-2]$/, ""),
+                      }
+                    : lbPlayer;
+                  setRunnerUp(cleanRunnerUp);
                   setFinalMatch(updatedMatch);
                   setShowSummaryModal(true);
                   Alert.alert(
                     "Tournament Complete! 🏆",
-                    `${winner.name} is the Champion!`,
+                    `${cleanWinner.name} is the Champion!`,
                     [{ text: "OK" }]
                   );
                 }, 100);
@@ -144,13 +156,25 @@ const DoubleElim16Screen: React.FC<DoubleElim16ScreenProps> = ({
                 } else {
                   setTimeout(() => {
                     setTournamentOver(true);
-                    setOverallWinner(winner);
-                    setRunnerUp(wbPlayer);
+                    // Clean winner name by removing loss record
+                    const cleanWinner = {
+                      ...winner,
+                      name: winner.name.replace(/ L[0-2]$/, ""),
+                    };
+                    setOverallWinner(cleanWinner);
+                    // Clean runner-up name by removing loss record
+                    const cleanRunnerUp = wbPlayer
+                      ? {
+                          ...wbPlayer,
+                          name: wbPlayer.name.replace(/ L[0-2]$/, ""),
+                        }
+                      : wbPlayer;
+                    setRunnerUp(cleanRunnerUp);
                     setFinalMatch(updatedMatch);
                     setShowSummaryModal(true);
                     Alert.alert(
                       "Tournament Complete! 🏆",
-                      `${winner.name} is the Champion!`,
+                      `${cleanWinner.name} is the Champion!`,
                       [{ text: "OK" }]
                     );
                   }, 100);
