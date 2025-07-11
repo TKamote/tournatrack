@@ -53,90 +53,41 @@ export const createDEInitialMatches = (
   const matches: Match[] = [];
   const shuffledPlayers = shuffleArray(players);
 
-  if (players.length === 6) {
-    // Handle 6 players: 2 actual matches + 2 bye matches in Round 1
-    const [p1, p2, p3, p4, p5, p6] = shuffledPlayers;
-
-    matches.push(
-      // First bye match
-      createMatch(
-        "match-wb1-1",
-        1,
-        1,
-        p1, // Player 1 gets a bye
-        null,
-        "winners",
-        false,
-        format
-      ),
-      // Second bye match
-      createMatch(
-        "match-wb1-2",
-        1,
-        2,
-        p2, // Player 2 gets a bye
-        null,
-        "winners",
-        false,
-        format
-      ),
-      // First actual match
-      createMatch(
-        "match-wb1-3",
-        1,
-        3,
-        p3, // Player 3
-        p6, // Player 6
-        "winners",
-        false,
-        format
-      ),
-      // Second actual match
-      createMatch(
-        "match-wb1-4",
-        1,
-        4,
-        p4, // Player 4
-        p5, // Player 5
-        "winners",
-        false,
-        format
-      )
-    );
-  } else if (players.length === 7) {
-    // Handle 7 players: 1 bye, 3 actual matches in Round 1
-    const shuffled = shuffleArray(players);
-    // Pair up first 6 players for 3 matches
-    for (let i = 0; i < 6; i += 2) {
+  if (players.length === 4) {
+    // Handle 4 players: 2 actual matches in Round 1
+    for (let i = 0; i < 4; i += 2) {
       matches.push(
         createMatch(
           `match-wb1-${i / 2 + 1}`,
           1,
           i / 2 + 1,
-          shuffled[i],
-          shuffled[i + 1],
+          shuffledPlayers[i],
+          shuffledPlayers[i + 1],
           "winners",
           false,
           format
         )
       );
     }
-    // 7th player gets a bye
-    matches.push(
-      createMatch(
-        "match-wb1-bye",
-        1,
-        4,
-        shuffled[6],
-        null,
-        "winners",
-        false,
-        format
-      )
-    );
   } else if (players.length === 8) {
     // Handle 8 players: 4 actual matches in Round 1
     for (let i = 0; i < 4; i++) {
+      matches.push(
+        createMatch(
+          `match-wb1-${i + 1}`,
+          1,
+          i + 1,
+          shuffledPlayers[i * 2],
+          shuffledPlayers[i * 2 + 1],
+          "winners",
+          false,
+          format
+        )
+      );
+    }
+  } else if (players.length === 16) {
+    // Handle 16 players: 8 actual matches in Round 1
+    for (let i = 0; i < 8; i++) {
       matches.push(
         createMatch(
           `match-wb1-${i + 1}`,

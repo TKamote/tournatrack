@@ -8,17 +8,18 @@ export type RootStackParamList = {
     matchFormat?: MatchFormat;
     numPlayers?: number;
   };
-  PlayerInput6: undefined; // ← ADD THIS
-  PlayerInput7: undefined;
+  PlayerInput4: undefined;
+  PlayerInput8: undefined;
+  PlayerInput16: undefined;
   DoubleElim8: {
     playerNames: string[];
     matchFormat: MatchFormat;
   };
-  DoubleElim6: {
+  DoubleElim4: {
     playerNames: string[];
     matchFormat: MatchFormat;
   };
-  DoubleElim7: {
+  DoubleElim16: {
     playerNames: string[];
     matchFormat: MatchFormat;
   };
@@ -40,17 +41,29 @@ export type PlayerInputScreenProps = NativeStackScreenProps<
   RootStackParamList,
   "PlayerInput"
 >;
-export type PlayerInput6ScreenProps = NativeStackScreenProps<
+export type PlayerInput4ScreenProps = NativeStackScreenProps<
   RootStackParamList,
-  "PlayerInput6"
+  "PlayerInput4"
+>;
+export type PlayerInput8ScreenProps = NativeStackScreenProps<
+  RootStackParamList,
+  "PlayerInput8"
+>;
+export type PlayerInput16ScreenProps = NativeStackScreenProps<
+  RootStackParamList,
+  "PlayerInput16"
 >;
 export type DoubleElim8ScreenProps = NativeStackScreenProps<
   RootStackParamList,
   "DoubleElim8"
 >;
-export type DoubleElim6ScreenProps = NativeStackScreenProps<
+export type DoubleElim4ScreenProps = NativeStackScreenProps<
   RootStackParamList,
-  "DoubleElim6"
+  "DoubleElim4"
+>;
+export type DoubleElim16ScreenProps = NativeStackScreenProps<
+  RootStackParamList,
+  "DoubleElim16"
 >;
 export type SingleElim8ScreenProps = NativeStackScreenProps<
   RootStackParamList,

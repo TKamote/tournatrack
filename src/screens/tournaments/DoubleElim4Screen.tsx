@@ -10,15 +10,20 @@ import {
 } from "react-native";
 import { Player, Match, MatchFormat } from "../../types";
 import { COLORS } from "../../constants/colors";
-import { DoubleElim7ScreenProps } from "../../types/navigation.types";
+import { DoubleElim4ScreenProps } from "../../types/navigation.types";
 import {
   createMatch,
   shuffleArray,
   createDEInitialMatches,
 } from "../../utils/tournament/tournamentUtils";
 import ScreenHeader from "../../components/common/ScreenHeader";
+import MatchListItem from "../../components/matches/MatchListItem";
+import ConfirmActionModal from "../../components/common/ConfirmActionModal";
+import IncompleteMatchesModal from "../../components/tournament/IncompleteMatchesModal";
+import TournamentSummaryModal from "../../components/tournament/TournamentSummaryModal";
+import { RoundSeparator } from "../../components/tournament/RoundSeparator";
 
-const DoubleElim7Screen: React.FC<DoubleElim7ScreenProps> = ({
+export const DoubleElim4Screen: React.FC<DoubleElim4ScreenProps> = ({
   route,
   navigation,
 }) => {
@@ -40,7 +45,7 @@ const DoubleElim7Screen: React.FC<DoubleElim7ScreenProps> = ({
   useEffect(() => {
     if (
       playerNames &&
-      playerNames.length === 7 &&
+      playerNames.length === 4 &&
       matchFormat &&
       !hasInitialized
     ) {
@@ -52,7 +57,6 @@ const DoubleElim7Screen: React.FC<DoubleElim7ScreenProps> = ({
         isEliminated: false,
       }));
       const shuffledPlayers = shuffleArray(initialPlayers);
-      // Use the utility for 7 players
       const round1Matches = createDEInitialMatches(
         shuffledPlayers,
         matchFormat
@@ -60,7 +64,6 @@ const DoubleElim7Screen: React.FC<DoubleElim7ScreenProps> = ({
       setPlayers(shuffledPlayers);
       setMatches(round1Matches);
       setHasInitialized(true);
-      console.log("DE-7 matches after initialization:", round1Matches);
     }
   }, [playerNames, matchFormat, hasInitialized]);
 
@@ -130,7 +133,7 @@ const DoubleElim7Screen: React.FC<DoubleElim7ScreenProps> = ({
                 if (!match.isGrandFinalsReset) {
                   setTimeout(() => {
                     const resetMatch = createMatch(
-                      `de7-gf-reset-${Date.now()}`,
+                      `de4-gf-reset-${Date.now()}`,
                       match.round,
                       2,
                       wbPlayer!,
@@ -171,7 +174,110 @@ const DoubleElim7Screen: React.FC<DoubleElim7ScreenProps> = ({
     [matchFormat, updatePlayerLosses]
   );
 
-  // Advance round logic (simplified for placeholder)
+  // **DE-4 COMPLETE ADVANCE ROUND LOGIC**
+  const executeAdvanceRound = useCallback(() => {
+    setShowAdvanceModal(false);
+
+    const currentRoundMatches = matches.filter(
+      (match) => match.round === currentRound && match.winner
+    );
+
+    if (currentRoundMatches.length === 0) return;
+
+    const nextRoundMatches: Match[] = [];
+    const nextRound = currentRound + 1;
+
+    const wbMatches = currentRoundMatches.filter(
+      (m) => m.bracket === "winners"
+    );
+    const lbMatches = currentRoundMatches.filter((m) => m.bracket === "losers");
+
+    const wbWinners = wbMatches.map((m) => m.winner!);
+    const wbLosers = wbMatches.map((m) =>
+      m.player1?.id === m.winner?.id ? m.player2! : m.player1!
+    );
+    const lbWinners = lbMatches.map((m) => m.winner!);
+
+    if (currentRound === 1) {
+      // Round 1 → Round 2: 2 winners → 1 final
+      if (wbWinners.length === 2) {
+        nextRoundMatches.push(
+          createMatch(
+            `de4-wb${nextRound}-1`,
+            nextRound,
+            1,
+            wbWinners[0],
+            wbWinners[1],
+            "winners",
+            false,
+            matchFormat
+          )
+        );
+      }
+
+      // Round 1 → Round 2: 2 losers → 1 match
+      if (wbLosers.length === 2) {
+        nextRoundMatches.push(
+          createMatch(
+            `de4-lb${nextRound}-1`,
+            nextRound,
+            1,
+            wbLosers[0],
+            wbLosers[1],
+            "losers",
+            false,
+            matchFormat
+          )
+        );
+      }
+    } else if (currentRound === 2) {
+      // Round 2 → Round 3: WB final winner + LB winner → Grand Finals
+      if (wbWinners.length === 1 && lbWinners.length === 1) {
+        nextRoundMatches.push(
+          createMatch(
+            `de4-gf-1`,
+            nextRound,
+            1,
+            wbWinners[0],
+            lbWinners[0],
+            "grandFinals",
+            false,
+            matchFormat
+          )
+        );
+      }
+    }
+
+    if (nextRoundMatches.length > 0) {
+      setMatches((prev) => [...prev, ...nextRoundMatches]);
+      setCurrentRound(nextRound);
+    }
+  }, [matches, currentRound, matchFormat]);
+
+  // Display functions
+  const matchesForDisplay = useCallback((): Match[] => {
+    return matches
+      .filter((match) => match.player1 !== null)
+      .sort((a, b) => {
+        if (a.round !== b.round) return a.round - b.round;
+        const bracketPriority = { winners: 1, losers: 2, grandFinals: 3 };
+        if (a.bracket !== b.bracket)
+          return bracketPriority[a.bracket] - bracketPriority[b.bracket];
+        return a.matchNumber - b.matchNumber;
+      });
+  }, [matches]);
+
+  const displayTitle = useCallback((): string => {
+    if (tournamentOver && overallWinner) return "Tournament Complete!";
+    if (matches.some((m) => m.bracket === "grandFinals")) return "Grand Finals";
+    return `Double Elimination (4) - Round ${currentRound}`;
+  }, [tournamentOver, overallWinner, matches, currentRound]);
+
+  const isMatchLocked = useCallback((match: Match): boolean => {
+    return match.winner !== null || !match.player1 || !match.player2;
+  }, []);
+
+  // Update canAdvanceRound to only check for matches that actually exist in the current round
   const canAdvanceRound = useCallback((): boolean => {
     const currentRoundMatches = matches.filter(
       (match) =>
@@ -183,6 +289,7 @@ const DoubleElim7Screen: React.FC<DoubleElim7ScreenProps> = ({
     );
   }, [matches, currentRound]);
 
+  // Handle advance round
   const handleAdvanceRound = useCallback(() => {
     if (canAdvanceRound()) {
       setShowAdvanceModal(true);
@@ -191,63 +298,82 @@ const DoubleElim7Screen: React.FC<DoubleElim7ScreenProps> = ({
     }
   }, [canAdvanceRound]);
 
-  // Placeholder: just advance round number for now
-  const executeAdvanceRound = useCallback(() => {
-    setShowAdvanceModal(false);
-    setCurrentRound((prev) => prev + 1);
-    // TODO: Implement actual match progression logic for 7-player DE
-  }, []);
-
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        <ScreenHeader
-          title={`Double Elimination (7) - Round ${currentRound}`}
-          subtitle="7 Players"
-        />
-        <Text style={styles.formatBanner}>
-          Race to {matchFormat.gamesNeededToWin}
-        </Text>
+        <ScreenHeader title={displayTitle()} subtitle="4 Players" />
+
+        <View style={styles.formatBanner}>
+          <Text style={styles.formatText}>
+            Race to {matchFormat.gamesNeededToWin}
+          </Text>
+        </View>
+
         <FlatList
-          // For debugging, you can use: data={matches}
-          data={matches.filter((m) => m.round === currentRound)}
-          renderItem={({ item }) => (
-            <View style={styles.matchCard}>
-              <Text style={styles.matchTitle}>
-                {item.bracket === "winners"
-                  ? "Winners Bracket"
-                  : item.bracket === "losers"
-                  ? "Losers Bracket"
-                  : "Grand Finals"}
-              </Text>
-              <Text style={styles.matchPlayers}>
-                {item.player1?.name || "BYE"} vs {item.player2?.name || "BYE"}
-              </Text>
-              <Text style={styles.matchScore}>
-                Score:{" "}
-                {item.games.map((g) => `${g.score1}-${g.score2}`).join(", ")}
-              </Text>
-              {item.winner && (
-                <Text style={styles.matchWinner}>
-                  Winner: {item.winner.name}
-                </Text>
-              )}
-            </View>
-          )}
+          data={matchesForDisplay()}
+          renderItem={({ item, index }) => {
+            const prevItem = index > 0 ? matchesForDisplay()[index - 1] : null;
+            const showSeparator =
+              index === 0 ||
+              !prevItem ||
+              prevItem.round !== item.round ||
+              (prevItem.round === item.round &&
+                prevItem.bracket !== item.bracket);
+
+            return (
+              <>
+                {showSeparator && (
+                  <RoundSeparator round={item.round} bracket={item.bracket} />
+                )}
+                <MatchListItem
+                  item={item}
+                  players={players}
+                  tournamentType="Double Elimination (4)"
+                  isMatchLocked={isMatchLocked}
+                  onGameResult={handleIncrementScore}
+                />
+              </>
+            );
+          }}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={true}
         />
-        <TouchableOpacity
-          style={[
-            styles.advanceButton,
-            !canAdvanceRound() && styles.advanceButtonDisabled,
-          ]}
-          onPress={handleAdvanceRound}
-          disabled={!canAdvanceRound()}
-        >
-          <Text style={styles.advanceButtonText}>Advance to Next Round</Text>
-        </TouchableOpacity>
-        {/* Modals and summary placeholders can be added here */}
+
+        {/* Add the Advance Button */}
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity
+            style={[
+              styles.advanceButton,
+              !canAdvanceRound() && styles.advanceButtonDisabled,
+            ]}
+            onPress={handleAdvanceRound}
+            disabled={!canAdvanceRound()}
+          >
+            <Text style={styles.advanceButtonText}>Advance to Next Round</Text>
+          </TouchableOpacity>
+        </View>
+
+        <ConfirmActionModal
+          visible={showAdvanceModal}
+          title="Advance to Next Round"
+          message="Are you sure you want to advance to the next round?"
+          onConfirm={executeAdvanceRound}
+          onCancel={() => setShowAdvanceModal(false)}
+        />
+
+        <IncompleteMatchesModal
+          visible={showIncompleteModal}
+          onClose={() => setShowIncompleteModal(false)}
+        />
+
+        <TournamentSummaryModal
+          visible={showSummaryModal}
+          winner={overallWinner}
+          runnerUp={runnerUp}
+          finalMatch={finalMatch}
+          onClose={() => setShowSummaryModal(false)}
+        />
       </View>
     </SafeAreaView>
   );
@@ -263,60 +389,35 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   formatBanner: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: COLORS.primary,
-    marginBottom: 12,
+    backgroundColor: COLORS.primary,
+    padding: 8,
+    borderRadius: 4,
+    marginBottom: 16,
+  },
+  formatText: {
+    color: COLORS.backgroundWhite,
+    fontWeight: "bold",
     textAlign: "center",
   },
-  matchCard: {
-    backgroundColor: COLORS.backgroundWhite,
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  matchTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    marginBottom: 4,
-  },
-  matchPlayers: {
-    fontSize: 15,
-    marginBottom: 4,
-  },
-  matchScore: {
-    fontSize: 14,
-    color: COLORS.textLight,
-    marginBottom: 4,
-  },
-  matchWinner: {
-    fontSize: 14,
-    color: COLORS.success,
-    fontWeight: "bold",
-  },
   listContent: {
-    paddingBottom: 24,
+    paddingBottom: 80,
+  },
+  buttonContainer: {
+    padding: 16,
+    backgroundColor: COLORS.backgroundLight,
   },
   advanceButton: {
     backgroundColor: COLORS.primary,
     paddingVertical: 16,
     borderRadius: 8,
-    marginTop: 16,
   },
   advanceButtonDisabled: {
     backgroundColor: COLORS.textLight,
   },
   advanceButtonText: {
     color: COLORS.textWhite,
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "600",
     textAlign: "center",
   },
 });
-
-export default DoubleElim7Screen;

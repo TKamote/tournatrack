@@ -5,12 +5,13 @@ import { RootStackParamList } from "../types/navigation.types";
 import HomeScreen from "../screens/HomeScreen";
 import PlayerInputScreen from "../screens/PlayerInputScreen";
 import { DoubleElimination8Screen } from "../screens/tournaments/DoubleElim8Screen";
-import { DoubleElim6Screen } from "../screens/tournaments/DoubleElim6Screen";
-import DoubleElim7Screen from "../screens/tournaments/DoubleElim7Screen";
+import { DoubleElim4Screen } from "../screens/tournaments/DoubleElim4Screen";
+import DoubleElim16Screen from "../screens/tournaments/DoubleElim16Screen";
 import { SingleElim8Screen } from "../screens/tournaments/SingleElim8Screen";
 import { SingleElim16Screen } from "../screens/tournaments/SingleElim16Screen";
-import PlayerInput6Screen from "../screens/PlayerInput6Screen";
-import PlayerInput7Screen from "../screens/PlayerInput7Screen";
+import PlayerInput4Screen from "../screens/PlayerInput4Screen";
+import PlayerInput8Screen from "../screens/PlayerInput8Screen";
+import PlayerInput16Screen from "../screens/PlayerInput16Screen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -44,24 +45,29 @@ export const AppNavigator = () => {
           options={{ title: "Single Elimination - 16 Players" }}
         />
         <Stack.Screen
-          name="PlayerInput6"
-          component={PlayerInput6Screen}
-          options={{ title: "DE-6 Setup" }}
+          name="PlayerInput4"
+          component={PlayerInput4Screen}
+          options={{ title: "DE-4 Setup" }}
         />
         <Stack.Screen
-          name="DoubleElim6"
-          component={DoubleElim6Screen}
-          options={{ title: "Double Elimination - 6 Players" }}
+          name="PlayerInput8"
+          component={PlayerInput8Screen}
+          options={{ title: "DE-8 Setup" }}
         />
         <Stack.Screen
-          name="PlayerInput7"
-          component={PlayerInput7Screen}
-          options={{ title: "DE-7 Setup" }}
+          name="DoubleElim4"
+          component={DoubleElim4Screen}
+          options={{ title: "Double Elimination - 4 Players" }}
         />
         <Stack.Screen
-          name="DoubleElim7"
-          component={DoubleElim7Screen}
-          options={{ title: "Double Elimination - 7 Players" }}
+          name="PlayerInput16"
+          component={PlayerInput16Screen}
+          options={{ title: "DE-16 Setup" }}
+        />
+        <Stack.Screen
+          name="DoubleElim16"
+          component={DoubleElim16Screen}
+          options={{ title: "Double Elimination - 16 Players" }}
         />
       </Stack.Navigator>
     </NavigationContainer>

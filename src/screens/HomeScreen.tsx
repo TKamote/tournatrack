@@ -35,21 +35,21 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           <View style={styles.buttonContainer}>
             <TouchableOpacity
               style={styles.button}
-              onPress={() => navigation.navigate("PlayerInput6")}
+              onPress={() => navigation.navigate("PlayerInput4")}
             >
-              <Text style={styles.buttonText}>6 Players</Text>
+              <Text style={styles.buttonText}>4 Players</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.button}
-              onPress={() => navigation.navigate("PlayerInput7")}
-            >
-              <Text style={styles.buttonText}>7 Players</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.button}
-              onPress={() => handleTournamentSelect("Double Elimination", 8)}
+              onPress={() => navigation.navigate("PlayerInput8")}
             >
               <Text style={styles.buttonText}>8 Players</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={() => navigation.navigate("PlayerInput16")}
+            >
+              <Text style={styles.buttonText}>16 Players</Text>
             </TouchableOpacity>
           </View>
         </View>
