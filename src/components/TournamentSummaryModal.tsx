@@ -1,8 +1,8 @@
 import React from "react";
 import { Modal, View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { COLORS } from "../../constants/colors";
+import { COLORS } from "../constants/colors";
 // Update the import path below if your types are located elsewhere, e.g. '../../types'
-import { Match, Player, TournamentType } from "../../types";
+import { Match, Player, TournamentType } from "../types";
 
 interface TournamentSummaryModalProps {
   visible: boolean;

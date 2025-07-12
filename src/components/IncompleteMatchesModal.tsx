@@ -1,6 +1,6 @@
-import React from 'react';
-import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { COLORS } from '../../constants/colors';
+import React from "react";
+import { Modal, View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { COLORS } from "../constants/colors";
 
 interface IncompleteMatchesModalProps {
   visible: boolean;
@@ -35,16 +35,16 @@ const IncompleteMatchesModal: React.FC<IncompleteMatchesModalProps> = ({
 const styles = StyleSheet.create({
   centeredView: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
   modalView: {
     backgroundColor: COLORS.backgroundWhite,
     borderRadius: 8,
     padding: 20,
-    alignItems: 'center',
-    shadowColor: '#000',
+    alignItems: "center",
+    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 2,
@@ -56,7 +56,7 @@ const styles = StyleSheet.create({
   },
   modalText: {
     marginBottom: 16,
-    textAlign: 'center',
+    textAlign: "center",
     fontSize: 16,
     color: COLORS.textDark,
   },
@@ -69,7 +69,7 @@ const styles = StyleSheet.create({
   buttonText: {
     color: COLORS.textWhite,
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: "500",
   },
 });
 

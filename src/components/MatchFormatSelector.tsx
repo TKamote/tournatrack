@@ -6,8 +6,8 @@ import {
   StyleSheet,
   ScrollView,
 } from "react-native";
-import { COLORS } from "../../constants/colors";
-import { MatchFormat } from "../../types";
+import { COLORS } from "../constants/colors";
+import { MatchFormat } from "../types";
 
 interface MatchFormatSelectorProps {
   selectedFormat: MatchFormat;

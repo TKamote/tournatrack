@@ -13,7 +13,7 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../types/navigation.types";
 import { COLORS } from "../constants/colors";
 import { MatchFormat } from "../types";
-import ScreenHeader from "../components/common/ScreenHeader";
+import ScreenHeader from "../components/ScreenHeader";
 
 type PlayerInputSingle8ScreenProps = NativeStackScreenProps<
   RootStackParamList,

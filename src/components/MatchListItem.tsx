@@ -1,9 +1,10 @@
 import React from "react";
 import { View, StyleSheet, Text } from "react-native";
-import { Match, Player } from "../../types";
-import { COLORS } from "../../constants/colors";
-import { MatchResults } from "./MatchResults";
+import { Match, Player } from "../types";
+import { COLORS } from "../constants/colors";
+import { MatchFormat } from "../types";
 import { MatchInfo } from "./MatchInfo";
+import { MatchResults } from "./MatchResults";
 
 interface MatchListItemProps {
   item: Match;

@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { COLORS } from "../../constants/colors"; // Updated path with additional ../
+import { COLORS } from "../constants/colors";
 
 interface ScreenHeaderProps {
   title: string;

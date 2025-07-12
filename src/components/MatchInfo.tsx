@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { COLORS } from "../../constants/colors";
-import { BracketType } from "../../types";
+import { COLORS } from "../constants/colors";
+import { MatchFormat, BracketType } from "../types";
 
 interface MatchInfoProps {
   round: number;

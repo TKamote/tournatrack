@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { Match, Player } from "../../types";
-import { COLORS } from "../../constants/colors";
+import { Match, Player } from "../types";
+import { COLORS } from "../constants/colors";
 
 interface MatchCardProps {
   match: Match;

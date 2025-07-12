@@ -1,6 +1,6 @@
 import React from "react";
 import { View, TouchableOpacity, Text, StyleSheet } from "react-native";
-import { COLORS } from "../../constants/colors";
+import { COLORS } from "../constants/colors";
 
 type TournamentView = "brackets" | "history" | "stats";
 

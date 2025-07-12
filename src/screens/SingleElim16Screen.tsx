@@ -8,20 +8,17 @@ import {
   TouchableOpacity,
   Alert,
 } from "react-native";
-import { Player, Match, MatchFormat } from "../../types";
-import { COLORS } from "../../constants/colors";
-import MatchListItem from "../../components/matches/MatchListItem";
-import {
-  createMatch,
-  shuffleArray,
-} from "../../utils/tournament/tournamentUtils";
-import ConfirmActionModal from "../../components/common/ConfirmActionModal";
-import ScreenHeader from "../../components/common/ScreenHeader";
-import IncompleteMatchesModal from "../../components/tournament/IncompleteMatchesModal";
-import TournamentSummaryModal from "../../components/tournament/TournamentSummaryModal";
-import { RoundSeparator } from "../../components/tournament/RoundSeparator";
+import { Player, Match, MatchFormat } from "../types";
+import { COLORS } from "../constants/colors";
+import MatchListItem from "../components/MatchListItem";
+import { createMatch, shuffleArray } from "../utils/tournament/tournamentUtils";
+import ConfirmActionModal from "../components/ConfirmActionModal";
+import ScreenHeader from "../components/ScreenHeader";
+import IncompleteMatchesModal from "../components/IncompleteMatchesModal";
+import TournamentSummaryModal from "../components/TournamentSummaryModal";
+import { RoundSeparator } from "../components/RoundSeparator";
 
-interface SingleElim8ScreenProps {
+interface SingleElim16ScreenProps {
   route: {
     params: {
       playerNames: string[];
@@ -31,7 +28,7 @@ interface SingleElim8ScreenProps {
   navigation: any;
 }
 
-export const SingleElim8Screen: React.FC<SingleElim8ScreenProps> = ({
+export const SingleElim16Screen: React.FC<SingleElim16ScreenProps> = ({
   route,
   navigation,
 }) => {
@@ -51,7 +48,7 @@ export const SingleElim8Screen: React.FC<SingleElim8ScreenProps> = ({
   useEffect(() => {
     if (
       playerNames &&
-      playerNames.length === 8 &&
+      playerNames.length === 16 &&
       matchFormat &&
       !hasInitialized
     ) {
@@ -65,12 +62,12 @@ export const SingleElim8Screen: React.FC<SingleElim8ScreenProps> = ({
 
       const shuffledPlayers = shuffleArray(initialPlayers);
 
-      // Create Round 1 matches (4 matches)
+      // Create Round 1 matches (8 matches)
       const round1Matches: Match[] = [];
-      for (let i = 0; i < 4; i++) {
+      for (let i = 0; i < 8; i++) {
         round1Matches.push(
           createMatch(
-            `se8-r1-${i + 1}`,
+            `se16-r1-${i + 1}`,
             1,
             i + 1,
             shuffledPlayers[i * 2],
@@ -135,8 +132,8 @@ export const SingleElim8Screen: React.FC<SingleElim8ScreenProps> = ({
               setTimeout(() => updatePlayerElimination(losingPlayer.id), 0);
             }
 
-            // Check if this is the final match (round 3, match 1)
-            if (match.round === 3 && match.matchNumber === 1) {
+            // Check if this is the final match (round 4, match 1)
+            if (match.round === 4 && match.matchNumber === 1) {
               setTimeout(() => {
                 setTournamentOver(true);
                 setOverallWinner(winner);
@@ -156,18 +153,6 @@ export const SingleElim8Screen: React.FC<SingleElim8ScreenProps> = ({
     },
     [matchFormat, updatePlayerElimination]
   );
-
-  // Handle set winner
-  const handleSetWinner = useCallback((matchId: string, winner: Player) => {
-    setMatches((prevMatches) => {
-      return prevMatches.map((match) => {
-        if (match.id === matchId) {
-          return { ...match, winner };
-        }
-        return match;
-      });
-    });
-  }, []);
 
   // Advance to next round
   const executeAdvanceRound = useCallback(() => {
@@ -190,11 +175,11 @@ export const SingleElim8Screen: React.FC<SingleElim8ScreenProps> = ({
     let newMatches: Match[] = [];
 
     if (currentRound === 1) {
-      // Round 1 → Round 2 (Semifinals): 4 winners → 2 matches
+      // Round 1 → Round 2: 8 winners → 4 matches
       for (let i = 0; i < Math.floor(winners.length / 2); i++) {
         newMatches.push(
           createMatch(
-            `se8-r2-${i + 1}`,
+            `se16-r2-${i + 1}`,
             2,
             i + 1,
             winners[i * 2],
@@ -206,12 +191,28 @@ export const SingleElim8Screen: React.FC<SingleElim8ScreenProps> = ({
         );
       }
     } else if (currentRound === 2) {
-      // Round 2 → Round 3 (Finals): 2 winners → 1 match
+      // Round 2 → Round 3: 4 winners → 2 matches
+      for (let i = 0; i < Math.floor(winners.length / 2); i++) {
+        newMatches.push(
+          createMatch(
+            `se16-r3-${i + 1}`,
+            3,
+            i + 1,
+            winners[i * 2],
+            winners[i * 2 + 1],
+            "winners",
+            false,
+            matchFormat
+          )
+        );
+      }
+    } else if (currentRound === 3) {
+      // Round 3 → Round 4 (Finals): 2 winners → 1 match
       if (winners.length === 2) {
         newMatches.push(
           createMatch(
-            "se8-r3-1",
-            3,
+            "se16-r4-1",
+            4,
             1,
             winners[0],
             winners[1],
@@ -221,7 +222,7 @@ export const SingleElim8Screen: React.FC<SingleElim8ScreenProps> = ({
           )
         );
       }
-    } else if (currentRound === 3) {
+    } else if (currentRound === 4) {
       // Tournament complete
       if (winners.length === 1) {
         setTournamentOver(true);
@@ -254,7 +255,7 @@ export const SingleElim8Screen: React.FC<SingleElim8ScreenProps> = ({
 
   const displayTitle = useCallback((): string => {
     if (tournamentOver && overallWinner) return "Tournament Complete!";
-    return `Single Elimination (8) - Round ${currentRound}`;
+    return `Single Elimination (16) - Round ${currentRound}`;
   }, [tournamentOver, overallWinner, currentRound]);
 
   const isMatchLocked = useCallback((match: Match): boolean => {
@@ -266,7 +267,7 @@ export const SingleElim8Screen: React.FC<SingleElim8ScreenProps> = ({
       <View style={styles.container}>
         <ScreenHeader
           title={displayTitle()}
-          subtitle="8 Players"
+          subtitle="16 Players"
           titleColor={COLORS.textWhite}
           subtitleColor={COLORS.textLight}
         />
@@ -292,7 +293,7 @@ export const SingleElim8Screen: React.FC<SingleElim8ScreenProps> = ({
                 <MatchListItem
                   item={item}
                   players={players}
-                  tournamentType="Single Elimination (8)"
+                  tournamentType="Single Elimination (16)"
                   isMatchLocked={isMatchLocked}
                   onGameResult={handleIncrementScore}
                 />

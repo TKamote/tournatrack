@@ -8,18 +8,15 @@ import {
   TouchableOpacity,
   Alert,
 } from "react-native";
-import { Player, Match, MatchFormat } from "../../types";
-import { COLORS } from "../../constants/colors";
-import MatchListItem from "../../components/matches/MatchListItem";
-import {
-  createMatch,
-  shuffleArray,
-} from "../../utils/tournament/tournamentUtils";
-import ConfirmActionModal from "../../components/common/ConfirmActionModal";
-import ScreenHeader from "../../components/common/ScreenHeader";
-import IncompleteMatchesModal from "../../components/tournament/IncompleteMatchesModal";
-import TournamentSummaryModal from "../../components/tournament/TournamentSummaryModal";
-import { RoundSeparator } from "../../components/tournament/RoundSeparator";
+import { Player, Match, MatchFormat } from "../types";
+import { COLORS } from "../constants/colors";
+import MatchListItem from "../components/MatchListItem";
+import { createMatch, shuffleArray } from "../utils/tournament/tournamentUtils";
+import ConfirmActionModal from "../components/ConfirmActionModal";
+import ScreenHeader from "../components/ScreenHeader";
+import IncompleteMatchesModal from "../components/IncompleteMatchesModal";
+import TournamentSummaryModal from "../components/TournamentSummaryModal";
+import { RoundSeparator } from "../components/RoundSeparator";
 
 interface SingleElim4ScreenProps {
   route: {

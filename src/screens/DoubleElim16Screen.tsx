@@ -8,17 +8,17 @@ import {
   TouchableOpacity,
   Alert,
 } from "react-native";
-import { Player, Match, MatchFormat } from "../../types";
-import { COLORS } from "../../constants/colors";
-import { DoubleElim16ScreenProps } from "../../types/navigation.types";
+import { Player, Match, MatchFormat } from "../types";
+import { COLORS } from "../constants/colors";
+import { DoubleElim16ScreenProps } from "../types/navigation.types";
 import {
   createMatch,
   shuffleArray,
   createDEInitialMatches,
-} from "../../utils/tournament/tournamentUtils";
-import ScreenHeader from "../../components/common/ScreenHeader";
-import MatchListItem from "../../components/matches/MatchListItem";
-import ConfirmActionModal from "../../components/common/ConfirmActionModal";
+} from "../utils/tournament/tournamentUtils";
+import ScreenHeader from "../components/ScreenHeader";
+import MatchListItem from "../components/MatchListItem";
+import ConfirmActionModal from "../components/ConfirmActionModal";
 
 const DoubleElim16Screen: React.FC<DoubleElim16ScreenProps> = ({
   route,
