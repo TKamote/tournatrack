@@ -2,6 +2,7 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { MatchFormat } from "./match.types";
 
 export type RootStackParamList = {
+  MainTabs: undefined;
   Home: undefined;
   PlayerInput: {
     tournamentType: string;

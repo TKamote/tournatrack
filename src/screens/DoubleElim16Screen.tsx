@@ -414,12 +414,16 @@ const DoubleElim16Screen: React.FC<DoubleElim16ScreenProps> = ({
     }
   }, [canAdvanceRound]);
 
+  const displayTitle = () => {
+    return `Double Elimination (16) - Round ${currentRound}`;
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <ScreenHeader
-          title={`Double Elimination (16) - Round ${currentRound}`}
-          subtitle="16 Players"
+          title={displayTitle()}
+          titleColor={COLORS.singleElimText}
         />
         <Text style={styles.formatBanner}>
           Race to {matchFormat.gamesNeededToWin}
@@ -478,7 +482,7 @@ const DoubleElim16Screen: React.FC<DoubleElim16ScreenProps> = ({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.backgroundLight,
+    backgroundColor: COLORS.backgroundDark,
   },
   container: {
     flex: 1,
@@ -528,7 +532,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
     paddingVertical: 16,
     borderRadius: 8,
-    marginTop: 16,
   },
   advanceButtonDisabled: {
     backgroundColor: COLORS.textLight,
@@ -538,6 +541,9 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
     textAlign: "center",
+  },
+  buttonContainer: {
+    // Removed padding and backgroundColor for a cleaner look
   },
 });
 

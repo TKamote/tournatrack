@@ -262,14 +262,17 @@ export const SingleElim16Screen: React.FC<SingleElim16ScreenProps> = ({
     return match.winner !== null || !match.player1 || !match.player2;
   }, []);
 
+  const canAdvanceRound = useCallback(() => {
+    const currentMatches = matches.filter((m) => m.round === currentRound);
+    return currentMatches.every((m) => m.winner !== null);
+  }, [matches, currentRound]);
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <ScreenHeader
           title={displayTitle()}
-          subtitle="16 Players"
-          titleColor={COLORS.textWhite}
-          subtitleColor={COLORS.textLight}
+          titleColor={COLORS.singleElimText}
         />
 
         <View style={styles.formatBanner}>
@@ -307,8 +310,12 @@ export const SingleElim16Screen: React.FC<SingleElim16ScreenProps> = ({
 
         {!tournamentOver && (
           <TouchableOpacity
-            style={styles.advanceButton}
+            style={[
+              styles.advanceButton,
+              !canAdvanceRound() && styles.advanceButtonDisabled,
+            ]}
             onPress={() => setShowAdvanceModal(true)}
+            disabled={!canAdvanceRound()}
           >
             <Text style={styles.advanceButtonText}>Advance to Next Round</Text>
           </TouchableOpacity>
@@ -342,7 +349,7 @@ export const SingleElim16Screen: React.FC<SingleElim16ScreenProps> = ({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.backgroundLight,
+    backgroundColor: COLORS.backgroundDark,
   },
   container: {
     flex: 1,
@@ -368,6 +375,9 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     alignItems: "center",
     marginTop: 16,
+  },
+  advanceButtonDisabled: {
+    backgroundColor: COLORS.textLight,
   },
   advanceButtonText: {
     color: COLORS.backgroundWhite,

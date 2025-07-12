@@ -532,7 +532,10 @@ export const DoubleElimination8Screen: React.FC<
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        <ScreenHeader title={displayTitle()} subtitle="8 Players" />
+        <ScreenHeader
+          title={displayTitle()}
+          titleColor={COLORS.singleElimText}
+        />
 
         <View style={styles.formatBanner}>
           <Text style={styles.formatText}>
@@ -613,7 +616,7 @@ export const DoubleElimination8Screen: React.FC<
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.backgroundLight,
+    backgroundColor: COLORS.backgroundDark,
   },
   container: {
     flex: 1,
@@ -634,8 +637,7 @@ const styles = StyleSheet.create({
     paddingBottom: 80,
   },
   buttonContainer: {
-    padding: 16,
-    backgroundColor: COLORS.backgroundLight, // Change from COLORS.background
+    // Removed padding and backgroundColor for a cleaner look
   },
   advanceButton: {
     backgroundColor: COLORS.primary,

@@ -74,16 +74,14 @@ const PlayerInputSingle16Screen: React.FC<PlayerInputSingle16ScreenProps> = ({
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <ScreenHeader
-          title="Single Knockout (16)"
-          subtitle="Enter 16 Players"
+          title="Enter 16 Players to Begin"
+          subtitle={undefined}
           titleColor={COLORS.doubleElimText}
           subtitleColor={COLORS.doubleElimSubtitleText}
         />
 
         <ScrollView contentContainerStyle={styles.scrollContent}>
-          <Text style={styles.instruction}>
-            Enter the names of the 16 players:
-          </Text>
+          {/* Removed instruction text for more space */}
 
           <View style={styles.playerGrid}>
             {playerNames.map((name, index) => (

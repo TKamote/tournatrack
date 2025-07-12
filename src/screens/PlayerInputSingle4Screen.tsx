@@ -74,16 +74,14 @@ const PlayerInputSingle4Screen: React.FC<PlayerInputSingle4ScreenProps> = ({
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <ScreenHeader
-          title="Single Knockout (4)"
-          subtitle="Enter 4 Players"
+          title="Enter 4 Players to Begin"
+          subtitle={undefined}
           titleColor={COLORS.doubleElimText}
           subtitleColor={COLORS.doubleElimSubtitleText}
         />
 
         <ScrollView contentContainerStyle={styles.scrollContent}>
-          <Text style={styles.instruction}>
-            Enter the names of the 4 players:
-          </Text>
+          {/* Removed instruction text for more space */}
 
           {playerNames.map((name, index) => (
             <View key={index} style={styles.inputContainer}>

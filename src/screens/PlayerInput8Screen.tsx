@@ -74,16 +74,14 @@ const PlayerInput8Screen: React.FC<PlayerInput8ScreenProps> = ({
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <ScreenHeader
-          title="Double Elimination (8)"
-          subtitle="Enter 8 Players"
+          title="Enter 8 Players to Begin"
+          subtitle={undefined}
           titleColor={COLORS.singleElimText}
           subtitleColor={COLORS.singleElimSubtitleText}
         />
 
         <ScrollView contentContainerStyle={styles.scrollContent}>
-          <Text style={styles.instruction}>
-            Enter the names of the 8 players:
-          </Text>
+          {/* Removed instruction text for more space */}
 
           <View style={styles.playerGrid}>
             {playerNames.map((name, index) => (
