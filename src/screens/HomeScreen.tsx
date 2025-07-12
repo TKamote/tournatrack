@@ -95,13 +95,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
   },
   title: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: "bold",
     color: COLORS.homeScreenTitleText,
     marginBottom: 10,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: COLORS.homeScreenSubtitleText,
     marginBottom: 30,
     textAlign: "center",
@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "600",
     color: COLORS.homeScreenAccent,
     marginBottom: 16,
@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: COLORS.textWhite,
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "600",
     textAlign: "center",
   },

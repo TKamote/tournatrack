@@ -47,33 +47,92 @@ const TermsOfUseScreen: React.FC = () => {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Privacy Policy</Text>
             <Text style={styles.paragraph}>
-              Your privacy is important to us. This policy explains how we
-              handle your information.
+              EFFECTIVE DATE: {new Date().toLocaleDateString()}
             </Text>
 
-            <Text style={styles.subtitle}>1. Data Collection</Text>
             <Text style={styles.paragraph}>
-              TournaTrack does not collect, store, or transmit any personal
-              data. All tournament information is stored locally on your device.
+              Welcome to TournaTrack. We respect your privacy and are committed
+              to protecting your personal data. This Privacy Policy explains how
+              we handle any information when using our tournament management
+              app.
             </Text>
 
-            <Text style={styles.subtitle}>2. No Tracking</Text>
+            <Text style={styles.subtitle}>Information We Collect</Text>
             <Text style={styles.paragraph}>
-              We do not use tracking technologies, cookies, or analytics
-              services. Your tournament data remains private and local to your
+              TournaTrack only accesses the following data to provide its core
+              functionality:
+            </Text>
+
+            <Text style={styles.paragraph}>
+              1. User-Provided Tournament Data: Any information you enter into
+              the app (such as player names, match results, tournament brackets)
+              is used only for tournament management and is not transmitted to
+              our servers.
+            </Text>
+
+            <Text style={styles.subtitle}>How We Use Your Information</Text>
+            <Text style={styles.paragraph}>
+              All data processing occurs locally on your device. We use your
+              information only to:
+            </Text>
+            <Text style={styles.paragraph}>
+              • Generate and manage tournament brackets
+            </Text>
+            <Text style={styles.paragraph}>
+              • Track match results and player progress
+            </Text>
+            <Text style={styles.paragraph}>
+              • Display tournament information and statistics
+            </Text>
+
+            <Text style={styles.subtitle}>Data Storage and Security</Text>
+            <Text style={styles.paragraph}>
+              Local Storage Only: All data (including player names, match
+              results, and tournament brackets) is stored locally on your
+              device.
+            </Text>
+            <Text style={styles.paragraph}>
+              • No External Servers: We do not collect, transmit, or store any
+              of your information on external servers.
+            </Text>
+            <Text style={styles.paragraph}>
+              • No Analytics: We do not use any analytics tools to track your
+              app usage.
+            </Text>
+
+            <Text style={styles.subtitle}>Sharing Your Information</Text>
+            <Text style={styles.paragraph}>
+              We do not share your personal information with third parties. Your
+              tournament data remains completely private and local to your
               device.
             </Text>
 
-            <Text style={styles.subtitle}>3. Third-Party Services</Text>
+            <Text style={styles.subtitle}>Age Requirements</Text>
             <Text style={styles.paragraph}>
-              This app does not integrate with third-party services that would
-              collect or process your personal information.
+              Our app is intended for users 17 years of age and older. We do not
+              knowingly collect personal information from users under 17 years
+              of age. This age requirement helps ensure responsible use of
+              tournament management features.
             </Text>
 
-            <Text style={styles.subtitle}>4. Data Security</Text>
+            <Text style={styles.subtitle}>Your Rights</Text>
             <Text style={styles.paragraph}>
-              Since no data is transmitted or stored externally, your tournament
-              information is as secure as your device itself.
+              Since all data is stored locally on your device, you have complete
+              control over your tournament information. You can manage your data
+              directly within the app or through your device's settings.
+            </Text>
+
+            <Text style={styles.subtitle}>Changes to This Privacy Policy</Text>
+            <Text style={styles.paragraph}>
+              We may update our Privacy Policy from time to time. We will notify
+              you of any changes by posting the new Privacy Policy on this page
+              and updating the "Effective Date" at the top.
+            </Text>
+
+            <Text style={styles.subtitle}>International Data Transfers</Text>
+            <Text style={styles.paragraph}>
+              Since all data remains on your device, no international data
+              transfers occur.
             </Text>
           </View>
 
@@ -288,14 +347,22 @@ const TermsOfUseScreen: React.FC = () => {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Contact</Text>
+            <Text style={styles.sectionTitle}>Contact Us</Text>
             <Text style={styles.paragraph}>
-              If you have any questions about these terms or privacy policy,
-              please contact us through the app store review system. Alternatively you can visit www.TournaTrack@PDFReportMaker.com
+              If you have any questions about this Privacy Policy or Terms of
+              Use, please contact us at:
+            </Text>
+            <Text style={styles.paragraph}>
+              • Email: admin@TournaTrack.site
+            </Text>
+            <Text style={styles.paragraph}>
+              • App Store Reviews: You can also contact us through the app store
+              review system
             </Text>
 
             <Text style={styles.paragraph}>
-              Last updated: {new Date().toLocaleDateString()}
+              By using our app, you consent to our Privacy Policy and Terms of
+              Use.
             </Text>
           </View>
         </ScrollView>
@@ -320,20 +387,20 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "bold",
     color: COLORS.textDark,
     marginBottom: 12,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "600",
     color: COLORS.textDark,
     marginTop: 16,
     marginBottom: 8,
   },
   paragraph: {
-    fontSize: 14,
+    fontSize: 12,
     lineHeight: 20,
     color: COLORS.textMedium,
     marginBottom: 12,
@@ -353,7 +420,7 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.backgroundDark,
   },
   tableHeader: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "bold",
     color: COLORS.textDark,
     flex: 1,
@@ -362,7 +429,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   tableCell: {
-    fontSize: 14,
+    fontSize: 12,
     color: COLORS.textMedium,
     flex: 1,
     textAlign: "center",

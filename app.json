@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "tournatrack",
+    "name": "TourTrack",
     "slug": "tournatrack",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -13,17 +13,27 @@
       "backgroundColor": "#2c3e50"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.davidonq.tournatrack",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.davidonq.tournatrack"
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "f262ea3d-048b-42ff-9953-86c4abd51306"
+      }
     }
   }
 }

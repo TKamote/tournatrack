@@ -57,14 +57,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   titleText: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "bold",
     textAlign: "center",
     marginBottom: 5,
     color: COLORS.textDark,
   },
   subTitle: {
-    fontSize: 16,
+    fontSize: 14,
     textAlign: "center",
     marginBottom: 10,
     color: COLORS.textMedium,

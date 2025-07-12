@@ -40,7 +40,7 @@ export const AppNavigator = () => {
                 name="home"
                 size={24}
                 color="#3498db"
-                style={{ marginLeft: 16 }}
+                style={{ marginLeft: 20 }}
                 onPress={() => navigation.navigate("MainTabs")}
               />
             ),
@@ -72,7 +72,7 @@ export const AppNavigator = () => {
                 name="home"
                 size={24}
                 color="#3498db"
-                style={{ marginLeft: 16 }}
+                style={{ marginLeft: 20 }}
                 onPress={() => navigation.navigate("MainTabs")}
               />
             ),
@@ -89,7 +89,7 @@ export const AppNavigator = () => {
                 name="home"
                 size={24}
                 color="#3498db"
-                style={{ marginLeft: 16 }}
+                style={{ marginLeft: 20 }}
                 onPress={() => navigation.navigate("MainTabs")}
               />
             ),
@@ -111,7 +111,7 @@ export const AppNavigator = () => {
                 name="home"
                 size={24}
                 color="#3498db"
-                style={{ marginLeft: 16 }}
+                style={{ marginLeft: 20 }}
                 onPress={() => navigation.navigate("MainTabs")}
               />
             ),
@@ -128,7 +128,7 @@ export const AppNavigator = () => {
                 name="home"
                 size={24}
                 color="#3498db"
-                style={{ marginLeft: 16 }}
+                style={{ marginLeft: 20 }}
                 onPress={() => navigation.navigate("MainTabs")}
               />
             ),
@@ -145,7 +145,7 @@ export const AppNavigator = () => {
                 name="home"
                 size={24}
                 color="#3498db"
-                style={{ marginLeft: 16 }}
+                style={{ marginLeft: 20 }}
                 onPress={() => navigation.navigate("MainTabs")}
               />
             ),
@@ -162,7 +162,7 @@ export const AppNavigator = () => {
                 name="home"
                 size={24}
                 color="#3498db"
-                style={{ marginLeft: 16 }}
+                style={{ marginLeft: 20 }}
                 onPress={() => navigation.navigate("MainTabs")}
               />
             ),

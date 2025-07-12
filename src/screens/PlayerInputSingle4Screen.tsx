@@ -168,7 +168,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   label: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "500",
     color: COLORS.doubleElimText,
     marginBottom: 8,
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.doubleElimPrimary,
     borderRadius: 8,
     padding: 12,
-    fontSize: 16,
+    fontSize: 14,
     color: COLORS.doubleElimText,
   },
   formatSection: {
@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   formatTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "600",
     color: COLORS.doubleElimText,
     marginBottom: 12,
@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.doubleElimPrimary,
   },
   formatButtonText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "500",
     color: COLORS.doubleElimText,
     textAlign: "center",
@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
   },
   startButtonText: {
     color: COLORS.textWhite,
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "600",
     textAlign: "center",
   },

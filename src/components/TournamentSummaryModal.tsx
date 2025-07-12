@@ -76,6 +76,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 20,
     alignItems: "center",
+    justifyContent: "center",
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -86,9 +87,10 @@ const styles = StyleSheet.create({
     elevation: 5,
     margin: 20,
     minWidth: "80%",
+    maxWidth: "90%",
   },
   titleText: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: "bold",
     color: COLORS.textDark,
     marginBottom: 20,
@@ -98,25 +100,25 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   winnerText: {
-    fontSize: 18,
-    color: COLORS.success,
+    fontSize: 16,
+    color: COLORS.textDark,
     fontWeight: "600",
     marginBottom: 5,
   },
   runnerUpText: {
-    fontSize: 16,
+    fontSize: 14,
     color: COLORS.textLight,
     fontWeight: "500",
     marginTop: 10,
     marginBottom: 5,
   },
   playerName: {
-    fontSize: 20,
+    fontSize: 18,
     color: COLORS.textDark,
     marginBottom: 10,
   },
   scoreText: {
-    fontSize: 16,
+    fontSize: 14,
     color: COLORS.textDark,
     marginTop: 10,
   },
@@ -128,7 +130,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: COLORS.textWhite,
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "500",
   },
 });
