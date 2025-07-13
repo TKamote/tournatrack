@@ -14,7 +14,7 @@ import { COLORS } from "../constants/colors";
 
 type HomeScreenProps = NativeStackScreenProps<RootStackParamList, "Home">;
 
-const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
+const HomeScreen: React.FC<any> = ({ navigation, route }) => {
   const handleTournamentSelect = (type: TournamentType, players: number) => {
     navigation.navigate("PlayerInput", {
       tournamentType: type,
@@ -26,7 +26,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.title}>TournaTrack</Text>
-        <Text style={styles.subtitle}>Create and manage your tournaments</Text>
+        <Text style={styles.subtitle}>
+          Choose the tournament you will manage:
+        </Text>
 
         {/* Double Elimination Section - Featured */}
         <View style={[styles.section, styles.featuredSection]}>
@@ -78,6 +80,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             </TouchableOpacity>
           </View>
         </View>
+        <TouchableOpacity
+          style={[styles.button, { marginTop: 20 }]}
+          onPress={() => navigation.navigate("OngoingTournaments")}
+        >
+          <Text style={styles.buttonText}>Ongoing Tournaments</Text>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -101,8 +109,8 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   subtitle: {
-    fontSize: 14,
-    color: COLORS.homeScreenSubtitleText,
+    fontSize: 18, // was 14, increased by 4px
+    color: COLORS.homeScreenTitleText, // match title color
     marginBottom: 30,
     textAlign: "center",
   },

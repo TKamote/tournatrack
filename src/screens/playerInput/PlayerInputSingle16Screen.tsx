@@ -8,22 +8,24 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../types/navigation.types";
-import { COLORS } from "../constants/colors";
-import { MatchFormat } from "../types";
-import ScreenHeader from "../components/ScreenHeader";
+import { RootStackParamList } from "../../types/navigation.types";
+import { COLORS } from "../../constants/colors";
+import { MatchFormat } from "../../types";
+import ScreenHeader from "../../components/ScreenHeader";
 
-type PlayerInputSingle8ScreenProps = NativeStackScreenProps<
+type PlayerInputSingle16ScreenProps = NativeStackScreenProps<
   RootStackParamList,
-  "PlayerInputSingle8"
+  "PlayerInputSingle16"
 >;
 
-const PlayerInputSingle8Screen: React.FC<PlayerInputSingle8ScreenProps> = ({
+const PlayerInputSingle16Screen: React.FC<PlayerInputSingle16ScreenProps> = ({
   navigation,
 }) => {
-  const [playerNames, setPlayerNames] = useState<string[]>(Array(8).fill(""));
+  const [playerNames, setPlayerNames] = useState<string[]>(Array(16).fill(""));
   const [selectedFormat, setSelectedFormat] = useState<MatchFormat>({
     type: "raceTo",
     gamesNeededToWin: 3,
@@ -57,14 +59,14 @@ const PlayerInputSingle8Screen: React.FC<PlayerInputSingle8ScreenProps> = ({
 
   const handleStartTournament = () => {
     const validNames = playerNames.filter((name) => name.trim() !== "");
-    if (validNames.length !== 8) {
-      Alert.alert("Invalid Input", "Please enter exactly 8 player names.", [
+    if (validNames.length !== 16) {
+      Alert.alert("Invalid Input", "Please enter exactly 16 player names.", [
         { text: "OK" },
       ]);
       return;
     }
 
-    navigation.navigate("SingleElim8", {
+    navigation.navigate("SingleElim16", {
       playerNames: validNames,
       matchFormat: selectedFormat,
     });
@@ -72,76 +74,89 @@ const PlayerInputSingle8Screen: React.FC<PlayerInputSingle8ScreenProps> = ({
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <ScreenHeader
-          title="Enter 8 Players to Begin"
-          subtitle={undefined}
-          titleColor={COLORS.doubleElimText}
-          subtitleColor={COLORS.doubleElimSubtitleText}
-        />
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+      >
+        <View style={styles.container}>
+          <ScreenHeader
+            title="Enter 16 Players to Begin"
+            subtitle={undefined}
+            titleColor={COLORS.doubleElimText}
+            subtitleColor={COLORS.doubleElimSubtitleText}
+          />
 
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          {/* Removed instruction text for more space */}
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={true}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Removed instruction text for more space */}
 
-          <View style={styles.playerGrid}>
-            {playerNames.map((name, index) => (
-              <View key={index} style={styles.inputContainer}>
-                <Text style={styles.label}>P{index + 1}:</Text>
-                <TextInput
-                  style={styles.input}
-                  value={name}
-                  onChangeText={(text) => handlePlayerNameChange(index, text)}
-                  placeholder={`Player ${index + 1}`}
-                  placeholderTextColor={COLORS.textLight}
-                />
-              </View>
-            ))}
-          </View>
+            <View style={styles.playerGrid}>
+              {playerNames.map((name, index) => (
+                <View key={index} style={styles.inputContainer}>
+                  <Text style={styles.label}>P{index + 1}:</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={name}
+                    onChangeText={(text) => handlePlayerNameChange(index, text)}
+                    placeholder={`Player ${index + 1}`}
+                    placeholderTextColor={COLORS.textLight}
+                    returnKeyType="next"
+                  />
+                </View>
+              ))}
+            </View>
 
-          {/* Race Format Section */}
-          <View style={styles.formatSection}>
-            <Text style={styles.formatTitle}>Race Format</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.formatScrollView}
-            >
-              <View style={styles.formatContainer}>
-                {formatOptions.map((option) => (
-                  <TouchableOpacity
-                    key={option.label}
-                    style={[
-                      styles.formatButton,
-                      selectedFormat.gamesNeededToWin ===
-                        option.value.gamesNeededToWin &&
-                        styles.formatButtonSelected,
-                    ]}
-                    onPress={() => setSelectedFormat(option.value)}
-                  >
-                    <Text
+            {/* Race Format Section */}
+            <View style={styles.formatSection}>
+              <Text style={styles.formatTitle}>Race Format</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.formatScrollView}
+              >
+                <View style={styles.formatContainer}>
+                  {formatOptions.map((option) => (
+                    <TouchableOpacity
+                      key={option.label}
                       style={[
-                        styles.formatButtonText,
+                        styles.formatButton,
                         selectedFormat.gamesNeededToWin ===
                           option.value.gamesNeededToWin &&
-                          styles.formatButtonTextSelected,
+                          styles.formatButtonSelected,
                       ]}
+                      onPress={() => setSelectedFormat(option.value)}
                     >
-                      {option.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </ScrollView>
-          </View>
+                      <Text
+                        style={[
+                          styles.formatButtonText,
+                          selectedFormat.gamesNeededToWin ===
+                            option.value.gamesNeededToWin &&
+                            styles.formatButtonTextSelected,
+                        ]}
+                      >
+                        {option.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
+            </View>
 
-          <TouchableOpacity
-            style={styles.startButton}
-            onPress={handleStartTournament}
-          >
-            <Text style={styles.startButtonText}>Start Tournament</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </View>
+            <TouchableOpacity
+              style={styles.startButton}
+              onPress={handleStartTournament}
+            >
+              <Text style={styles.startButtonText}>
+                Create and start the tournament
+              </Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -151,6 +166,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.doubleElimBackground,
   },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
   container: {
     flex: 1,
     padding: 16,
@@ -158,6 +176,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingVertical: 20,
+    paddingBottom: 100, // Extra padding for keyboard
   },
   instruction: {
     fontSize: 18,
@@ -250,4 +269,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default PlayerInputSingle8Screen;
+export default PlayerInputSingle16Screen;

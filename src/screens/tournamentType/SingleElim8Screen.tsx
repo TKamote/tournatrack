@@ -8,17 +8,21 @@ import {
   TouchableOpacity,
   Alert,
 } from "react-native";
-import { Player, Match, MatchFormat } from "../types";
-import { COLORS } from "../constants/colors";
-import MatchListItem from "../components/MatchListItem";
-import { createMatch, shuffleArray } from "../utils/tournament/tournamentUtils";
-import ConfirmActionModal from "../components/ConfirmActionModal";
-import ScreenHeader from "../components/ScreenHeader";
-import IncompleteMatchesModal from "../components/IncompleteMatchesModal";
-import TournamentSummaryModal from "../components/TournamentSummaryModal";
-import { RoundSeparator } from "../components/RoundSeparator";
+import { Player, Match, MatchFormat } from "../../types";
+import { COLORS } from "../../constants/colors";
+import MatchListItem from "../../components/MatchListItem";
+import {
+  createMatch,
+  shuffleArray,
+} from "../../utils/tournament/tournamentUtils";
+import ConfirmActionModal from "../../components/ConfirmActionModal";
+import ScreenHeader from "../../components/ScreenHeader";
+import IncompleteMatchesModal from "../../components/IncompleteMatchesModal";
+import TournamentSummaryModal from "../../components/TournamentSummaryModal";
+import { RoundSeparator } from "../../components/RoundSeparator";
+import { Ionicons } from "@expo/vector-icons";
 
-interface SingleElim4ScreenProps {
+interface SingleElim8ScreenProps {
   route: {
     params: {
       playerNames: string[];
@@ -28,7 +32,7 @@ interface SingleElim4ScreenProps {
   navigation: any;
 }
 
-export const SingleElim4Screen: React.FC<SingleElim4ScreenProps> = ({
+export const SingleElim8Screen: React.FC<SingleElim8ScreenProps> = ({
   route,
   navigation,
 }) => {
@@ -48,7 +52,7 @@ export const SingleElim4Screen: React.FC<SingleElim4ScreenProps> = ({
   useEffect(() => {
     if (
       playerNames &&
-      playerNames.length === 4 &&
+      playerNames.length === 8 &&
       matchFormat &&
       !hasInitialized
     ) {
@@ -62,12 +66,12 @@ export const SingleElim4Screen: React.FC<SingleElim4ScreenProps> = ({
 
       const shuffledPlayers = shuffleArray(initialPlayers);
 
-      // Create Round 1 matches (2 matches)
+      // Create Round 1 matches (4 matches)
       const round1Matches: Match[] = [];
-      for (let i = 0; i < 2; i++) {
+      for (let i = 0; i < 4; i++) {
         round1Matches.push(
           createMatch(
-            `se4-r1-${i + 1}`,
+            `se8-r1-${i + 1}`,
             1,
             i + 1,
             shuffledPlayers[i * 2],
@@ -132,8 +136,8 @@ export const SingleElim4Screen: React.FC<SingleElim4ScreenProps> = ({
               setTimeout(() => updatePlayerElimination(losingPlayer.id), 0);
             }
 
-            // Check if this is the final match (round 2, match 1)
-            if (match.round === 2 && match.matchNumber === 1) {
+            // Check if this is the final match (round 3, match 1)
+            if (match.round === 3 && match.matchNumber === 1) {
               setTimeout(() => {
                 setTournamentOver(true);
                 setOverallWinner(winner);
@@ -187,12 +191,28 @@ export const SingleElim4Screen: React.FC<SingleElim4ScreenProps> = ({
     let newMatches: Match[] = [];
 
     if (currentRound === 1) {
-      // Round 1 → Round 2 (Finals): 2 winners → 1 match
+      // Round 1 → Round 2 (Semifinals): 4 winners → 2 matches
+      for (let i = 0; i < Math.floor(winners.length / 2); i++) {
+        newMatches.push(
+          createMatch(
+            `se8-r2-${i + 1}`,
+            2,
+            i + 1,
+            winners[i * 2],
+            winners[i * 2 + 1],
+            "winners",
+            false,
+            matchFormat
+          )
+        );
+      }
+    } else if (currentRound === 2) {
+      // Round 2 → Round 3 (Finals): 2 winners → 1 match
       if (winners.length === 2) {
         newMatches.push(
           createMatch(
-            "se4-r2-1",
-            2,
+            "se8-r3-1",
+            3,
             1,
             winners[0],
             winners[1],
@@ -202,7 +222,7 @@ export const SingleElim4Screen: React.FC<SingleElim4ScreenProps> = ({
           )
         );
       }
-    } else if (currentRound === 2) {
+    } else if (currentRound === 3) {
       // Tournament complete
       if (winners.length === 1) {
         setTournamentOver(true);
@@ -235,7 +255,7 @@ export const SingleElim4Screen: React.FC<SingleElim4ScreenProps> = ({
 
   const displayTitle = useCallback((): string => {
     if (tournamentOver && overallWinner) return "Tournament Complete!";
-    return `Single Elimination (4) - Round ${currentRound}`;
+    return `Single Elimination (8) - Round ${currentRound}`;
   }, [tournamentOver, overallWinner, currentRound]);
 
   const isMatchLocked = useCallback((match: Match): boolean => {
@@ -276,7 +296,7 @@ export const SingleElim4Screen: React.FC<SingleElim4ScreenProps> = ({
                 <MatchListItem
                   item={item}
                   players={players}
-                  tournamentType="Single Elimination (4)"
+                  tournamentType="Single Elimination (8)"
                   isMatchLocked={isMatchLocked}
                   onGameResult={handleIncrementScore}
                 />
@@ -336,7 +356,7 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   formatBanner: {
-    backgroundColor: COLORS.singleElimPrimary,
+    backgroundColor: COLORS.primary,
     padding: 8,
     borderRadius: 4,
     marginBottom: 16,
@@ -350,7 +370,7 @@ const styles = StyleSheet.create({
     paddingBottom: 80,
   },
   advanceButton: {
-    backgroundColor: COLORS.singleElimPrimary,
+    backgroundColor: COLORS.primary,
     padding: 16,
     borderRadius: 4,
     alignItems: "center",

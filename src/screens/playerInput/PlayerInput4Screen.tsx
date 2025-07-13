@@ -10,17 +10,17 @@ import {
   Alert,
 } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../types/navigation.types";
-import { COLORS } from "../constants/colors";
-import { MatchFormat } from "../types";
-import ScreenHeader from "../components/ScreenHeader";
+import { RootStackParamList } from "../../types/navigation.types";
+import { COLORS } from "../../constants/colors";
+import { MatchFormat } from "../../types";
+import ScreenHeader from "../../components/ScreenHeader";
 
-type PlayerInputSingle4ScreenProps = NativeStackScreenProps<
+type PlayerInput4ScreenProps = NativeStackScreenProps<
   RootStackParamList,
-  "PlayerInputSingle4"
+  "PlayerInput4"
 >;
 
-const PlayerInputSingle4Screen: React.FC<PlayerInputSingle4ScreenProps> = ({
+const PlayerInput4Screen: React.FC<PlayerInput4ScreenProps> = ({
   navigation,
 }) => {
   const [playerNames, setPlayerNames] = useState<string[]>(["", "", "", ""]);
@@ -64,7 +64,7 @@ const PlayerInputSingle4Screen: React.FC<PlayerInputSingle4ScreenProps> = ({
       return;
     }
 
-    navigation.navigate("SingleElim4", {
+    navigation.navigate("DoubleElim4", {
       playerNames: validNames,
       matchFormat: selectedFormat,
     });
@@ -76,8 +76,8 @@ const PlayerInputSingle4Screen: React.FC<PlayerInputSingle4ScreenProps> = ({
         <ScreenHeader
           title="Enter 4 Players to Begin"
           subtitle={undefined}
-          titleColor={COLORS.doubleElimText}
-          subtitleColor={COLORS.doubleElimSubtitleText}
+          titleColor={COLORS.singleElimText}
+          subtitleColor={COLORS.singleElimSubtitleText}
         />
 
         <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -136,7 +136,9 @@ const PlayerInputSingle4Screen: React.FC<PlayerInputSingle4ScreenProps> = ({
             style={styles.startButton}
             onPress={handleStartTournament}
           >
-            <Text style={styles.startButtonText}>Start Tournament</Text>
+            <Text style={styles.startButtonText}>
+              Create and start the tournament
+            </Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
@@ -147,7 +149,7 @@ const PlayerInputSingle4Screen: React.FC<PlayerInputSingle4ScreenProps> = ({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.doubleElimBackground,
+    backgroundColor: COLORS.singleElimBackground,
   },
   container: {
     flex: 1,
@@ -160,7 +162,7 @@ const styles = StyleSheet.create({
   instruction: {
     fontSize: 18,
     fontWeight: "600",
-    color: COLORS.doubleElimText,
+    color: COLORS.singleElimText,
     marginBottom: 24,
     textAlign: "center",
   },
@@ -170,17 +172,17 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: "500",
-    color: COLORS.doubleElimText,
+    color: COLORS.singleElimText,
     marginBottom: 8,
   },
   input: {
-    backgroundColor: COLORS.doubleElimSectionBackground,
+    backgroundColor: COLORS.singleElimSectionBackground,
     borderWidth: 1,
-    borderColor: COLORS.doubleElimPrimary,
+    borderColor: COLORS.singleElimPrimary,
     borderRadius: 8,
     padding: 12,
     fontSize: 14,
-    color: COLORS.doubleElimText,
+    color: COLORS.singleElimText,
   },
   formatSection: {
     marginTop: 24,
@@ -189,7 +191,7 @@ const styles = StyleSheet.create({
   formatTitle: {
     fontSize: 14,
     fontWeight: "600",
-    color: COLORS.doubleElimText,
+    color: COLORS.singleElimText,
     marginBottom: 12,
     textAlign: "center",
   },
@@ -201,9 +203,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   formatButton: {
-    backgroundColor: COLORS.doubleElimSectionBackground,
+    backgroundColor: COLORS.singleElimSectionBackground,
     borderWidth: 1,
-    borderColor: COLORS.doubleElimPrimary,
+    borderColor: COLORS.singleElimPrimary,
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -211,20 +213,20 @@ const styles = StyleSheet.create({
     minWidth: 80,
   },
   formatButtonSelected: {
-    backgroundColor: COLORS.doubleElimPrimary,
-    borderColor: COLORS.doubleElimPrimary,
+    backgroundColor: COLORS.singleElimPrimary,
+    borderColor: COLORS.singleElimPrimary,
   },
   formatButtonText: {
     fontSize: 12,
     fontWeight: "500",
-    color: COLORS.doubleElimText,
+    color: COLORS.singleElimText,
     textAlign: "center",
   },
   formatButtonTextSelected: {
     color: COLORS.textWhite,
   },
   startButton: {
-    backgroundColor: COLORS.doubleElimPrimary,
+    backgroundColor: COLORS.singleElimPrimary,
     paddingVertical: 16,
     borderRadius: 8,
     marginTop: 32,
@@ -242,4 +244,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default PlayerInputSingle4Screen;
+export default PlayerInput4Screen;

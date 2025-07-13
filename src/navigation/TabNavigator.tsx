@@ -3,6 +3,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import HomeScreen from "../screens/HomeScreen";
 import TermsOfUseScreen from "../screens/TermsOfUseScreen";
+import AuthScreen from "../screens/AuthScreen";
 import { COLORS } from "../constants/colors";
 
 const Tab = createBottomTabNavigator();
@@ -44,6 +45,16 @@ export const TabNavigator = () => {
         name="Terms"
         component={TermsOfUseScreen}
         options={{ title: "Terms & Privacy" }}
+      />
+      <Tab.Screen
+        name="Auth"
+        component={AuthScreen}
+        options={{
+          title: "Sign In",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="log-in-outline" size={size} color={color} />
+          ),
+        }}
       />
     </Tab.Navigator>
   );

@@ -8,19 +8,20 @@ import {
   TouchableOpacity,
   Alert,
 } from "react-native";
-import { Player, Match, MatchFormat } from "../types";
-import { COLORS } from "../constants/colors";
-import MatchListItem from "../components/MatchListItem";
+import { Player, Match, MatchFormat } from "../../types";
+import { COLORS } from "../../constants/colors";
+import MatchListItem from "../../components/MatchListItem";
 import {
   createMatch,
   shuffleArray,
   createDEInitialMatches,
-} from "../utils/tournament/tournamentUtils";
-import ConfirmActionModal from "../components/ConfirmActionModal";
-import ScreenHeader from "../components/ScreenHeader";
-import IncompleteMatchesModal from "../components/IncompleteMatchesModal";
-import TournamentSummaryModal from "../components/TournamentSummaryModal";
-import { RoundSeparator } from "../components/RoundSeparator";
+} from "../../utils/tournament/tournamentUtils";
+import ConfirmActionModal from "../../components/ConfirmActionModal";
+import ScreenHeader from "../../components/ScreenHeader";
+import IncompleteMatchesModal from "../../components/IncompleteMatchesModal";
+import TournamentSummaryModal from "../../components/TournamentSummaryModal";
+import { RoundSeparator } from "../../components/RoundSeparator";
+import { Ionicons } from "@expo/vector-icons";
 
 interface DoubleElimination8ScreenProps {
   route: {

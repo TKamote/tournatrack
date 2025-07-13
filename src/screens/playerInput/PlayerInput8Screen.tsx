@@ -10,10 +10,10 @@ import {
   Alert,
 } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../types/navigation.types";
-import { COLORS } from "../constants/colors";
-import { MatchFormat } from "../types";
-import ScreenHeader from "../components/ScreenHeader";
+import { RootStackParamList } from "../../types/navigation.types";
+import { COLORS } from "../../constants/colors";
+import { MatchFormat } from "../../types";
+import ScreenHeader from "../../components/ScreenHeader";
 
 type PlayerInput8ScreenProps = NativeStackScreenProps<
   RootStackParamList,
@@ -138,7 +138,9 @@ const PlayerInput8Screen: React.FC<PlayerInput8ScreenProps> = ({
             style={styles.startButton}
             onPress={handleStartTournament}
           >
-            <Text style={styles.startButtonText}>Start Tournament</Text>
+            <Text style={styles.startButtonText}>
+              Create and start the tournament
+            </Text>
           </TouchableOpacity>
         </ScrollView>
       </View>

@@ -39,6 +39,8 @@ export type RootStackParamList = {
     playerNames: string[];
     matchFormat: MatchFormat;
   };
+  Auth: undefined;
+  OngoingTournaments: undefined;
 };
 
 export type HomeScreenProps = NativeStackScreenProps<
