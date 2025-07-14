@@ -40,8 +40,8 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
   modalView: {
-    backgroundColor: COLORS.backgroundWhite,
-    borderRadius: 8,
+    backgroundColor: COLORS.glassmorphism.modalBackground,
+    borderRadius: 16,
     padding: 20,
     alignItems: "center",
     shadowColor: "#000",
@@ -53,6 +53,8 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
     margin: 20,
+    borderWidth: 1,
+    borderColor: COLORS.glassmorphism.border,
   },
   modalText: {
     marginBottom: 16,
@@ -61,15 +63,18 @@ const styles = StyleSheet.create({
     color: COLORS.textDark,
   },
   button: {
-    backgroundColor: COLORS.primary,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 4,
+    backgroundColor: COLORS.glassmorphism.background,
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.glassmorphism.border,
+    marginTop: 8,
   },
   buttonText: {
     color: COLORS.textWhite,
     fontSize: 16,
-    fontWeight: "500",
+    fontWeight: "600",
   },
 });
 

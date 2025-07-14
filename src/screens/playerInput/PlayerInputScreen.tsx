@@ -8,11 +8,14 @@ import {
   TextInput,
   TouchableOpacity,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../types/navigation.types";
 import { COLORS } from "../../constants/colors";
 import { MatchFormat } from "../../types";
+import { FONT_SIZES, FONT_WEIGHTS } from "../../constants/typography";
 
 type PlayerInputScreenProps = NativeStackScreenProps<
   RootStackParamList,
@@ -79,7 +82,13 @@ const PlayerInputScreen: React.FC<PlayerInputScreenProps> = ({
       Alert.alert("Error", "Please fill in all player names");
       return;
     }
-
+    // Duplicate name check (case-insensitive, trimmed)
+    const normalizedNames = playerNames.map((n) => n.trim().toLowerCase());
+    const nameSet = new Set(normalizedNames);
+    if (nameSet.size !== normalizedNames.length) {
+      Alert.alert("Duplicate Names", "Each player must have a unique name.");
+      return;
+    }
     // New navigation logic based on tournament type and player count
     if (tournamentType === "Double Elimination" && playerNames.length === 8) {
       navigation.navigate("DoubleElim8", {
@@ -175,60 +184,119 @@ const PlayerInputScreen: React.FC<PlayerInputScreenProps> = ({
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.title}>Enter Player Names</Text>
-        <Text style={styles.subtitle}>
-          {tournamentType} - {numPlayers} Players
-        </Text>
+      {numPlayers === 4 ? (
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+        >
+          <ScrollView contentContainerStyle={styles.container}>
+            <Text style={styles.title}>Enter Player Names</Text>
+            <Text style={styles.subtitle}>
+              {tournamentType} - {numPlayers} Players
+            </Text>
 
-        {/* Player Names Section */}
-        <View style={styles.section}>{renderPlayerInputs()}</View>
+            {/* Player Names Section */}
+            <View style={styles.section}>{renderPlayerInputs()}</View>
 
-        {/* Match Format Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Race Format</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.formatScrollView}
-          >
-            <View style={styles.formatContainer}>
-              {formatOptions.map((option) => (
-                <TouchableOpacity
-                  key={option.label}
-                  style={[
-                    styles.formatButton,
-                    selectedFormat.gamesNeededToWin ===
-                      option.value.gamesNeededToWin &&
-                      styles.formatButtonSelected,
-                  ]}
-                  onPress={() => setSelectedFormat(option.value)}
-                >
-                  <Text
+            {/* Match Format Section */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Race Format</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.formatScrollView}
+              >
+                <View style={styles.formatContainer}>
+                  {formatOptions.map((option) => (
+                    <TouchableOpacity
+                      key={option.label}
+                      style={[
+                        styles.formatButton,
+                        selectedFormat.gamesNeededToWin ===
+                          option.value.gamesNeededToWin &&
+                          styles.formatButtonSelected,
+                      ]}
+                      onPress={() => setSelectedFormat(option.value)}
+                    >
+                      <Text
+                        style={[
+                          styles.formatButtonText,
+                          selectedFormat.gamesNeededToWin ===
+                            option.value.gamesNeededToWin &&
+                            styles.formatButtonTextSelected,
+                        ]}
+                      >
+                        {option.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
+            </View>
+
+            <TouchableOpacity
+              style={styles.startButton}
+              onPress={handleStartTournament}
+            >
+              <Text style={styles.startButtonText}>Start Tournament</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      ) : (
+        <ScrollView contentContainerStyle={styles.container}>
+          <Text style={styles.title}>Enter Player Names</Text>
+          <Text style={styles.subtitle}>
+            {tournamentType} - {numPlayers} Players
+          </Text>
+
+          {/* Player Names Section */}
+          <View style={styles.section}>{renderPlayerInputs()}</View>
+
+          {/* Match Format Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Race Format</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.formatScrollView}
+            >
+              <View style={styles.formatContainer}>
+                {formatOptions.map((option) => (
+                  <TouchableOpacity
+                    key={option.label}
                     style={[
-                      styles.formatButtonText,
+                      styles.formatButton,
                       selectedFormat.gamesNeededToWin ===
                         option.value.gamesNeededToWin &&
-                        styles.formatButtonTextSelected,
+                        styles.formatButtonSelected,
                     ]}
+                    onPress={() => setSelectedFormat(option.value)}
                   >
-                    {option.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </ScrollView>
-        </View>
+                    <Text
+                      style={[
+                        styles.formatButtonText,
+                        selectedFormat.gamesNeededToWin ===
+                          option.value.gamesNeededToWin &&
+                          styles.formatButtonTextSelected,
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </ScrollView>
+          </View>
 
-        <TouchableOpacity
-          style={styles.startButton}
-          onPress={handleStartTournament}
-        >
-          <Text style={styles.startButtonText}>
-            Create and start the tournament
-          </Text>
-        </TouchableOpacity>
-      </ScrollView>
+          <TouchableOpacity
+            style={styles.startButton}
+            onPress={handleStartTournament}
+          >
+            <Text style={styles.startButtonText}>Start Tournament</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 };
@@ -243,14 +311,14 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: COLORS.homeScreenTitleText,
+    fontSize: FONT_SIZES.xxl,
+    fontWeight: FONT_WEIGHTS.bold,
+    color: COLORS.textWhite,
     marginBottom: 8,
   },
   subtitle: {
-    fontSize: 16,
-    color: COLORS.homeScreenSubtitleText,
+    fontSize: FONT_SIZES.md,
+    color: COLORS.textWhite,
     marginBottom: 24,
   },
   section: {
@@ -262,9 +330,9 @@ const styles = StyleSheet.create({
     borderColor: COLORS.primary,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: COLORS.homeScreenAccent,
+    fontSize: FONT_SIZES.lg,
+    fontWeight: FONT_WEIGHTS.semiBold,
+    color: COLORS.textWhite,
     marginBottom: 16,
     textAlign: "center",
   },
@@ -281,16 +349,16 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   inputLabel: {
-    fontSize: 14,
-    color: COLORS.homeScreenAccent,
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textWhite,
     marginBottom: 8,
   },
   input: {
     backgroundColor: COLORS.backgroundWhite,
     borderRadius: 8,
     padding: 12,
-    fontSize: 16,
-    color: COLORS.textDark,
+    fontSize: FONT_SIZES.md,
+    color: COLORS.textWhite,
     width: "100%",
   },
   formatTypeContainer: {
@@ -311,8 +379,8 @@ const styles = StyleSheet.create({
   },
   formatTypeText: {
     color: COLORS.homeScreenAccent,
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: FONT_SIZES.sm,
+    fontWeight: FONT_WEIGHTS.semiBold,
   },
   formatTypeTextSelected: {
     color: COLORS.textWhite,
@@ -337,13 +405,13 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
   },
   formatButtonText: {
-    color: COLORS.homeScreenAccent,
-    fontSize: 14,
+    color: COLORS.textWhite,
+    fontSize: FONT_SIZES.sm,
     textAlign: "center",
-    fontWeight: "600",
+    fontWeight: FONT_WEIGHTS.semiBold,
   },
   formatButtonTextSelected: {
-    color: COLORS.textWhite,
+    color: COLORS.textDark,
   },
   startButton: {
     backgroundColor: COLORS.primary,
@@ -353,8 +421,8 @@ const styles = StyleSheet.create({
   },
   startButtonText: {
     color: COLORS.textWhite,
-    fontSize: 18,
-    fontWeight: "600",
+    fontSize: FONT_SIZES.lg,
+    fontWeight: FONT_WEIGHTS.semiBold,
     textAlign: "center",
   },
 });

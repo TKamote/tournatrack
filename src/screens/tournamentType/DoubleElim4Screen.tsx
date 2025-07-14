@@ -134,11 +134,11 @@ export const DoubleElim4Screen: React.FC<DoubleElim4ScreenProps> = ({
                   setRunnerUp(cleanRunnerUp);
                   setFinalMatch(updatedMatch);
                   setShowSummaryModal(true);
-                  Alert.alert(
-                    "Tournament Complete! 🏆",
-                    `${cleanWinner.name} is the Champion!`,
-                    [{ text: "OK" }]
-                  );
+                  // Alert.alert(
+                  //   "Tournament Complete! 🏆",
+                  //   `${cleanWinner.name} is the Champion!`,
+                  //   [{ text: "OK" }]
+                  // );
                 }, 100);
               } else if (winner.id === lbPlayer?.id) {
                 if (wbPlayer)
@@ -176,11 +176,11 @@ export const DoubleElim4Screen: React.FC<DoubleElim4ScreenProps> = ({
                     setRunnerUp(cleanRunnerUp);
                     setFinalMatch(updatedMatch);
                     setShowSummaryModal(true);
-                    Alert.alert(
-                      "Tournament Complete! 🏆",
-                      `${cleanWinner.name} is the Champion!`,
-                      [{ text: "OK" }]
-                    );
+                    // Alert.alert(
+                    //   "Tournament Complete! 🏆",
+                    //   `${cleanWinner.name} is the Champion!`,
+                    //   [{ text: "OK" }]
+                    // );
                   }, 100);
                 }
               }
@@ -441,13 +441,15 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   formatBanner: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.glassmorphism.background,
     padding: 8,
-    borderRadius: 4,
+    borderRadius: 8,
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: COLORS.glassmorphism.border,
   },
   formatText: {
-    color: COLORS.backgroundWhite,
+    color: COLORS.textWhite,
     fontWeight: "bold",
     textAlign: "center",
   },
@@ -458,12 +460,15 @@ const styles = StyleSheet.create({
     // Removed padding and backgroundColor for a cleaner look
   },
   advanceButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: "#111",
     paddingVertical: 16,
-    borderRadius: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.glassmorphism.border,
   },
   advanceButtonDisabled: {
-    backgroundColor: COLORS.textLight,
+    backgroundColor: COLORS.glassmorphism.backgroundLight,
+    borderColor: COLORS.glassmorphism.border,
   },
   advanceButtonText: {
     color: COLORS.textWhite,

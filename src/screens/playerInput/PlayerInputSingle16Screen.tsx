@@ -16,6 +16,7 @@ import { RootStackParamList } from "../../types/navigation.types";
 import { COLORS } from "../../constants/colors";
 import { MatchFormat } from "../../types";
 import ScreenHeader from "../../components/ScreenHeader";
+import { FONT_SIZES, FONT_WEIGHTS } from "../../constants/typography";
 
 type PlayerInputSingle16ScreenProps = NativeStackScreenProps<
   RootStackParamList,
@@ -65,7 +66,15 @@ const PlayerInputSingle16Screen: React.FC<PlayerInputSingle16ScreenProps> = ({
       ]);
       return;
     }
-
+    // Duplicate name check (case-insensitive, trimmed)
+    const normalizedNames = validNames.map((n) => n.trim().toLowerCase());
+    const nameSet = new Set(normalizedNames);
+    if (nameSet.size !== normalizedNames.length) {
+      Alert.alert("Duplicate Names", "Each player must have a unique name.", [
+        { text: "OK" },
+      ]);
+      return;
+    }
     navigation.navigate("SingleElim16", {
       playerNames: validNames,
       matchFormat: selectedFormat,
@@ -83,8 +92,8 @@ const PlayerInputSingle16Screen: React.FC<PlayerInputSingle16ScreenProps> = ({
           <ScreenHeader
             title="Enter 16 Players to Begin"
             subtitle={undefined}
-            titleColor={COLORS.doubleElimText}
-            subtitleColor={COLORS.doubleElimSubtitleText}
+            titleColor={COLORS.glassmorphism.text}
+            subtitleColor={COLORS.glassmorphism.textSecondary}
           />
 
           <ScrollView
@@ -150,9 +159,7 @@ const PlayerInputSingle16Screen: React.FC<PlayerInputSingle16ScreenProps> = ({
               style={styles.startButton}
               onPress={handleStartTournament}
             >
-              <Text style={styles.startButtonText}>
-                Create and start the tournament
-              </Text>
+              <Text style={styles.startButtonText}>Start Tournament</Text>
             </TouchableOpacity>
           </ScrollView>
         </View>
@@ -164,7 +171,7 @@ const PlayerInputSingle16Screen: React.FC<PlayerInputSingle16ScreenProps> = ({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.doubleElimBackground,
+    backgroundColor: COLORS.homeScreenBackground,
   },
   keyboardAvoidingView: {
     flex: 1,
@@ -195,28 +202,28 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   label: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: COLORS.doubleElimText,
+    fontSize: FONT_SIZES.sm,
+    fontWeight: FONT_WEIGHTS.medium,
+    color: COLORS.glassmorphism.text,
     marginBottom: 4,
   },
   input: {
-    backgroundColor: COLORS.doubleElimSectionBackground,
+    backgroundColor: COLORS.glassmorphism.background,
     borderWidth: 1,
-    borderColor: COLORS.doubleElimPrimary,
-    borderRadius: 6,
+    borderColor: COLORS.glassmorphism.border,
+    borderRadius: 12,
     padding: 8,
-    fontSize: 14,
-    color: COLORS.doubleElimText,
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.glassmorphism.text,
   },
   formatSection: {
     marginTop: 24,
     marginBottom: 16,
   },
   formatTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: COLORS.doubleElimText,
+    fontSize: FONT_SIZES.md,
+    fontWeight: FONT_WEIGHTS.semiBold,
+    color: COLORS.glassmorphism.text,
     marginBottom: 12,
     textAlign: "center",
   },
@@ -228,43 +235,45 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   formatButton: {
-    backgroundColor: COLORS.doubleElimSectionBackground,
+    backgroundColor: COLORS.glassmorphism.background,
     borderWidth: 1,
-    borderColor: COLORS.doubleElimPrimary,
-    borderRadius: 8,
+    borderColor: COLORS.glassmorphism.border,
+    borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 10,
     marginHorizontal: 4,
     minWidth: 80,
   },
   formatButtonSelected: {
-    backgroundColor: COLORS.doubleElimPrimary,
-    borderColor: COLORS.doubleElimPrimary,
+    backgroundColor: "#fff",
+    borderColor: COLORS.glassmorphism.borderMedium,
   },
   formatButtonText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: COLORS.doubleElimText,
+    fontSize: FONT_SIZES.md,
+    fontWeight: FONT_WEIGHTS.medium,
+    color: COLORS.glassmorphism.text,
     textAlign: "center",
   },
   formatButtonTextSelected: {
-    color: COLORS.textWhite,
+    color: COLORS.textDark,
   },
   startButton: {
-    backgroundColor: COLORS.doubleElimPrimary,
+    backgroundColor: COLORS.glassmorphism.background,
     paddingVertical: 16,
-    borderRadius: 8,
+    borderRadius: 12,
     marginTop: 32,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: COLORS.glassmorphism.border,
   },
   startButtonText: {
-    color: COLORS.textWhite,
-    fontSize: 18,
-    fontWeight: "600",
+    fontSize: FONT_SIZES.md,
+    fontWeight: FONT_WEIGHTS.semiBold,
+    color: COLORS.glassmorphism.text,
     textAlign: "center",
   },
 });

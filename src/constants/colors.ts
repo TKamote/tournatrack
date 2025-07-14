@@ -59,4 +59,16 @@ export const COLORS = {
   singleElimAccent: "#2980b9", // Darker blue accent
   singleElimText: "#ecf0f1", // Light text
   singleElimSubtitleText: "#bdc3c7", // Light gray subtitle
+
+  // Glassmorphism theme variables
+  glassmorphism: {
+    background: "rgba(255, 255, 255, 0.15)",
+    backgroundLight: "rgba(255, 255, 255, 0.1)",
+    backgroundMedium: "rgba(255, 255, 255, 0.2)",
+    border: "rgba(255, 255, 255, 0.2)",
+    borderMedium: "rgba(255, 255, 255, 0.3)",
+    text: "#ffffff",
+    textSecondary: "rgba(255, 255, 255, 0.8)",
+    modalBackground: "rgba(20, 30, 40, 0.85)",
+  },
 };

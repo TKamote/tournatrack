@@ -43,6 +43,8 @@ export const SingleElim4Screen: React.FC<SingleElim4ScreenProps> = ({
   const [currentRound, setCurrentRound] = useState(1);
   const [tournamentOver, setTournamentOver] = useState(false);
   const [overallWinner, setOverallWinner] = useState<Player | null>(null);
+  const [finalMatch, setFinalMatch] = useState<Match | null>(null);
+  const [runnerUp, setRunnerUp] = useState<Player | null>(null);
   const [hasInitialized, setHasInitialized] = useState(false);
   const [showAdvanceModal, setShowAdvanceModal] = useState(false);
   const [showIncompleteModal, setShowIncompleteModal] = useState(false);
@@ -141,12 +143,18 @@ export const SingleElim4Screen: React.FC<SingleElim4ScreenProps> = ({
               setTimeout(() => {
                 setTournamentOver(true);
                 setOverallWinner(winner);
+                setFinalMatch(updatedMatch);
+                const losingPlayer =
+                  updatedMatch.player1?.id === winner.id
+                    ? updatedMatch.player2
+                    : updatedMatch.player1;
+                setRunnerUp(losingPlayer || null);
                 setShowSummaryModal(true);
-                Alert.alert(
-                  "Tournament Complete! 🏆",
-                  `${winner.name} is the Champion!`,
-                  [{ text: "OK" }]
-                );
+                // Alert.alert(
+                //   "Tournament Complete! 🏆",
+                //   `${winner.name} is the Champion!`,
+                //   [{ text: "OK" }]
+                // );
               }, 100);
             }
           }
@@ -321,8 +329,8 @@ export const SingleElim4Screen: React.FC<SingleElim4ScreenProps> = ({
         <TournamentSummaryModal
           visible={showSummaryModal}
           winner={overallWinner}
-          runnerUp={null}
-          finalMatch={null}
+          runnerUp={runnerUp}
+          finalMatch={finalMatch}
           onClose={() => setShowSummaryModal(false)}
         />
       </View>
@@ -340,13 +348,15 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   formatBanner: {
-    backgroundColor: COLORS.singleElimPrimary,
+    backgroundColor: COLORS.glassmorphism.background,
     padding: 8,
-    borderRadius: 4,
+    borderRadius: 8,
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: COLORS.glassmorphism.border,
   },
   formatText: {
-    color: COLORS.backgroundWhite,
+    color: COLORS.textWhite,
     fontWeight: "bold",
     textAlign: "center",
   },
@@ -354,17 +364,20 @@ const styles = StyleSheet.create({
     paddingBottom: 80,
   },
   advanceButton: {
-    backgroundColor: COLORS.singleElimPrimary,
-    padding: 16,
-    borderRadius: 4,
-    alignItems: "center",
-    marginTop: 16,
+    backgroundColor: "#111",
+    paddingVertical: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.glassmorphism.border,
   },
   advanceButtonDisabled: {
-    backgroundColor: COLORS.textLight,
+    backgroundColor: COLORS.glassmorphism.backgroundLight,
+    borderColor: COLORS.glassmorphism.border,
   },
   advanceButtonText: {
-    color: COLORS.backgroundWhite,
-    fontWeight: "bold",
+    color: COLORS.textWhite,
+    fontSize: 16,
+    fontWeight: "600",
+    textAlign: "center",
   },
 });

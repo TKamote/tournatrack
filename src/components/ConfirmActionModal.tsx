@@ -60,23 +60,25 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.5)",
   },
   modalContent: {
-    backgroundColor: COLORS.backgroundWhite,
+    backgroundColor: COLORS.glassmorphism.modalBackground,
     padding: 20,
-    borderRadius: 10,
+    borderRadius: 16,
     width: "80%",
     alignItems: "center",
+    borderWidth: 1,
+    borderColor: COLORS.glassmorphism.border,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: "bold",
     marginBottom: 10,
-    color: COLORS.textDark,
+    color: COLORS.textWhite,
   },
   modalMessage: {
     fontSize: 16,
     marginBottom: 20,
     textAlign: "center",
-    color: COLORS.textMedium,
+    color: COLORS.textWhite,
   },
   modalButtonContainer: {
     flexDirection: "row",
@@ -86,19 +88,24 @@ const styles = StyleSheet.create({
   modalButton: {
     paddingVertical: 10,
     paddingHorizontal: 20,
-    borderRadius: 5,
+    borderRadius: 12,
     minWidth: 100,
     alignItems: "center",
+    backgroundColor: COLORS.glassmorphism.background,
+    borderWidth: 1,
+    borderColor: COLORS.glassmorphism.border,
+    marginHorizontal: 4,
   },
   modalButtonCancel: {
-    backgroundColor: COLORS.primaryLight,
+    // No extra color, keep glassmorphism
   },
   modalButtonConfirm: {
-    backgroundColor: COLORS.primary,
+    // No extra color, keep glassmorphism
   },
   modalButtonText: {
     color: COLORS.textWhite,
     fontSize: 16,
+    fontWeight: "600",
   },
 });
 

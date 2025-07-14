@@ -47,6 +47,7 @@ export const SingleElim16Screen: React.FC<SingleElim16ScreenProps> = ({
   const [showAdvanceModal, setShowAdvanceModal] = useState(false);
   const [showIncompleteModal, setShowIncompleteModal] = useState(false);
   const [showSummaryModal, setShowSummaryModal] = useState(false);
+  const [finalMatch, setFinalMatch] = useState<Match | null>(null);
 
   // Initialize tournament
   useEffect(() => {
@@ -141,12 +142,8 @@ export const SingleElim16Screen: React.FC<SingleElim16ScreenProps> = ({
               setTimeout(() => {
                 setTournamentOver(true);
                 setOverallWinner(winner);
+                setFinalMatch(updatedMatch);
                 setShowSummaryModal(true);
-                Alert.alert(
-                  "Tournament Complete! 🏆",
-                  `${winner.name} is the Champion!`,
-                  [{ text: "OK" }]
-                );
               }, 100);
             }
           }
@@ -229,14 +226,13 @@ export const SingleElim16Screen: React.FC<SingleElim16ScreenProps> = ({
     } else if (currentRound === 4) {
       // Tournament complete
       if (winners.length === 1) {
+        const finalMatch = matches.find(
+          (m) => m.round === 4 && m.matchNumber === 1
+        );
         setTournamentOver(true);
         setOverallWinner(winners[0]);
+        setFinalMatch(finalMatch || null);
         setShowSummaryModal(true);
-        Alert.alert(
-          "Tournament Complete! 🏆",
-          `${winners[0].name} is the Champion!`,
-          [{ text: "OK" }]
-        );
         return;
       }
     }
@@ -342,7 +338,7 @@ export const SingleElim16Screen: React.FC<SingleElim16ScreenProps> = ({
           visible={showSummaryModal}
           winner={overallWinner}
           runnerUp={null}
-          finalMatch={null}
+          finalMatch={finalMatch}
           onClose={() => setShowSummaryModal(false)}
         />
       </View>
@@ -360,13 +356,15 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   formatBanner: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.glassmorphism.background,
     padding: 8,
-    borderRadius: 4,
+    borderRadius: 8,
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: COLORS.glassmorphism.border,
   },
   formatText: {
-    color: COLORS.backgroundWhite,
+    color: COLORS.textWhite,
     fontWeight: "bold",
     textAlign: "center",
   },
@@ -374,17 +372,20 @@ const styles = StyleSheet.create({
     paddingBottom: 80,
   },
   advanceButton: {
-    backgroundColor: COLORS.primary,
-    padding: 16,
-    borderRadius: 4,
-    alignItems: "center",
-    marginTop: 16,
+    backgroundColor: "#111",
+    paddingVertical: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.glassmorphism.border,
   },
   advanceButtonDisabled: {
-    backgroundColor: COLORS.textLight,
+    backgroundColor: COLORS.glassmorphism.backgroundLight,
+    borderColor: COLORS.glassmorphism.border,
   },
   advanceButtonText: {
-    color: COLORS.backgroundWhite,
-    fontWeight: "bold",
+    color: COLORS.textWhite,
+    fontSize: 16,
+    fontWeight: "600",
+    textAlign: "center",
   },
 });

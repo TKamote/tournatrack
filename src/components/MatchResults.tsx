@@ -110,25 +110,25 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: COLORS.textDark,
     flex: 1,
-    // paddingHorizontal: 2,
     paddingVertical: 4,
     textAlign: "center",
     borderRadius: 6,
+    backgroundColor: "#fff",
+    fontWeight: "bold",
+    elevation: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 1,
+    borderWidth: 1,
+    borderColor: "transparent",
   },
   winnerName: {
-    color: COLORS.textWhite, // ← WHITE TEXT instead of dark blue
+    color: COLORS.primary,
+    borderColor: COLORS.primary,
+    borderWidth: 2,
+    backgroundColor: "#fff",
     fontWeight: "bold",
-    backgroundColor: COLORS.primary, // ← DARK BLUE BACKGROUND instead of light blue
-    paddingVertical: 4,
-    borderRadius: 6,
-    elevation: 1, // Add subtle shadow on Android
-    shadowColor: "#000", // iOS shadow
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 1,
   },
   score: {
     fontSize: 24,

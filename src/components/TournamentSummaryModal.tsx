@@ -1,5 +1,14 @@
-import React from "react";
-import { Modal, View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import React, { useEffect, useRef } from "react";
+import {
+  Modal,
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Animated,
+  Easing,
+  Dimensions,
+} from "react-native";
 import { COLORS } from "../constants/colors";
 // Update the import path below if your types are located elsewhere, e.g. '../../types'
 import { Match, Player, TournamentType } from "../types";
@@ -12,6 +21,8 @@ interface TournamentSummaryModalProps {
   onClose: () => void;
 }
 
+const SCREEN_HEIGHT = Dimensions.get("window").height;
+
 const TournamentSummaryModal: React.FC<TournamentSummaryModalProps> = ({
   visible,
   onClose,
@@ -19,6 +30,26 @@ const TournamentSummaryModal: React.FC<TournamentSummaryModalProps> = ({
   runnerUp,
   finalMatch,
 }) => {
+  const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+
+  useEffect(() => {
+    if (visible) {
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 400,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.timing(slideAnim, {
+        toValue: SCREEN_HEIGHT,
+        duration: 300,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [visible, slideAnim]);
+
   if (!winner || !finalMatch) return null;
 
   const winnerScore = finalMatch.games.filter(
@@ -30,14 +61,28 @@ const TournamentSummaryModal: React.FC<TournamentSummaryModalProps> = ({
 
   return (
     <Modal
-      animationType="fade"
+      animationType="none"
       transparent={true}
       visible={visible && !!winner}
       onRequestClose={onClose}
     >
       <View style={styles.centeredView}>
-        <View style={styles.modalView}>
-          <Text style={styles.titleText}>Tournament Complete!</Text>
+        <Animated.View
+          style={[
+            styles.modalView,
+            {
+              transform: [
+                {
+                  translateY: slideAnim.interpolate({
+                    inputRange: [0, SCREEN_HEIGHT],
+                    outputRange: [0, SCREEN_HEIGHT],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          <Text style={styles.titleText}>Tournament Completed!</Text>
 
           <View style={styles.resultContainer}>
             <Text style={styles.winnerText}>Champion</Text>
@@ -45,7 +90,7 @@ const TournamentSummaryModal: React.FC<TournamentSummaryModalProps> = ({
 
             {runnerUp && (
               <>
-                <Text style={styles.runnerUpText}>Runner-up</Text>
+                <Text style={styles.runnerUpText}>Runner Up</Text>
                 <Text style={styles.playerName}>{runnerUp.name}</Text>
               </>
             )}
@@ -58,7 +103,7 @@ const TournamentSummaryModal: React.FC<TournamentSummaryModalProps> = ({
           <TouchableOpacity style={styles.button} onPress={onClose}>
             <Text style={styles.buttonText}>Close</Text>
           </TouchableOpacity>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );
@@ -72,8 +117,8 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
   modalView: {
-    backgroundColor: COLORS.backgroundWhite,
-    borderRadius: 8,
+    backgroundColor: COLORS.glassmorphism.modalBackground,
+    borderRadius: 16,
     padding: 20,
     alignItems: "center",
     justifyContent: "center",
@@ -86,14 +131,16 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
     margin: 20,
-    minWidth: "80%",
-    maxWidth: "90%",
+    width: "90%",
+    borderWidth: 1,
+    borderColor: COLORS.glassmorphism.border,
   },
   titleText: {
     fontSize: 22,
     fontWeight: "bold",
-    color: COLORS.textDark,
+    color: COLORS.textWhite,
     marginBottom: 20,
+    textAlign: "center",
   },
   resultContainer: {
     alignItems: "center",
@@ -101,37 +148,44 @@ const styles = StyleSheet.create({
   },
   winnerText: {
     fontSize: 16,
-    color: COLORS.textDark,
+    color: COLORS.textWhite,
     fontWeight: "600",
     marginBottom: 5,
+    textAlign: "center",
   },
   runnerUpText: {
     fontSize: 14,
-    color: COLORS.textLight,
+    color: COLORS.textWhite,
     fontWeight: "500",
     marginTop: 10,
     marginBottom: 5,
+    textAlign: "center",
   },
   playerName: {
     fontSize: 18,
-    color: COLORS.textDark,
+    color: COLORS.textWhite,
     marginBottom: 10,
+    textAlign: "center",
   },
   scoreText: {
     fontSize: 14,
-    color: COLORS.textDark,
+    color: COLORS.textWhite,
     marginTop: 10,
+    textAlign: "center",
   },
   button: {
-    backgroundColor: COLORS.primary,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 4,
+    backgroundColor: COLORS.glassmorphism.background,
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.glassmorphism.border,
+    marginTop: 8,
   },
   buttonText: {
     color: COLORS.textWhite,
-    fontSize: 14,
-    fontWeight: "500",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });
 

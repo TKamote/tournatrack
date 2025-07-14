@@ -131,11 +131,11 @@ const DoubleElim16Screen: React.FC<DoubleElim16ScreenProps> = ({
                   setRunnerUp(cleanRunnerUp);
                   setFinalMatch(updatedMatch);
                   setShowSummaryModal(true);
-                  Alert.alert(
-                    "Tournament Complete! 🏆",
-                    `${cleanWinner.name} is the Champion!`,
-                    [{ text: "OK" }]
-                  );
+                  // Alert.alert(
+                  //   "Tournament Complete! 🏆",
+                  //   `${cleanWinner.name} is the Champion!`,
+                  //   [{ text: "OK" }]
+                  // );
                 }, 100);
               } else if (winner.id === lbPlayer?.id) {
                 if (wbPlayer)
@@ -173,11 +173,11 @@ const DoubleElim16Screen: React.FC<DoubleElim16ScreenProps> = ({
                     setRunnerUp(cleanRunnerUp);
                     setFinalMatch(updatedMatch);
                     setShowSummaryModal(true);
-                    Alert.alert(
-                      "Tournament Complete! 🏆",
-                      `${cleanWinner.name} is the Champion!`,
-                      [{ text: "OK" }]
-                    );
+                    // Alert.alert(
+                    //   "Tournament Complete! 🏆",
+                    //   `${cleanWinner.name} is the Champion!`,
+                    //   [{ text: "OK" }]
+                    // );
                   }, 100);
                 }
               }
@@ -426,9 +426,11 @@ const DoubleElim16Screen: React.FC<DoubleElim16ScreenProps> = ({
           title={displayTitle()}
           titleColor={COLORS.singleElimText}
         />
-        <Text style={styles.formatBanner}>
-          Race to {matchFormat.gamesNeededToWin}
-        </Text>
+        <View style={styles.formatBanner}>
+          <Text style={styles.formatText}>
+            Race to {matchFormat.gamesNeededToWin}
+          </Text>
+        </View>
         <FlatList
           data={matches.filter((m) => m.round === currentRound)}
           renderItem={({ item, index }) => {
@@ -490,10 +492,16 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   formatBanner: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: COLORS.primary,
-    marginBottom: 12,
+    backgroundColor: COLORS.glassmorphism.background,
+    padding: 8,
+    borderRadius: 8,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: COLORS.glassmorphism.border,
+  },
+  formatText: {
+    color: COLORS.textWhite,
+    fontWeight: "bold",
     textAlign: "center",
   },
   matchCard: {
@@ -530,16 +538,19 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   advanceButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: "#111",
     paddingVertical: 16,
-    borderRadius: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.glassmorphism.border,
   },
   advanceButtonDisabled: {
-    backgroundColor: COLORS.textLight,
+    backgroundColor: COLORS.glassmorphism.backgroundLight,
+    borderColor: COLORS.glassmorphism.border,
   },
   advanceButtonText: {
     color: COLORS.textWhite,
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "600",
     textAlign: "center",
   },
