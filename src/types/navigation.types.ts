@@ -40,7 +40,7 @@ export type RootStackParamList = {
     matchFormat: MatchFormat;
   };
   Auth: undefined;
-  OngoingTournaments: undefined;
+  TournamentsDashboard: undefined;
 };
 
 export type HomeScreenProps = NativeStackScreenProps<

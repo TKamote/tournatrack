@@ -18,7 +18,7 @@ import PlayerInputSingle8Screen from "../screens/playerInput/PlayerInputSingle8S
 import PlayerInputSingle16Screen from "../screens/playerInput/PlayerInputSingle16Screen";
 import { Ionicons } from "@expo/vector-icons";
 import AuthScreen from "../screens/AuthScreen";
-import OngoingTournament from "../screens/OngoingTournament";
+import TournamentsDashboard from "../screens/TournamentsDashboard";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -258,20 +258,11 @@ export const AppNavigator = () => {
           })}
         />
         <Stack.Screen
-          name="OngoingTournaments"
-          component={OngoingTournament}
+          name="TournamentsDashboard"
+          component={TournamentsDashboard}
           options={({ navigation }) => ({
-            title: "Ongoing Tournaments",
+            title: "Tournaments Dashboard",
             headerBackTitleVisible: false,
-            headerLeft: () => (
-              <Ionicons
-                name="home"
-                size={24}
-                color="#3498db"
-                style={{ marginLeft: 20 }}
-                onPress={() => navigation.navigate("MainTabs")}
-              />
-            ),
           })}
         />
       </Stack.Navigator>
