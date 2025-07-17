@@ -22,6 +22,7 @@ import IncompleteMatchesModal from "../../components/IncompleteMatchesModal";
 import TournamentSummaryModal from "../../components/TournamentSummaryModal";
 import { RoundSeparator } from "../../components/RoundSeparator";
 import { Ionicons } from "@expo/vector-icons";
+import TournamentBracketView from "../../components/tournament/TournamentBracketView";
 
 interface DoubleElimination8ScreenProps {
   route: {
@@ -65,6 +66,11 @@ export const DoubleElimination8Screen: React.FC<
         losses: 0,
         seed: i + 1,
         isEliminated: false,
+        totalMatches: 0,
+        wins: 0,
+        winPercentage: 0,
+        averageScore: 0,
+        isActive: true,
       }));
 
       const shuffledPlayers = shuffleArray(initialPlayers);
@@ -513,7 +519,12 @@ export const DoubleElimination8Screen: React.FC<
       .filter((match) => match.player1 !== null)
       .sort((a, b) => {
         if (a.round !== b.round) return a.round - b.round;
-        const bracketPriority = { winners: 1, losers: 2, grandFinals: 3 };
+        const bracketPriority = {
+          winners: 1,
+          losers: 2,
+          grandFinals: 3,
+          main: 1,
+        };
         if (a.bracket !== b.bracket)
           return bracketPriority[a.bracket] - bracketPriority[b.bracket];
         return a.matchNumber - b.matchNumber;

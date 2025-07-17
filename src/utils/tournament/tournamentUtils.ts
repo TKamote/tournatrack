@@ -32,7 +32,43 @@ export const createMatch = (
   isGrandFinalsReset,
   format,
   games: [],
+  status: "scheduled",
+  isLive: false,
+  lastUpdated: new Date(),
+  createdBy: "system",
 });
+
+export const createPlayer = (
+  id: string,
+  name: string,
+  seed: number
+): Player => ({
+  id,
+  name,
+  seed,
+  losses: 0,
+  isEliminated: false,
+  totalMatches: 0,
+  wins: 0,
+  winPercentage: 0,
+  averageScore: 0,
+  isActive: true,
+});
+
+export const createPlayers = (names: string[]): Player[] => {
+  return Array.from({ length: names.length }, (_, i) => ({
+    id: `player-${i}`,
+    name: names[i],
+    seed: i + 1,
+    losses: 0,
+    isEliminated: false,
+    totalMatches: 0,
+    wins: 0,
+    winPercentage: 0,
+    averageScore: 0,
+    isActive: true,
+  }));
+};
 
 // Player generation
 export const generatePlayers = (count: number): Player[] => {
@@ -42,6 +78,11 @@ export const generatePlayers = (count: number): Player[] => {
     seed: i + 1,
     losses: 0, // Start with 0 losses (L0)
     isEliminated: false,
+    totalMatches: 0,
+    wins: 0,
+    winPercentage: 0,
+    averageScore: 0,
+    isActive: true,
   }));
 };
 

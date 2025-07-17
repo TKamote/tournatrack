@@ -64,6 +64,11 @@ export const SingleElim4Screen: React.FC<SingleElim4ScreenProps> = ({
         losses: 0,
         seed: i + 1,
         isEliminated: false,
+        totalMatches: 0,
+        wins: 0,
+        winPercentage: 0,
+        averageScore: 0,
+        isActive: true,
       }));
 
       const shuffledPlayers = shuffleArray(initialPlayers);

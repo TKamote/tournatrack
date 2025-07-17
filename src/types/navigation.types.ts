@@ -1,5 +1,6 @@
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { MatchFormat } from "./match.types";
+import { Tournament } from "./tournament.types";
 
 export type RootStackParamList = {
   MainTabs: undefined;
@@ -41,6 +42,9 @@ export type RootStackParamList = {
   };
   Auth: undefined;
   TournamentsDashboard: undefined;
+  TournamentDetails: {
+    tournament: Tournament;
+  };
 };
 
 export type HomeScreenProps = NativeStackScreenProps<

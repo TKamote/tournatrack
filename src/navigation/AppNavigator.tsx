@@ -19,6 +19,7 @@ import PlayerInputSingle16Screen from "../screens/playerInput/PlayerInputSingle1
 import { Ionicons } from "@expo/vector-icons";
 import AuthScreen from "../screens/AuthScreen";
 import TournamentsDashboard from "../screens/TournamentsDashboard";
+import TournamentDetailsScreen from "../screens/tournamentDetails/TournamentDetailsScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -264,6 +265,10 @@ export const AppNavigator = () => {
             title: "Tournaments Dashboard",
             headerBackTitleVisible: false,
           })}
+        />
+        <Stack.Screen
+          name="TournamentDetails"
+          component={TournamentDetailsScreen}
         />
       </Stack.Navigator>
     </NavigationContainer>

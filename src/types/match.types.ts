@@ -12,6 +12,9 @@ export interface Game {
   winner: Player | null;
   score1: number;
   score2: number;
+  startTime?: Date;
+  endTime?: Date;
+  duration?: number; // in minutes
 }
 
 export interface Match {
@@ -25,5 +28,54 @@ export interface Match {
   isGrandFinalsReset: boolean;
   format: MatchFormat;
   games: Game[];
-  isByeMatch?: boolean; // Optional field to indicate if this is a bye match
+  isByeMatch?: boolean;
+  // Additional fields for better match management
+  status: MatchStatus;
+  startTime?: Date;
+  endTime?: Date;
+  duration?: number; // in minutes
+  location?: string;
+  notes?: string;
+  isLive: boolean;
+  lastUpdated: Date;
+  createdBy: string;
+}
+
+export type MatchStatus =
+  | "scheduled"
+  | "in_progress"
+  | "completed"
+  | "cancelled"
+  | "postponed";
+
+export interface MatchResult {
+  matchId: string;
+  winner: Player;
+  loser: Player;
+  finalScore: string;
+  games: Game[];
+  duration: number;
+  completedAt: Date;
+}
+
+export interface CreateMatchRequest {
+  round: number;
+  matchNumber: number;
+  player1Id: string;
+  player2Id: string;
+  bracket: BracketType;
+  format: MatchFormat;
+  location?: string;
+  scheduledTime?: Date;
+}
+
+export interface UpdateMatchRequest {
+  winnerId?: string;
+  games?: Game[];
+  status?: MatchStatus;
+  startTime?: Date;
+  endTime?: Date;
+  location?: string;
+  notes?: string;
+  isLive?: boolean;
 }
