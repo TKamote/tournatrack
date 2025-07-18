@@ -4,6 +4,8 @@ import { Tournament } from "./tournament.types";
 
 export type RootStackParamList = {
   MainTabs: undefined;
+  Manager: undefined;
+  Supporter: undefined;
   Home: undefined;
   PlayerInput: {
     tournamentType: string;

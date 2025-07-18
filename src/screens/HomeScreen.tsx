@@ -80,12 +80,6 @@ const HomeScreen: React.FC<any> = ({ navigation, route }) => {
             </TouchableOpacity>
           </View>
         </View>
-        <TouchableOpacity
-          style={[styles.ongoingButton, { marginTop: 20 }]}
-          onPress={() => navigation.navigate("TournamentsDashboard")}
-        >
-          <Text style={styles.ongoingButtonText}>Tournaments Dashboard</Text>
-        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );

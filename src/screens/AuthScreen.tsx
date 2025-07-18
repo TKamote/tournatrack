@@ -10,8 +10,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  ActivityIndicator,
 } from "react-native";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 import { db } from "../utils/firebase";
 import { auth } from "../utils/firebase";
 import {
@@ -20,13 +21,44 @@ import {
 } from "firebase/auth";
 import { COLORS } from "../constants/colors";
 import { FONT_SIZES, FONT_WEIGHTS } from "../constants/typography";
+import { useUser } from "../context/UserContext";
 
 const AuthScreen: React.FC<any> = ({ navigation, route }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const { setUserRole } = useUser();
+
+  const getUserRole = async (userId: string) => {
+    try {
+      console.log("Fetching user role for UID:", userId);
+      const userDoc = await getDoc(doc(db, "users", userId));
+      console.log("User document exists:", userDoc.exists());
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        console.log("User data:", userData);
+        // Remove extra quotes from the role value
+        const role = (userData.role || "supporter").replace(/"/g, "");
+        console.log("Returning role:", role);
+        return role;
+      }
+      console.log("User document does not exist, returning supporter");
+      return "supporter"; // Default role for existing users
+    } catch (error) {
+      console.error("Error getting user role:", error);
+      // Return supporter as fallback when offline or error
+      return "supporter";
+    }
+  };
 
   const handleSignUp = async () => {
+    if (!email || !password) {
+      Alert.alert("Error", "Please fill in all fields");
+      return;
+    }
+
+    setIsLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(
         auth,
@@ -36,14 +68,10 @@ const AuthScreen: React.FC<any> = ({ navigation, route }) => {
       // Save user info and role to Firestore
       await setDoc(doc(db, "users", userCredential.user.uid), {
         email: userCredential.user.email,
-        role: "manager",
+        role: "supporter", // Default to supporter for new signups
       });
-      Alert.alert("Success", "Account created!", [
-        {
-          text: "OK",
-          onPress: () => navigation.navigate("Home"),
-        },
-      ]);
+      setUserRole("supporter"); // Set role in context
+      navigation.navigate("MainTabs");
     } catch (error: any) {
       let message = error.message;
       if (error.code === "auth/email-already-in-use") {
@@ -54,28 +82,48 @@ const AuthScreen: React.FC<any> = ({ navigation, route }) => {
         message = "Password should be at least 6 characters.";
       }
       Alert.alert("Sign up error", message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleSignIn = async () => {
+    if (!email || !password) {
+      Alert.alert("Error", "Please fill in all fields");
+      return;
+    }
+
+    // Clean the email - remove mailto: prefix and trim
+    const cleanEmail = email.replace(/^mailto:/, "").trim();
+
+    console.log("Original email:", email);
+    console.log("Clean email:", cleanEmail);
+    console.log("Email length:", cleanEmail.length);
+    setIsLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      Alert.alert("Success", "Logged in!", [
-        {
-          text: "OK",
-          onPress: () => navigation.navigate("Home"),
-        },
-      ]);
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        cleanEmail,
+        password
+      );
+      console.log("Sign in successful for user:", userCredential.user.uid);
+      const role = await getUserRole(userCredential.user.uid);
+      setUserRole(role); // Set role in context
+      navigation.navigate("MainTabs");
     } catch (error: any) {
+      console.error("Sign in error:", error.code, error.message);
+      console.error("Full error object:", error);
       let message = error.message;
       if (error.code === "auth/user-not-found") {
         message = "No user found with this email.";
       } else if (error.code === "auth/wrong-password") {
         message = "Incorrect password.";
       } else if (error.code === "auth/invalid-email") {
-        message = "The email address is invalid.";
+        message = "The email address is invalid. Please check the format.";
       }
       Alert.alert("Sign in error", message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -110,6 +158,7 @@ const AuthScreen: React.FC<any> = ({ navigation, route }) => {
                 keyboardType="email-address"
                 value={email}
                 onChangeText={setEmail}
+                editable={!isLoading}
               />
               <TextInput
                 style={styles.input}
@@ -118,20 +167,30 @@ const AuthScreen: React.FC<any> = ({ navigation, route }) => {
                 secureTextEntry
                 value={password}
                 onChangeText={setPassword}
+                editable={!isLoading}
               />
 
               <TouchableOpacity
-                style={styles.submitButton}
+                style={[
+                  styles.submitButton,
+                  isLoading && styles.submitButtonDisabled,
+                ]}
                 onPress={handleSubmit}
+                disabled={isLoading}
               >
-                <Text style={styles.submitButtonText}>
-                  {isSignUp ? "Sign Up" : "Sign In"}
-                </Text>
+                {isLoading ? (
+                  <ActivityIndicator color={COLORS.textWhite} />
+                ) : (
+                  <Text style={styles.submitButtonText}>
+                    {isSignUp ? "Sign Up" : "Sign In"}
+                  </Text>
+                )}
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={styles.switchButton}
                 onPress={() => setIsSignUp(!isSignUp)}
+                disabled={isLoading}
               >
                 <Text style={styles.switchButtonText}>
                   {isSignUp
@@ -197,6 +256,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 5,
+  },
+  submitButtonDisabled: {
+    opacity: 0.6,
   },
   submitButtonText: {
     color: COLORS.textWhite,

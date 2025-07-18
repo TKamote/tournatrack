@@ -56,7 +56,7 @@ const TournamentDetailsScreen: React.FC<TournamentDetailsScreenProps> = ({
           : lastMatch.player1;
 
       // Calculate final score from games
-      const totalScore1 = lastMatch.games.reduce(
+      const totalScore1 = (lastMatch.games ?? []).reduce(
         (sum, game) => sum + game.score1,
         0
       );

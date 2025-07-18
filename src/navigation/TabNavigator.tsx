@@ -1,26 +1,36 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
-import HomeScreen from "../screens/HomeScreen";
+import { COLORS } from "../constants/colors";
+import { ManagerStack } from "./ManagerStack";
+import { SupporterStack } from "./SupporterStack";
 import TermsOfUseScreen from "../screens/TermsOfUseScreen";
 import AuthScreen from "../screens/AuthScreen";
-import { COLORS } from "../constants/colors";
+import { useUser } from "../context/UserContext";
+import { View, ActivityIndicator } from "react-native";
 
 const Tab = createBottomTabNavigator();
 
 export const TabNavigator = () => {
+  // Temporarily hardcode to test
+  const userRole = "manager";
+
+  console.log("TabNavigator - Current userRole:", userRole);
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
           let iconName: keyof typeof Ionicons.glyphMap;
 
-          if (route.name === "Home") {
-            iconName = focused ? "home" : "home-outline";
+          if (route.name === "Manager") {
+            iconName = focused ? "trophy" : "trophy-outline";
+          } else if (route.name === "Supporter") {
+            iconName = focused ? "people" : "people-outline";
           } else if (route.name === "Terms") {
             iconName = focused ? "document-text" : "document-text-outline";
           } else {
-            iconName = "help-outline";
+            iconName = "log-in-outline";
           }
 
           return <Ionicons name={iconName} size={size} color={color} />;
@@ -36,10 +46,17 @@ export const TabNavigator = () => {
         headerShown: false,
       })}
     >
+      {userRole === "manager" && (
+        <Tab.Screen
+          name="Manager"
+          component={ManagerStack}
+          options={{ title: "Manager" }}
+        />
+      )}
       <Tab.Screen
-        name="Home"
-        component={HomeScreen}
-        options={{ title: "Tournaments" }}
+        name="Supporter"
+        component={SupporterStack}
+        options={{ title: "Supporter" }}
       />
       <Tab.Screen
         name="Terms"
@@ -59,4 +76,3 @@ export const TabNavigator = () => {
     </Tab.Navigator>
   );
 };
- 
