@@ -12,8 +12,7 @@ import { View, ActivityIndicator } from "react-native";
 const Tab = createBottomTabNavigator();
 
 export const TabNavigator = () => {
-  // Temporarily hardcode to test
-  const userRole = "manager";
+  const { userRole } = useUser();
 
   console.log("TabNavigator - Current userRole:", userRole);
 
