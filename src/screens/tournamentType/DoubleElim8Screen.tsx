@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   Alert,
 } from "react-native";
-import { Player, Match, MatchFormat } from "../../types";
+import { Player, Match, MatchFormat, Tournament } from "../../types";
 import { COLORS } from "../../constants/colors";
 import MatchListItem from "../../components/MatchListItem";
 import {
@@ -23,6 +23,7 @@ import TournamentSummaryModal from "../../components/TournamentSummaryModal";
 import { RoundSeparator } from "../../components/RoundSeparator";
 import { Ionicons } from "@expo/vector-icons";
 import TournamentBracketView from "../../components/tournament/TournamentBracketView";
+import { TournamentService } from "../../utils/tournamentService";
 
 interface DoubleElimination8ScreenProps {
   route: {
@@ -51,6 +52,53 @@ export const DoubleElimination8Screen: React.FC<
   const [showAdvanceModal, setShowAdvanceModal] = useState(false);
   const [showIncompleteModal, setShowIncompleteModal] = useState(false);
   const [showSummaryModal, setShowSummaryModal] = useState(false);
+  const [tournamentId, setTournamentId] = useState<string>("");
+
+  // Save tournament to Firebase
+  const saveTournamentToFirebase = useCallback(
+    async (tournamentData: Tournament) => {
+      try {
+        await TournamentService.saveTournament(tournamentData);
+        console.log("Tournament saved to Firebase:", tournamentData.id);
+      } catch (error) {
+        console.error("Error saving tournament to Firebase:", error);
+      }
+    },
+    []
+  );
+
+  // Update tournament in Firebase
+  const updateTournamentInFirebase = useCallback(
+    async (updatedMatches: Match[], updatedStatus?: string) => {
+      if (!tournamentId) return;
+
+      try {
+        const updatedTournament: Tournament = {
+          id: tournamentId,
+          name: "Double Elimination Tournament",
+          type: "Double Elimination",
+          manager: "David",
+          managerId: "manager-1",
+          players,
+          matches: updatedMatches,
+          format: matchFormat,
+          status: updatedStatus || "in_progress",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          isPublic: true,
+          maxPlayers: 8,
+          currentRound,
+          totalRounds: 4,
+        };
+
+        await TournamentService.saveTournament(updatedTournament);
+        console.log("Tournament updated in Firebase:", tournamentId);
+      } catch (error) {
+        console.error("Error updating tournament in Firebase:", error);
+      }
+    },
+    [tournamentId, players, matchFormat, currentRound]
+  );
 
   // Initialize tournament
   useEffect(() => {
@@ -79,11 +127,35 @@ export const DoubleElimination8Screen: React.FC<
         matchFormat
       );
 
+      // Create tournament object for Firebase
+      const tournamentId = `de8-${Date.now()}`;
+      const tournament: Tournament = {
+        id: tournamentId,
+        name: "Double Elimination Tournament",
+        type: "Double Elimination",
+        manager: "David", // TODO: Get from user context
+        managerId: "manager-1", // TODO: Get from user context
+        players: shuffledPlayers,
+        matches: initialMatches,
+        format: matchFormat,
+        status: "in_progress",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        isPublic: true, // Make it public so supporters can see it
+        maxPlayers: 8,
+        currentRound: 1,
+        totalRounds: 4,
+      };
+
       setPlayers(shuffledPlayers);
       setMatches(initialMatches);
+      setTournamentId(tournamentId);
       setHasInitialized(true);
+
+      // Save to Firebase
+      saveTournamentToFirebase(tournament);
     }
-  }, [playerNames, matchFormat, hasInitialized]);
+  }, [playerNames, matchFormat, hasInitialized, saveTournamentToFirebase]);
 
   // Update player losses
   const updatePlayerLosses = useCallback((playerId: string) => {
@@ -265,6 +337,13 @@ export const DoubleElimination8Screen: React.FC<
                   setRunnerUp(lbPlayer);
                   setFinalMatch({ ...match, winner });
                   setShowSummaryModal(true);
+
+                  // Update Firebase with completed status
+                  const updatedMatches = matches.map((m) =>
+                    m.id === matchId ? { ...m, winner } : m
+                  );
+                  updateTournamentInFirebase(updatedMatches, "completed");
+
                   // Alert.alert(
                   //   "Tournament Complete! 🏆",
                   //   `${winner.name} is the Champion!`,
@@ -304,6 +383,13 @@ export const DoubleElimination8Screen: React.FC<
                   setRunnerUp(runnerUp);
                   setFinalMatch({ ...match, winner });
                   setShowSummaryModal(true);
+
+                  // Update Firebase with completed status
+                  const updatedMatches = matches.map((m) =>
+                    m.id === matchId ? { ...m, winner } : m
+                  );
+                  updateTournamentInFirebase(updatedMatches, "completed");
+
                   // Alert.alert(
                   //   "Tournament Complete! 🏆",
                   //   `${winner.name} is the Champion!`,
@@ -324,9 +410,20 @@ export const DoubleElimination8Screen: React.FC<
           }
           return match;
         });
+
+        // Update Firebase with new matches
+        const updatedMatches = prevMatches.map((match) => {
+          if (match.id === matchId) {
+            return { ...match, winner };
+          }
+          return match;
+        });
+
+        // Update Firebase
+        updateTournamentInFirebase(updatedMatches);
       });
     },
-    [updatePlayerLosses, matchFormat]
+    [updatePlayerLosses, matchFormat, updateTournamentInFirebase]
   );
 
   // Check if we can advance to next round

@@ -29,7 +29,7 @@ const TournamentCard: React.FC<TournamentCardProps> = ({
   navigation,
   matches = [],
 }) => {
-  // Calculate tournament progress
+  // Calculate tournament progress with live updates
   const calculateProgress = () => {
     if (!matches || matches.length === 0) return 0;
 
@@ -41,7 +41,33 @@ const TournamentCard: React.FC<TournamentCardProps> = ({
     return Math.round((completedMatches / totalMatches) * 100);
   };
 
+  // Get live match info
+  const getLiveMatchInfo = () => {
+    if (!matches || matches.length === 0) return null;
+
+    const currentMatch = matches.find(
+      (match) => !match.winner && match.player1 && match.player2
+    );
+
+    if (currentMatch) {
+      const games = currentMatch.games || [];
+      const player1Score = games.filter(g => g.winner?.id === currentMatch.player1?.id).length;
+      const player2Score = games.filter(g => g.winner?.id === currentMatch.player2?.id).length;
+      
+      return {
+        player1: currentMatch.player1?.name || "Player 1",
+        player2: currentMatch.player2?.name || "Player 2",
+        score1: player1Score,
+        score2: player2Score,
+        round: currentMatch.round,
+      };
+    }
+
+    return null;
+  };
+
   const progressPercentage = calculateProgress();
+  const liveMatch = getLiveMatchInfo();
 
   // Determine status and progress bar color based on completion
   const getStatusText = () => {
@@ -100,6 +126,26 @@ const TournamentCard: React.FC<TournamentCardProps> = ({
             </View>
           )}
         </View>
+
+        {/* Live Match Display */}
+        {status === "ongoing" && liveMatch && (
+          <View style={styles.liveMatchContainer}>
+            <View style={styles.liveIndicator}>
+              <View style={styles.liveDot} />
+              <Text style={styles.liveText}>LIVE</Text>
+            </View>
+            <View style={styles.matchInfo}>
+              <Text style={styles.roundText}>Round {liveMatch.round}</Text>
+              <View style={styles.scoreContainer}>
+                <Text style={styles.playerName}>{liveMatch.player1}</Text>
+                <Text style={styles.scoreText}>{liveMatch.score1}</Text>
+                <Text style={styles.vsText}>vs</Text>
+                <Text style={styles.scoreText}>{liveMatch.score2}</Text>
+                <Text style={styles.playerName}>{liveMatch.player2}</Text>
+              </View>
+            </View>
+          </View>
+        )}
         <TouchableOpacity
           style={styles.managerRow}
           onPress={() => {

@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   Alert,
 } from "react-native";
-import { Player, Match, MatchFormat } from "../../types";
+import { Player, Match, MatchFormat, Tournament } from "../../types";
 import { COLORS } from "../../constants/colors";
 import MatchListItem from "../../components/MatchListItem";
 import {
@@ -21,6 +21,7 @@ import IncompleteMatchesModal from "../../components/IncompleteMatchesModal";
 import TournamentSummaryModal from "../../components/TournamentSummaryModal";
 import { RoundSeparator } from "../../components/RoundSeparator";
 import { Ionicons } from "@expo/vector-icons";
+import { TournamentService } from "../../utils/tournamentService";
 
 interface SingleElim8ScreenProps {
   route: {
@@ -48,6 +49,20 @@ export const SingleElim8Screen: React.FC<SingleElim8ScreenProps> = ({
   const [showIncompleteModal, setShowIncompleteModal] = useState(false);
   const [showSummaryModal, setShowSummaryModal] = useState(false);
   const [finalMatch, setFinalMatch] = useState<Match | null>(null);
+  const [tournamentId, setTournamentId] = useState<string>("");
+
+  // Save tournament to Firebase
+  const saveTournamentToFirebase = useCallback(
+    async (tournamentData: Tournament) => {
+      try {
+        await TournamentService.saveTournament(tournamentData);
+        console.log("Tournament saved to Firebase:", tournamentData.id);
+      } catch (error) {
+        console.error("Error saving tournament to Firebase:", error);
+      }
+    },
+    []
+  );
 
   // Initialize tournament
   useEffect(() => {
@@ -89,11 +104,35 @@ export const SingleElim8Screen: React.FC<SingleElim8ScreenProps> = ({
         );
       }
 
+      // Create tournament object for Firebase
+      const tournamentId = `se8-${Date.now()}`;
+      const tournament: Tournament = {
+        id: tournamentId,
+        name: "Single Elimination Tournament",
+        type: "Single Elimination",
+        manager: "David",
+        managerId: "manager-1",
+        players: shuffledPlayers,
+        matches: round1Matches,
+        format: matchFormat,
+        status: "in_progress",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        isPublic: true,
+        maxPlayers: 8,
+        currentRound: 1,
+        totalRounds: 3,
+      };
+
       setPlayers(shuffledPlayers);
       setMatches(round1Matches);
+      setTournamentId(tournamentId);
       setHasInitialized(true);
+
+      // Save to Firebase
+      saveTournamentToFirebase(tournament);
     }
-  }, [playerNames, matchFormat, hasInitialized]);
+  }, [playerNames, matchFormat, hasInitialized, saveTournamentToFirebase]);
 
   // Update player elimination status
   const updatePlayerElimination = useCallback((playerId: string) => {
@@ -149,6 +188,31 @@ export const SingleElim8Screen: React.FC<SingleElim8ScreenProps> = ({
                 setOverallWinner(winner);
                 setFinalMatch(updatedMatch);
                 setShowSummaryModal(true);
+                
+                // Update Firebase with completed status
+                const updatedMatches = matches.map((m) => 
+                  m.id === matchId ? updatedMatch : m
+                );
+                if (tournamentId) {
+                  const completedTournament: Tournament = {
+                    id: tournamentId,
+                    name: "Single Elimination Tournament",
+                    type: "Single Elimination",
+                    manager: "David",
+                    managerId: "manager-1",
+                    players,
+                    matches: updatedMatches,
+                    format: matchFormat,
+                    status: "completed",
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                    isPublic: true,
+                    maxPlayers: 8,
+                    currentRound: 3,
+                    totalRounds: 3,
+                  };
+                  TournamentService.saveTournament(completedTournament);
+                }
               }, 100);
             }
           }

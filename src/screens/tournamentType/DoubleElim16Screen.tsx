@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   Alert,
 } from "react-native";
-import { Player, Match } from "../../types";
+import { Player, Match, Tournament } from "../../types";
 import { COLORS } from "../../constants/colors";
 import { DoubleElim16ScreenProps } from "../../types/navigation.types";
 import {
@@ -20,6 +20,7 @@ import ScreenHeader from "../../components/ScreenHeader";
 import MatchListItem from "../../components/MatchListItem";
 import ConfirmActionModal from "../../components/ConfirmActionModal";
 import { Ionicons } from "@expo/vector-icons";
+import { TournamentService } from "../../utils/tournamentService";
 
 const DoubleElim16Screen: React.FC<DoubleElim16ScreenProps> = ({
   route,
@@ -38,6 +39,20 @@ const DoubleElim16Screen: React.FC<DoubleElim16ScreenProps> = ({
   const [showAdvanceModal, setShowAdvanceModal] = useState(false);
   const [showIncompleteModal, setShowIncompleteModal] = useState(false);
   const [showSummaryModal, setShowSummaryModal] = useState(false);
+  const [tournamentId, setTournamentId] = useState<string>("");
+
+  // Save tournament to Firebase
+  const saveTournamentToFirebase = useCallback(
+    async (tournamentData: Tournament) => {
+      try {
+        await TournamentService.saveTournament(tournamentData);
+        console.log("Tournament saved to Firebase:", tournamentData.id);
+      } catch (error) {
+        console.error("Error saving tournament to Firebase:", error);
+      }
+    },
+    []
+  );
 
   // Initialize tournament
   useEffect(() => {
@@ -64,11 +79,36 @@ const DoubleElim16Screen: React.FC<DoubleElim16ScreenProps> = ({
         shuffledPlayers,
         matchFormat
       );
+
+      // Create tournament object for Firebase
+      const tournamentId = `de16-${Date.now()}`;
+      const tournament: Tournament = {
+        id: tournamentId,
+        name: "Double Elimination Tournament",
+        type: "Double Elimination",
+        manager: "David",
+        managerId: "manager-1",
+        players: shuffledPlayers,
+        matches: round1Matches,
+        format: matchFormat,
+        status: "in_progress",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        isPublic: true,
+        maxPlayers: 16,
+        currentRound: 1,
+        totalRounds: 5,
+      };
+
       setPlayers(shuffledPlayers);
       setMatches(round1Matches);
+      setTournamentId(tournamentId);
       setHasInitialized(true);
+
+      // Save to Firebase
+      saveTournamentToFirebase(tournament);
     }
-  }, [playerNames, matchFormat, hasInitialized]);
+  }, [playerNames, matchFormat, hasInitialized, saveTournamentToFirebase]);
 
   // Update player losses
   const updatePlayerLosses = useCallback((playerId: string) => {

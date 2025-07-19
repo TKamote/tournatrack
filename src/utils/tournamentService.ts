@@ -20,11 +20,20 @@ export class TournamentService {
   // Save a new tournament
   static async saveTournament(tournament: Tournament): Promise<void> {
     try {
-      await setDoc(doc(db, TOURNAMENTS_COLLECTION, tournament.id), {
+      const tournamentData = {
         ...tournament,
         createdAt: tournament.createdAt.toISOString(),
         updatedAt: new Date().toISOString(),
-      });
+      };
+      console.log(
+        "Saving tournament to Firebase:",
+        tournament.id,
+        tournamentData
+      );
+      await setDoc(
+        doc(db, TOURNAMENTS_COLLECTION, tournament.id),
+        tournamentData
+      );
       console.log("Tournament saved successfully:", tournament.id);
     } catch (error) {
       console.error("Error saving tournament:", error);
@@ -87,29 +96,69 @@ export class TournamentService {
   // Get all public tournaments
   static async getPublicTournaments(): Promise<Tournament[]> {
     try {
-      const q = query(
-        collection(db, TOURNAMENTS_COLLECTION),
-        where("isPublic", "==", true),
-        orderBy("createdAt", "desc")
-      );
+      // First try with ordering, if it fails, fall back to simple query
+      try {
+        const q = query(
+          collection(db, TOURNAMENTS_COLLECTION),
+          where("isPublic", "==", true),
+          orderBy("createdAt", "desc")
+        );
 
-      const querySnapshot = await getDocs(q);
-      const tournaments: Tournament[] = [];
+        const querySnapshot = await getDocs(q);
+        const tournaments: Tournament[] = [];
 
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        tournaments.push({
-          ...data,
-          id: doc.id,
-          createdAt: new Date(data.createdAt),
-          updatedAt: new Date(data.updatedAt),
-        } as Tournament);
-      });
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          tournaments.push({
+            ...data,
+            id: doc.id,
+            createdAt: new Date(data.createdAt),
+            updatedAt: new Date(data.updatedAt),
+          } as Tournament);
+        });
 
-      return tournaments;
+        return tournaments;
+      } catch (indexError) {
+        console.log("Index not available, using simple query");
+        // Fallback: get all tournaments and filter/sort in memory
+        const q = query(collection(db, TOURNAMENTS_COLLECTION));
+        const querySnapshot = await getDocs(q);
+        const tournaments: Tournament[] = [];
+
+        console.log(
+          "Total documents in tournaments collection:",
+          querySnapshot.size
+        );
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          console.log(
+            "Found tournament in Firebase:",
+            doc.id,
+            "isPublic:",
+            data.isPublic,
+            "type:",
+            data.type,
+            "manager:",
+            data.manager
+          );
+          if (data.isPublic === true) {
+            tournaments.push({
+              ...data,
+              id: doc.id,
+              createdAt: new Date(data.createdAt),
+              updatedAt: new Date(data.updatedAt),
+            } as Tournament);
+          }
+        });
+
+        // Sort by createdAt descending
+        return tournaments.sort(
+          (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+        );
+      }
     } catch (error) {
       console.error("Error getting public tournaments:", error);
-      throw error;
+      return []; // Return empty array instead of throwing
     }
   }
 
