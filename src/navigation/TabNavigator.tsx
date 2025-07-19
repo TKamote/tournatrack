@@ -12,12 +12,40 @@ import { View, ActivityIndicator } from "react-native";
 const Tab = createBottomTabNavigator();
 
 export const TabNavigator = () => {
-  const { userRole } = useUser();
+  const { userRole, isLoading } = useUser();
 
-  console.log("TabNavigator - Current userRole:", userRole);
+  console.log(
+    "TabNavigator - Current userRole:",
+    userRole,
+    "Loading:",
+    isLoading,
+    "Should show Manager tab:",
+    userRole === "manager"
+  );
+
+  // Note: initialRouteName should handle the correct tab selection
+
+  // Show loading screen while role is being determined
+  if (isLoading) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: "#1a252f",
+        }}
+      >
+        <ActivityIndicator size="large" color="#3498db" />
+      </View>
+    );
+  }
+
+  console.log("Rendering Manager tab:", userRole === "manager");
 
   return (
     <Tab.Navigator
+      initialRouteName={userRole === "manager" ? "Manager" : "Supporter"}
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
           let iconName: keyof typeof Ionicons.glyphMap;
@@ -62,16 +90,7 @@ export const TabNavigator = () => {
         component={TermsOfUseScreen}
         options={{ title: "Terms & Privacy" }}
       />
-      <Tab.Screen
-        name="Auth"
-        component={AuthScreen}
-        options={{
-          title: "Sign In",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="log-in-outline" size={size} color={color} />
-          ),
-        }}
-      />
+      {/* Sign Out functionality removed - supporters should stay logged in */}
     </Tab.Navigator>
   );
 };

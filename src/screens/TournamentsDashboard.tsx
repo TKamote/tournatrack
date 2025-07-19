@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,9 +6,13 @@ import {
   TouchableOpacity,
   ScrollView,
   SafeAreaView,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Tournament, Match, Game } from "../types";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import TournamentCard from "../components/TournamentCard";
+import { TournamentService } from "../utils/tournamentService";
 
 // Helper function to convert old mock data format to new Match format
 const convertOldMatchToNewFormat = (oldMatch: any): Match => {
@@ -92,16 +96,266 @@ const convertOldTournamentToNewFormat = (oldTournament: any): Tournament => {
 };
 
 const TournamentsDashboard: React.FC<any> = ({ navigation }) => {
+  const [likedTournaments, setLikedTournaments] = useState<string[]>([]);
+  const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Load tournaments and liked tournaments on component mount
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+
+        // Load liked tournaments
+        const stored = await AsyncStorage.getItem("likedTournaments");
+        if (stored) {
+          setLikedTournaments(JSON.parse(stored));
+        }
+
+        // Load public tournaments from Firebase
+        const publicTournaments =
+          await TournamentService.getPublicTournaments();
+        setTournaments(publicTournaments);
+      } catch (error) {
+        console.error("Error loading data:", error);
+        // Fallback to mock data if Firebase fails
+        setTournaments([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
+
+  const toggleLike = async (tournamentId: string) => {
+    try {
+      const newLikedTournaments = likedTournaments.includes(tournamentId)
+        ? likedTournaments.filter((id) => id !== tournamentId)
+        : [...likedTournaments, tournamentId];
+
+      setLikedTournaments(newLikedTournaments);
+      await AsyncStorage.setItem(
+        "likedTournaments",
+        JSON.stringify(newLikedTournaments)
+      );
+    } catch (error) {
+      console.error("Error saving liked tournaments:", error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#4fc3f7" />
+          <Text style={styles.loadingText}>Loading tournaments...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.title}>Tournaments Dashboard</Text>
         <Text style={styles.subtitle}>
-          This is where your tournaments will be listed.
+          {tournaments.length > 0
+            ? "Live tournaments from the community"
+            : "No tournaments available yet"}
         </Text>
         <View style={styles.cardContainer}>
-          <TouchableOpacity
-            style={styles.card}
+          <TournamentCard
+            tournamentId="tournament-1"
+            tournamentType="Double Elimination"
+            playerCount="8 Players"
+            manager="David"
+            isLiked={likedTournaments.includes("tournament-1")}
+            onLike={toggleLike}
+            status="ongoing"
+            managerAvatar="D"
+            navigation={navigation}
+            matches={[
+              // Winners Bracket - Round 1
+              {
+                round: 1,
+                bracket: "winners",
+                player1: { name: "Seven" },
+                player2: { name: "One" },
+                winner: { name: "Seven" },
+                score1: 3,
+                score2: 0,
+                status: "completed",
+              },
+              {
+                round: 1,
+                bracket: "winners",
+                player1: { name: "Six" },
+                player2: { name: "Eight" },
+                winner: { name: "Eight" },
+                score1: 0,
+                score2: 3,
+                status: "completed",
+              },
+              {
+                round: 1,
+                bracket: "winners",
+                player1: { name: "Two" },
+                player2: { name: "Four" },
+                winner: { name: "Two" },
+                score1: 3,
+                score2: 0,
+                status: "completed",
+              },
+              {
+                round: 1,
+                bracket: "winners",
+                player1: { name: "Five" },
+                player2: { name: "Three" },
+                winner: { name: "Five" },
+                score1: 3,
+                score2: 0,
+                status: "completed",
+              },
+              // Winners Bracket - Round 2
+              {
+                round: 2,
+                bracket: "winners",
+                player1: { name: "Seven" },
+                player2: { name: "Eight" },
+                winner: { name: "Seven" },
+                score1: 3,
+                score2: 2,
+                status: "completed",
+              },
+              {
+                round: 2,
+                bracket: "winners",
+                player1: { name: "Two" },
+                player2: { name: "Five" },
+                winner: { name: "Two" },
+                score1: 3,
+                score2: 2,
+                status: "completed",
+              },
+              // Winners Bracket - Round 3
+              {
+                round: 3,
+                bracket: "winners",
+                player1: { name: "Seven" },
+                player2: { name: "Two" },
+                winner: { name: "Two" },
+                score1: 1,
+                score2: 3,
+                status: "completed",
+              },
+              // Losers Bracket - Round 1
+              {
+                round: 1,
+                bracket: "losers",
+                player1: { name: "One" },
+                player2: { name: "Six" },
+                winner: { name: "One" },
+                score1: 3,
+                score2: 2,
+                status: "completed",
+              },
+              {
+                round: 1,
+                bracket: "losers",
+                player1: { name: "Four" },
+                player2: { name: "Three" },
+                winner: { name: "Three" },
+                score1: 0,
+                score2: 3,
+                status: "completed",
+              },
+              // Losers Bracket - Round 2
+              {
+                round: 2,
+                bracket: "losers",
+                player1: { name: "One" },
+                player2: { name: "Eight" },
+                winner: { name: "One" },
+                score1: 3,
+                score2: 2,
+                status: "completed",
+              },
+              {
+                round: 2,
+                bracket: "losers",
+                player1: { name: "Three" },
+                player2: { name: "Five" },
+                winner: { name: "Three" },
+                score1: 3,
+                score2: 0,
+                status: "completed",
+              },
+              // Losers Bracket - Round 3
+              {
+                round: 3,
+                bracket: "losers",
+                player1: { name: "One" },
+                player2: { name: "Three" },
+                winner: { name: "Three" },
+                score1: 2,
+                score2: 3,
+                status: "completed",
+              },
+              {
+                round: 3,
+                bracket: "losers",
+                player1: { name: "Eight" },
+                player2: { name: "Five" },
+                winner: { name: "Eight" },
+                score1: 3,
+                score2: 0,
+                status: "completed",
+              },
+              // Losers Bracket - Round 4
+              {
+                round: 4,
+                bracket: "losers",
+                player1: { name: "Three" },
+                player2: { name: "Eight" },
+                winner: { name: "Three" },
+                score1: 3,
+                score2: 1,
+                status: "completed",
+              },
+              // Losers Bracket - Round 5
+              {
+                round: 5,
+                bracket: "losers",
+                player1: { name: "Seven" },
+                player2: { name: "Three" },
+                winner: { name: "Three" },
+                score1: 2,
+                score2: 3,
+                status: "completed",
+              },
+              // Grand Finals
+              {
+                round: 6,
+                bracket: "grandFinals",
+                player1: { name: "Two" },
+                player2: { name: "Three" },
+                winner: { name: "Three" },
+                score1: 0,
+                score2: 3,
+                status: "completed",
+              },
+              {
+                round: 6,
+                bracket: "grandFinals",
+                player1: { name: "Two" },
+                player2: { name: "Three" },
+                winner: { name: "Two" },
+                score1: 3,
+                score2: 1,
+                status: "completed",
+              },
+            ]}
             onPress={() => {
               const oldTournamentData = {
                 type: "Double Elimination",
@@ -298,13 +552,94 @@ const TournamentsDashboard: React.FC<any> = ({ navigation }) => {
                 tournament: convertedTournament,
               });
             }}
-          >
-            <Text style={styles.tournamentType}>Double Elimination</Text>
-            <Text style={styles.tournamentDetails}>8 Players</Text>
-            <Text style={styles.manager}>Manager: David</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.card}
+          />
+          <TournamentCard
+            tournamentId="tournament-2"
+            tournamentType="Double Elimination"
+            playerCount="4 Players"
+            manager="David"
+            isLiked={likedTournaments.includes("tournament-2")}
+            onLike={toggleLike}
+            status="completed"
+            managerAvatar="D"
+            navigation={navigation}
+            matches={[
+              // Winners Bracket - Round 1
+              {
+                round: 1,
+                bracket: "winners",
+                player1: { name: "Alice" },
+                player2: { name: "Bob" },
+                winner: { name: "Alice" },
+                score1: 3,
+                score2: 1,
+                status: "completed",
+              },
+              {
+                round: 1,
+                bracket: "winners",
+                player1: { name: "Carol" },
+                player2: { name: "Dave" },
+                winner: { name: "Dave" },
+                score1: 2,
+                score2: 3,
+                status: "completed",
+              },
+              // Winners Bracket - Round 2
+              {
+                round: 2,
+                bracket: "winners",
+                player1: { name: "Alice" },
+                player2: { name: "Dave" },
+                winner: { name: "Alice" },
+                score1: 3,
+                score2: 2,
+                status: "completed",
+              },
+              // Losers Bracket - Round 1
+              {
+                round: 1,
+                bracket: "losers",
+                player1: { name: "Bob" },
+                player2: { name: "Carol" },
+                winner: { name: "Carol" },
+                score1: 1,
+                score2: 3,
+                status: "completed",
+              },
+              // Losers Bracket - Round 2
+              {
+                round: 2,
+                bracket: "losers",
+                player1: { name: "Dave" },
+                player2: { name: "Carol" },
+                winner: { name: "Carol" },
+                score1: 2,
+                score2: 3,
+                status: "completed",
+              },
+              // Grand Finals
+              {
+                round: 3,
+                bracket: "grandFinals",
+                player1: { name: "Alice" },
+                player2: { name: "Carol" },
+                winner: { name: "Carol" },
+                score1: 2,
+                score2: 3,
+                status: "completed",
+              },
+              {
+                round: 3,
+                bracket: "grandFinals",
+                player1: { name: "Alice" },
+                player2: { name: "Carol" },
+                winner: { name: "Alice" },
+                score1: 3,
+                score2: 1,
+                status: "completed",
+              },
+            ]}
             onPress={() => {
               const oldTournamentData = {
                 type: "Double Elimination",
@@ -399,13 +734,100 @@ const TournamentsDashboard: React.FC<any> = ({ navigation }) => {
                 tournament: convertedTournament,
               });
             }}
-          >
-            <Text style={styles.tournamentType}>Double Elimination</Text>
-            <Text style={styles.tournamentDetails}>4 Players</Text>
-            <Text style={styles.manager}>Manager: David</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.card}
+          />
+          <TournamentCard
+            tournamentId="tournament-3"
+            tournamentType="Double Elimination"
+            playerCount="16 Players"
+            manager="Jerome"
+            isLiked={likedTournaments.includes("tournament-3")}
+            onLike={toggleLike}
+            status="upcoming"
+            managerAvatar="J"
+            navigation={navigation}
+            matches={[
+              // Winners Bracket - Round 1 (all pending)
+              {
+                round: 1,
+                bracket: "winners",
+                player1: { name: "Alice" },
+                player2: { name: "Bob" },
+                winner: null,
+                score1: 0,
+                score2: 0,
+                status: "scheduled",
+              },
+              {
+                round: 1,
+                bracket: "winners",
+                player1: { name: "Carol" },
+                player2: { name: "Dave" },
+                winner: null,
+                score1: 0,
+                score2: 0,
+                status: "scheduled",
+              },
+              {
+                round: 1,
+                bracket: "winners",
+                player1: { name: "Eve" },
+                player2: { name: "Frank" },
+                winner: null,
+                score1: 0,
+                score2: 0,
+                status: "scheduled",
+              },
+              {
+                round: 1,
+                bracket: "winners",
+                player1: { name: "Grace" },
+                player2: { name: "Henry" },
+                winner: null,
+                score1: 0,
+                score2: 0,
+                status: "scheduled",
+              },
+              {
+                round: 1,
+                bracket: "winners",
+                player1: { name: "Ivy" },
+                player2: { name: "Jack" },
+                winner: null,
+                score1: 0,
+                score2: 0,
+                status: "scheduled",
+              },
+              {
+                round: 1,
+                bracket: "winners",
+                player1: { name: "Kathy" },
+                player2: { name: "Leo" },
+                winner: null,
+                score1: 0,
+                score2: 0,
+                status: "scheduled",
+              },
+              {
+                round: 1,
+                bracket: "winners",
+                player1: { name: "Mona" },
+                player2: { name: "Nate" },
+                winner: null,
+                score1: 0,
+                score2: 0,
+                status: "scheduled",
+              },
+              {
+                round: 1,
+                bracket: "winners",
+                player1: { name: "Olivia" },
+                player2: { name: "Paul" },
+                winner: null,
+                score1: 0,
+                score2: 0,
+                status: "scheduled",
+              },
+            ]}
             onPress={() => {
               const oldTournamentData = {
                 type: "Double Elimination",
@@ -735,13 +1157,17 @@ const TournamentsDashboard: React.FC<any> = ({ navigation }) => {
                 tournament: convertedTournament,
               });
             }}
-          >
-            <Text style={styles.tournamentType}>Double Elimination</Text>
-            <Text style={styles.tournamentDetails}>16 Players</Text>
-            <Text style={styles.manager}>Manager: Jerome</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.card}
+          />
+          <TournamentCard
+            tournamentId="tournament-4"
+            tournamentType="Single Elimination"
+            playerCount="8 Players"
+            manager="Jerome"
+            isLiked={likedTournaments.includes("tournament-4")}
+            onLike={toggleLike}
+            status="ongoing"
+            managerAvatar="J"
+            navigation={navigation}
             onPress={() => {
               const oldTournamentData = {
                 type: "Single Elimination",
@@ -819,7 +1245,7 @@ const TournamentsDashboard: React.FC<any> = ({ navigation }) => {
                     score2: 1,
                   },
                 ],
-                manager: "David",
+                manager: "Jerome",
                 format: {
                   type: "raceTo",
                   gamesNeededToWin: 3,
@@ -834,13 +1260,17 @@ const TournamentsDashboard: React.FC<any> = ({ navigation }) => {
                 tournament: convertedTournament,
               });
             }}
-          >
-            <Text style={styles.tournamentType}>Single Elimination</Text>
-            <Text style={styles.tournamentDetails}>8 Players</Text>
-            <Text style={styles.manager}>Manager: Jerome</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.card}
+          />
+          <TournamentCard
+            tournamentId="tournament-5"
+            tournamentType="Single Elimination"
+            playerCount="16 Players"
+            manager="Jerome"
+            isLiked={likedTournaments.includes("tournament-5")}
+            onLike={toggleLike}
+            status="upcoming"
+            managerAvatar="J"
+            navigation={navigation}
             onPress={() => {
               const oldTournamentData = {
                 type: "Single Elimination",
@@ -1003,7 +1433,7 @@ const TournamentsDashboard: React.FC<any> = ({ navigation }) => {
                     score2: 1,
                   },
                 ],
-                manager: "David",
+                manager: "Jerome",
                 format: {
                   type: "raceTo",
                   gamesNeededToWin: 3,
@@ -1018,11 +1448,7 @@ const TournamentsDashboard: React.FC<any> = ({ navigation }) => {
                 tournament: convertedTournament,
               });
             }}
-          >
-            <Text style={styles.tournamentType}>Single Elimination</Text>
-            <Text style={styles.tournamentDetails}>16 Players</Text>
-            <Text style={styles.manager}>Manager: Jerome</Text>
-          </TouchableOpacity>
+          />
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -1033,6 +1459,17 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: "#1a252f",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#1a252f",
+  },
+  loadingText: {
+    color: "#bdc3c7",
+    fontSize: 16,
+    marginTop: 16,
   },
   container: {
     flexGrow: 1,
@@ -1071,6 +1508,17 @@ const styles = StyleSheet.create({
     elevation: 4,
     borderWidth: 1,
     borderColor: "#2c3e50",
+    position: "relative",
+  },
+  likeButton: {
+    position: "absolute",
+    top: 15,
+    right: 15,
+    zIndex: 1,
+    padding: 5,
+  },
+  cardContent: {
+    flex: 1,
   },
   tournamentType: {
     color: "#4fc3f7",

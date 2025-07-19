@@ -12,6 +12,7 @@ type UserRole = "manager" | "supporter";
 interface UserContextType {
   userRole: UserRole;
   setUserRole: (role: UserRole) => void;
+  isLoading: boolean;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -20,6 +21,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
   const [userRole, setUserRole] = useState<UserRole>("supporter");
+  const [isLoading, setIsLoading] = useState(true);
 
   // Load user role from storage on app start
   useEffect(() => {
@@ -29,8 +31,10 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
         if (storedRole === "manager" || storedRole === "supporter") {
           setUserRole(storedRole);
         }
+        setIsLoading(false);
       } catch (error) {
         console.error("Error loading user role:", error);
+        setIsLoading(false);
       }
     };
     loadUserRole();
@@ -38,8 +42,10 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
 
   const setUserRoleWithStorage = async (role: UserRole) => {
     try {
+      console.log("UserContext: Setting role to:", role);
       await AsyncStorage.setItem("userRole", role);
       setUserRole(role);
+      console.log("UserContext: Role set successfully");
     } catch (error) {
       console.error("Error saving user role:", error);
       setUserRole(role);
@@ -48,7 +54,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
 
   return (
     <UserContext.Provider
-      value={{ userRole, setUserRole: setUserRoleWithStorage }}
+      value={{ userRole, setUserRole: setUserRoleWithStorage, isLoading }}
     >
       {children}
     </UserContext.Provider>

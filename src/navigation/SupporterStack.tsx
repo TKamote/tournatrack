@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
 import TournamentsDashboard from "../screens/TournamentsDashboard";
 import TournamentDetailsScreen from "../screens/tournamentDetails/TournamentDetailsScreen";
+import ManagerProfileScreen from "../screens/ManagerProfileScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -20,6 +21,14 @@ export const SupporterStack = () => {
       <Stack.Screen
         name="TournamentDetails"
         component={TournamentDetailsScreen}
+      />
+      <Stack.Screen
+        name="ManagerProfile"
+        component={ManagerProfileScreen}
+        options={{
+          title: "Manager Profile",
+          headerShown: false,
+        }}
       />
     </Stack.Navigator>
   );

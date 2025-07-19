@@ -47,6 +47,9 @@ export type RootStackParamList = {
   TournamentDetails: {
     tournament: Tournament;
   };
+  ManagerProfile: {
+    managerId: string;
+  };
 };
 
 export type HomeScreenProps = NativeStackScreenProps<

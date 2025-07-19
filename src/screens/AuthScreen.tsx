@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -29,6 +29,21 @@ const AuthScreen: React.FC<any> = ({ navigation, route }) => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { setUserRole } = useUser();
+
+  // Check if user is already authenticated and load their role
+  useEffect(() => {
+    const checkAuthState = async () => {
+      const currentUser = auth.currentUser;
+      if (currentUser) {
+        console.log("User already authenticated:", currentUser.uid);
+        const role = await getUserRole(currentUser.uid);
+        setUserRole(role);
+        navigation.navigate("MainTabs");
+      }
+    };
+
+    checkAuthState();
+  }, []);
 
   const getUserRole = async (userId: string) => {
     try {
@@ -108,7 +123,9 @@ const AuthScreen: React.FC<any> = ({ navigation, route }) => {
       );
       console.log("Sign in successful for user:", userCredential.user.uid);
       const role = await getUserRole(userCredential.user.uid);
+      console.log("Setting user role in context:", role);
       setUserRole(role); // Set role in context
+      console.log("Role set, navigating to MainTabs");
       navigation.navigate("MainTabs");
     } catch (error: any) {
       console.error("Sign in error:", error.code, error.message);
