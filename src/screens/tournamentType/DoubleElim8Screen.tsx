@@ -59,7 +59,6 @@ export const DoubleElimination8Screen: React.FC<
     async (tournamentData: Tournament) => {
       try {
         await TournamentService.saveTournament(tournamentData);
-        console.log("Tournament saved to Firebase:", tournamentData.id);
       } catch (error) {
         console.error("Error saving tournament to Firebase:", error);
       }
@@ -71,6 +70,19 @@ export const DoubleElimination8Screen: React.FC<
   const updateTournamentInFirebase = useCallback(
     async (updatedMatches: Match[], updatedStatus?: string) => {
       if (!tournamentId) return;
+
+      // Check for different types of changes
+      const completedMatches = updatedMatches.filter((match) => match.winner);
+      const newRounds = updatedMatches.filter((match) => match.round > 1);
+      const totalMatches = updatedMatches.length;
+
+      // Always update if we have more than initial matches or any completed matches
+      const hasChanges =
+        completedMatches.length > 0 || newRounds.length > 0 || totalMatches > 8;
+
+      if (!hasChanges) {
+        return;
+      }
 
       try {
         const updatedTournament: Tournament = {
@@ -92,7 +104,6 @@ export const DoubleElimination8Screen: React.FC<
         };
 
         await TournamentService.saveTournament(updatedTournament);
-        console.log("Tournament updated in Firebase:", tournamentId);
       } catch (error) {
         console.error("Error updating tournament in Firebase:", error);
       }

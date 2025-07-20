@@ -1,6 +1,11 @@
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import {
+  calculateTournamentProgress,
+  getTournamentCompletionInfo,
+  getLiveMatchInfo,
+} from "../utils/tournament/progressUtils";
 
 interface TournamentCardProps {
   tournamentId: string;
@@ -14,6 +19,7 @@ interface TournamentCardProps {
   managerAvatar?: string;
   navigation?: any;
   matches?: any[]; // Add matches for progress calculation
+  tournament?: any; // Add full tournament object
 }
 
 const TournamentCard: React.FC<TournamentCardProps> = ({
@@ -28,46 +34,26 @@ const TournamentCard: React.FC<TournamentCardProps> = ({
   managerAvatar,
   navigation,
   matches = [],
+  tournament,
 }) => {
   // Calculate tournament progress with live updates
-  const calculateProgress = () => {
-    if (!matches || matches.length === 0) return 0;
-
-    const totalMatches = matches.length;
-    const completedMatches = matches.filter(
-      (match) => match.status === "completed" || match.winner
-    ).length;
-
-    return Math.round((completedMatches / totalMatches) * 100);
+  // Use passed tournament object or create one for centralized calculations
+  const tournamentData = tournament || {
+    id: tournamentId,
+    type: tournamentType,
+    matches: matches || [],
+    players: [],
+    format: { gamesNeededToWin: 3 },
+    status: status,
   };
 
-  // Get live match info
-  const getLiveMatchInfo = () => {
-    if (!matches || matches.length === 0) return null;
+  // Use centralized utilities
+  const progressPercentage = calculateTournamentProgress(tournamentData);
+  const liveMatch = getLiveMatchInfo(tournamentData);
+  const completionInfo = getTournamentCompletionInfo(tournamentData);
 
-    const currentMatch = matches.find(
-      (match) => !match.winner && match.player1 && match.player2
-    );
-
-    if (currentMatch) {
-      const games = currentMatch.games || [];
-      const player1Score = games.filter(g => g.winner?.id === currentMatch.player1?.id).length;
-      const player2Score = games.filter(g => g.winner?.id === currentMatch.player2?.id).length;
-      
-      return {
-        player1: currentMatch.player1?.name || "Player 1",
-        player2: currentMatch.player2?.name || "Player 2",
-        score1: player1Score,
-        score2: player2Score,
-        round: currentMatch.round,
-      };
-    }
-
-    return null;
-  };
-
-  const progressPercentage = calculateProgress();
-  const liveMatch = getLiveMatchInfo();
+  // Enhanced status detection - check if tournament is truly complete
+  const isTournamentComplete = progressPercentage === 100;
 
   // Determine status and progress bar color based on completion
   const getStatusText = () => {
@@ -79,8 +65,12 @@ const TournamentCard: React.FC<TournamentCardProps> = ({
   const getProgressColor = () => {
     if (progressPercentage === 100) return "#2ecc71"; // Green for completed
     if (progressPercentage > 50) return "#4fc3f7"; // Blue for good progress
-    return "rgba(255, 255, 255, 0.3)"; // Light for low progress
+    if (progressPercentage > 0) return "#f39c12"; // Orange for some progress
+    return "rgba(255, 255, 255, 0.3)"; // Light for no progress
   };
+
+  // Enhanced status detection
+  const actualStatus = isTournamentComplete ? "completed" : status;
 
   return (
     <View style={styles.card}>
@@ -101,7 +91,9 @@ const TournamentCard: React.FC<TournamentCardProps> = ({
             style={[
               styles.statusBadge,
               styles[
-                `status${status.charAt(0).toUpperCase() + status.slice(1)}`
+                `status${
+                  actualStatus.charAt(0).toUpperCase() + actualStatus.slice(1)
+                }`
               ],
             ]}
           >
@@ -112,7 +104,7 @@ const TournamentCard: React.FC<TournamentCardProps> = ({
         <View style={styles.infoRow}>
           <Text style={styles.tournamentDetails}>{playerCount}</Text>
           {/* Progress Bar for ongoing tournaments */}
-          {status === "ongoing" && (
+          {actualStatus === "ongoing" && (
             <View style={styles.progressBar}>
               <View
                 style={[
@@ -128,24 +120,87 @@ const TournamentCard: React.FC<TournamentCardProps> = ({
         </View>
 
         {/* Live Match Display */}
-        {status === "ongoing" && liveMatch && (
-          <View style={styles.liveMatchContainer}>
-            <View style={styles.liveIndicator}>
-              <View style={styles.liveDot} />
-              <Text style={styles.liveText}>LIVE</Text>
-            </View>
+        {actualStatus === "ongoing" && liveMatch && (
+          <View
+            style={[
+              styles.liveMatchContainer,
+              liveMatch.isMatchPoint && styles.matchPointContainer,
+              liveMatch.isCloseMatch && styles.closeMatchContainer,
+              liveMatch.isCompleted && styles.completedMatchContainer,
+            ]}
+          >
             <View style={styles.matchInfo}>
               <Text style={styles.roundText}>Round {liveMatch.round}</Text>
+              <Text style={styles.matchFormatText}>
+                {liveMatch.matchFormat}
+              </Text>
               <View style={styles.scoreContainer}>
                 <Text style={styles.playerName}>{liveMatch.player1}</Text>
-                <Text style={styles.scoreText}>{liveMatch.score1}</Text>
+                <Text
+                  style={[
+                    styles.scoreText,
+                    liveMatch.score1 > liveMatch.score2 && styles.winningScore,
+                  ]}
+                >
+                  {liveMatch.score1}
+                </Text>
                 <Text style={styles.vsText}>vs</Text>
-                <Text style={styles.scoreText}>{liveMatch.score2}</Text>
+                <Text
+                  style={[
+                    styles.scoreText,
+                    liveMatch.score2 > liveMatch.score1 && styles.winningScore,
+                  ]}
+                >
+                  {liveMatch.score2}
+                </Text>
                 <Text style={styles.playerName}>{liveMatch.player2}</Text>
               </View>
+              {liveMatch.isCompleted ? (
+                <View style={styles.matchCompletedBadge}>
+                  <Text style={styles.matchCompletedText}>
+                    {liveMatch.winner} WINS!
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.gameProgress}>
+                  <Text style={styles.gameProgressText}>
+                    Game {liveMatch.totalGames + 1} of{" "}
+                    {liveMatch.gamesNeeded * 2 - 1}
+                  </Text>
+                </View>
+              )}
+              {liveMatch.isMatchPoint && !liveMatch.isCompleted && (
+                <View style={styles.matchPointBadge}>
+                  <Text style={styles.matchPointText}>MATCH POINT!</Text>
+                </View>
+              )}
             </View>
           </View>
         )}
+
+        {/* Tournament Completion Display - Only show when tournament is completed */}
+        {completionInfo && actualStatus === "completed" && (
+          <View style={styles.completionContainer}>
+            <View style={styles.completionIndicator}>
+              <Text style={styles.completionText}>🏆 COMPLETED</Text>
+            </View>
+            <View style={styles.completionInfo}>
+              <Text style={styles.championText}>
+                Champion: {completionInfo.champion}
+              </Text>
+              <View style={styles.finalScoreContainer}>
+                <Text style={styles.finalScoreText}>
+                  {completionInfo.championScore} -{" "}
+                  {completionInfo.runnerUpScore}
+                </Text>
+              </View>
+              <Text style={styles.runnerUpText}>
+                Runner-up: {completionInfo.runnerUp}
+              </Text>
+            </View>
+          </View>
+        )}
+
         <TouchableOpacity
           style={styles.managerRow}
           onPress={() => {
@@ -291,6 +346,159 @@ const styles = StyleSheet.create({
   progressFill: {
     height: "100%",
     borderRadius: 2,
+  },
+  liveMatchContainer: {
+    backgroundColor: "rgba(52, 152, 219, 0.1)",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "rgba(52, 152, 219, 0.3)",
+  },
+  liveIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  liveDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#e74c3c",
+    marginRight: 6,
+  },
+  liveText: {
+    color: "#e74c3c",
+    fontSize: 12,
+    fontWeight: "bold",
+  },
+  matchInfo: {
+    alignItems: "center",
+  },
+  roundText: {
+    color: "#bdc3c7",
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  scoreContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  playerName: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "500",
+    flex: 1,
+    textAlign: "center",
+  },
+  scoreText: {
+    color: "#4fc3f7",
+    fontSize: 18,
+    fontWeight: "bold",
+    marginHorizontal: 8,
+  },
+  vsText: {
+    color: "#bdc3c7",
+    fontSize: 12,
+    marginHorizontal: 4,
+  },
+  matchPointContainer: {
+    backgroundColor: "rgba(231, 76, 60, 0.2)",
+    borderColor: "rgba(231, 76, 60, 0.5)",
+  },
+  closeMatchContainer: {
+    backgroundColor: "rgba(241, 196, 15, 0.1)",
+    borderColor: "rgba(241, 196, 15, 0.3)",
+  },
+  completedMatchContainer: {
+    backgroundColor: "rgba(46, 204, 113, 0.1)",
+    borderColor: "rgba(46, 204, 113, 0.3)",
+  },
+  matchPointBadge: {
+    backgroundColor: "#e74c3c",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+    marginLeft: 8,
+  },
+  matchPointText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "bold",
+  },
+  matchCompletedBadge: {
+    backgroundColor: "#2ecc71",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+    marginTop: 6,
+  },
+  matchCompletedText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "bold",
+  },
+  matchFormatText: {
+    color: "#95a5a6",
+    fontSize: 11,
+    marginBottom: 4,
+    fontStyle: "italic",
+  },
+  winningScore: {
+    color: "#2ecc71",
+    fontWeight: "bold",
+  },
+  gameProgress: {
+    marginTop: 6,
+  },
+  gameProgressText: {
+    color: "#7f8c8d",
+    fontSize: 10,
+    textAlign: "center",
+  },
+  completionContainer: {
+    backgroundColor: "rgba(46, 204, 113, 0.1)",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "rgba(46, 204, 113, 0.3)",
+  },
+  completionIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  completionText: {
+    color: "#2ecc71",
+    fontSize: 12,
+    fontWeight: "bold",
+  },
+  completionInfo: {
+    alignItems: "center",
+  },
+  championText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
+    marginBottom: 4,
+  },
+  finalScoreContainer: {
+    backgroundColor: "rgba(46, 204, 113, 0.2)",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    marginBottom: 4,
+  },
+  finalScoreText: {
+    color: "#2ecc71",
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  runnerUpText: {
+    color: "#bdc3c7",
+    fontSize: 12,
   },
 });
 

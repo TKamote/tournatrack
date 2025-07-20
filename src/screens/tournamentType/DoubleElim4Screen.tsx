@@ -9,6 +9,7 @@ import {
   Alert,
 } from "react-native";
 import { Player, Match, Tournament } from "../../types";
+import { TournamentStatus } from "../../types/tournament.types";
 import { COLORS } from "../../constants/colors";
 import { DoubleElim4ScreenProps } from "../../types/navigation.types";
 import {
@@ -48,10 +49,25 @@ export const DoubleElim4Screen: React.FC<DoubleElim4ScreenProps> = ({
   const saveTournamentToFirebase = useCallback(
     async (tournamentData: Tournament) => {
       try {
+        console.log("🔥🔥🔥 INITIAL SAVE TO FIREBASE 🔥🔥🔥");
+        console.log("📊 Tournament data:", {
+          id: tournamentData.id,
+          name: tournamentData.name,
+          type: tournamentData.type,
+          players: tournamentData.players.length,
+          matches: tournamentData.matches.length,
+          status: tournamentData.status,
+          isPublic: tournamentData.isPublic,
+        });
+
         await TournamentService.saveTournament(tournamentData);
-        console.log("Tournament saved to Firebase:", tournamentData.id);
+        console.log("✅ Tournament saved to Firebase:", tournamentData.id);
       } catch (error) {
-        console.error("Error saving tournament to Firebase:", error);
+        console.error("❌ Error saving tournament to Firebase:", error);
+        console.error("❌ Error details:", {
+          message: error instanceof Error ? error.message : "Unknown error",
+          tournamentId: tournamentData.id,
+        });
       }
     },
     []
@@ -133,18 +149,105 @@ export const DoubleElim4Screen: React.FC<DoubleElim4ScreenProps> = ({
     });
   }, []);
 
+  // Update tournament in Firebase
+  const updateTournamentInFirebase = useCallback(
+    async (updatedMatches: Match[], tournamentStatus?: TournamentStatus) => {
+      console.log("🔥🔥🔥 FIREBASE UPDATE FUNCTION CALLED 🔥🔥🔥");
+      console.log(
+        "🔄 UPDATE FUNCTION CALLED with",
+        updatedMatches.length,
+        "matches"
+      );
+      if (!tournamentId) return;
+
+      try {
+        const updatedTournament: Tournament = {
+          id: tournamentId,
+          name: "Double Elimination Tournament",
+          type: "Double Elimination",
+          manager: "David",
+          managerId: "manager-1",
+          players,
+          matches: updatedMatches,
+          format: matchFormat,
+          status: tournamentStatus || "in_progress",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          isPublic: true,
+          maxPlayers: 4,
+          currentRound: Math.max(...updatedMatches.map((m) => m.round)),
+          totalRounds: 3,
+        };
+
+        console.log(
+          "🔥 Attempting to update tournament in Firebase:",
+          tournamentId
+        );
+        console.log("📊 Data being saved:", {
+          tournamentId: updatedTournament.id,
+          matchesCount: updatedTournament.matches.length,
+          completedMatches: updatedTournament.matches.filter((m) => m.winner)
+            .length,
+          rounds: updatedTournament.matches.map((m) => m.round),
+          status: updatedTournament.status,
+        });
+
+        try {
+          await TournamentService.saveTournament(updatedTournament);
+          console.log(
+            "✅ Tournament updated in Firebase:",
+            tournamentId,
+            "with",
+            updatedMatches.filter((m) => m.winner).length,
+            "completed matches"
+          );
+        } catch (updateError: any) {
+          console.error(
+            "❌ Error updating tournament in Firebase:",
+            updateError
+          );
+          console.error("❌ Update error details:", {
+            code: updateError?.code,
+            message: updateError?.message,
+            tournamentId: tournamentId,
+          });
+        }
+      } catch (error) {
+        console.error("❌ Error in updateTournamentInFirebase:", error);
+      }
+    },
+    [tournamentId, players, matchFormat]
+  );
+
   // Handle game result
   const handleIncrementScore = useCallback(
     (matchId: string, winner: Player, score1: number, score2: number) => {
+      console.log("🎯 HANDLE INCREMENT SCORE CALLED:", {
+        matchId,
+        winner: winner.name,
+        score1,
+        score2,
+      });
+
       setMatches((prevMatches) => {
-        return prevMatches.map((match) => {
+        const updatedMatches = prevMatches.map((match) => {
           if (match.id !== matchId || match.winner) return match;
+
           const newGame = {
             id: `game-${match.games.length + 1}`,
             winner,
             score1,
             score2,
           };
+
+          console.log("🎮 GAME PLAYED:", {
+            matchId: match.id,
+            gameId: newGame.id,
+            winner: winner.name,
+            score: `${score1}-${score2}`,
+            totalGames: match.games.length + 1,
+          });
+
           const updatedGames = [...match.games, newGame];
           const playerScore = updatedGames.filter(
             (g) => g.winner?.id === winner.id
@@ -152,6 +255,17 @@ export const DoubleElim4Screen: React.FC<DoubleElim4ScreenProps> = ({
           let updatedMatch = { ...match, games: updatedGames };
           if (playerScore >= matchFormat.gamesNeededToWin) {
             updatedMatch.winner = winner;
+
+            console.log("🏆 MATCH COMPLETED:", {
+              matchId: match.id,
+              round: match.round,
+              bracket: match.bracket,
+              winner: winner.name,
+              score: `${playerScore}-${
+                matchFormat.gamesNeededToWin - playerScore
+              }`,
+              gamesPlayed: updatedGames.length,
+            });
             // Grand Finals logic
             if (match.bracket === "grandFinals") {
               const wbPlayer =
@@ -159,9 +273,44 @@ export const DoubleElim4Screen: React.FC<DoubleElim4ScreenProps> = ({
               const lbPlayer =
                 match.player1?.losses === 1 ? match.player1 : match.player2;
               if (winner.id === wbPlayer?.id) {
-                if (lbPlayer)
-                  setTimeout(() => updatePlayerLosses(lbPlayer.id), 0);
-                setTimeout(() => {
+                if (lbPlayer) updatePlayerLosses(lbPlayer.id);
+
+                setTournamentOver(true);
+                // Clean winner name by removing loss record
+                const cleanWinner = {
+                  ...winner,
+                  name: winner.name.replace(/ L[0-2]$/, ""),
+                };
+                setOverallWinner(cleanWinner);
+                // Clean runner-up name by removing loss record
+                const cleanRunnerUp = lbPlayer
+                  ? {
+                      ...lbPlayer,
+                      name: lbPlayer.name.replace(/ L[0-2]$/, ""),
+                    }
+                  : lbPlayer;
+                setRunnerUp(cleanRunnerUp);
+                setFinalMatch(updatedMatch);
+                setShowSummaryModal(true);
+
+                // Update Firebase with completed tournament status
+                updateTournamentInFirebase(updatedMatches, "completed");
+              } else if (winner.id === lbPlayer?.id) {
+                if (wbPlayer) updatePlayerLosses(wbPlayer.id);
+
+                if (!match.isGrandFinalsReset) {
+                  const resetMatch = createMatch(
+                    `de4-gf-reset-${Date.now()}`,
+                    match.round,
+                    2,
+                    wbPlayer!,
+                    lbPlayer,
+                    "grandFinals",
+                    true,
+                    matchFormat
+                  );
+                  setMatches((prev) => [...prev, resetMatch]);
+                } else {
                   setTournamentOver(true);
                   // Clean winner name by removing loss record
                   const cleanWinner = {
@@ -170,78 +319,46 @@ export const DoubleElim4Screen: React.FC<DoubleElim4ScreenProps> = ({
                   };
                   setOverallWinner(cleanWinner);
                   // Clean runner-up name by removing loss record
-                  const cleanRunnerUp = lbPlayer
+                  const cleanRunnerUp = wbPlayer
                     ? {
-                        ...lbPlayer,
-                        name: lbPlayer.name.replace(/ L[0-2]$/, ""),
+                        ...wbPlayer,
+                        name: wbPlayer.name.replace(/ L[0-2]$/, ""),
                       }
-                    : lbPlayer;
+                    : wbPlayer;
                   setRunnerUp(cleanRunnerUp);
                   setFinalMatch(updatedMatch);
                   setShowSummaryModal(true);
-                  // Alert.alert(
-                  //   "Tournament Complete! 🏆",
-                  //   `${cleanWinner.name} is the Champion!`,
-                  //   [{ text: "OK" }]
-                  // );
-                }, 100);
-              } else if (winner.id === lbPlayer?.id) {
-                if (wbPlayer)
-                  setTimeout(() => updatePlayerLosses(wbPlayer.id), 0);
-                if (!match.isGrandFinalsReset) {
-                  setTimeout(() => {
-                    const resetMatch = createMatch(
-                      `de4-gf-reset-${Date.now()}`,
-                      match.round,
-                      2,
-                      wbPlayer!,
-                      lbPlayer,
-                      "grandFinals",
-                      true,
-                      matchFormat
-                    );
-                    setMatches((prev) => [...prev, resetMatch]);
-                  }, 100);
-                } else {
-                  setTimeout(() => {
-                    setTournamentOver(true);
-                    // Clean winner name by removing loss record
-                    const cleanWinner = {
-                      ...winner,
-                      name: winner.name.replace(/ L[0-2]$/, ""),
-                    };
-                    setOverallWinner(cleanWinner);
-                    // Clean runner-up name by removing loss record
-                    const cleanRunnerUp = wbPlayer
-                      ? {
-                          ...wbPlayer,
-                          name: wbPlayer.name.replace(/ L[0-2]$/, ""),
-                        }
-                      : wbPlayer;
-                    setRunnerUp(cleanRunnerUp);
-                    setFinalMatch(updatedMatch);
-                    setShowSummaryModal(true);
-                    // Alert.alert(
-                    //   "Tournament Complete! 🏆",
-                    //   `${cleanWinner.name} is the Champion!`,
-                    //   [{ text: "OK" }]
-                    // );
-                  }, 100);
+
+                  // Update Firebase with completed tournament status
+                  updateTournamentInFirebase(updatedMatches, "completed");
                 }
               }
             } else {
               // Regular match
               const losingPlayer =
                 match.player1?.id === winner.id ? match.player2 : match.player1;
-              if (losingPlayer)
-                setTimeout(() => updatePlayerLosses(losingPlayer.id), 0);
+              if (losingPlayer) updatePlayerLosses(losingPlayer.id);
             }
           }
           return updatedMatch;
         });
+
+        // Update Firebase with current match state
+        console.log("🔥🔥🔥 ABOUT TO CALL FIREBASE UPDATE 🔥🔥🔥");
+        console.log(
+          "🔥🔥🔥 updateTournamentInFirebase function:",
+          typeof updateTournamentInFirebase
+        );
+        if (updateTournamentInFirebase) {
+          updateTournamentInFirebase(updatedMatches);
+        } else {
+          console.log("❌ updateTournamentInFirebase is undefined!");
+        }
+
+        return updatedMatches;
       });
     },
-    [matchFormat, updatePlayerLosses]
+    [matchFormat, updatePlayerLosses, updateTournamentInFirebase]
   );
 
   // **DE-4 COMPLETE ADVANCE ROUND LOGIC**
@@ -343,10 +460,47 @@ export const DoubleElim4Screen: React.FC<DoubleElim4ScreenProps> = ({
     }
 
     if (nextRoundMatches.length > 0) {
-      setMatches((prev) => [...prev, ...nextRoundMatches]);
+      console.log("🎯 CREATING NEW ROUND:", {
+        currentRound,
+        newMatchesCount: nextRoundMatches.length,
+        newMatches: nextRoundMatches.map((m) => ({
+          id: m.id,
+          round: m.round,
+          bracket: m.bracket,
+          player1: m.player1?.name,
+          player2: m.player2?.name,
+        })),
+      });
+
+      const allMatches = [...matches, ...nextRoundMatches];
+      setMatches(allMatches);
+
+      // Update Firebase with new matches immediately
+      updateTournamentInFirebase(allMatches);
       setCurrentRound(nextRound);
     }
-  }, [matches, currentRound, matchFormat]);
+  }, [matches, currentRound, matchFormat, updateTournamentInFirebase]);
+
+  // Update Firebase when tournament state changes
+  useEffect(() => {
+    if (hasInitialized && matches.length > 0) {
+      const status = tournamentOver ? "completed" : "in_progress";
+      console.log("🔄 Tournament state changed, updating Firebase:", {
+        tournamentId,
+        status,
+        matchesCount: matches.length,
+        completedMatches: matches.filter((m) => m.winner).length,
+        tournamentOver,
+      });
+      updateTournamentInFirebase(matches, status);
+    }
+  }, [
+    tournamentOver,
+    hasInitialized,
+    matches,
+    updateTournamentInFirebase,
+    tournamentId,
+  ]);
 
   // Display functions
   const matchesForDisplay = useCallback((): Match[] => {
@@ -373,7 +527,8 @@ export const DoubleElim4Screen: React.FC<DoubleElim4ScreenProps> = ({
   }, [tournamentOver, overallWinner, matches, currentRound]);
 
   const isMatchLocked = useCallback((match: Match): boolean => {
-    return match.winner !== null || !match.player1 || !match.player2;
+    const isLocked = match.winner !== null || !match.player1 || !match.player2;
+    return isLocked;
   }, []);
 
   // Update canAdvanceRound to only check for matches that actually exist in the current round

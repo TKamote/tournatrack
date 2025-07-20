@@ -9,6 +9,7 @@ import {
   Alert,
 } from "react-native";
 import { Player, Match, MatchFormat, Tournament } from "../../types";
+import { TournamentStatus } from "../../types/tournament.types";
 import { COLORS } from "../../constants/colors";
 import MatchListItem from "../../components/MatchListItem";
 import {
@@ -57,9 +58,8 @@ export const SingleElim4Screen: React.FC<SingleElim4ScreenProps> = ({
     async (tournamentData: Tournament) => {
       try {
         await TournamentService.saveTournament(tournamentData);
-        console.log("Tournament saved to Firebase:", tournamentData.id);
       } catch (error) {
-        console.error("Error saving tournament to Firebase:", error);
+        console.error("❌ Save error:", error);
       }
     },
     []
@@ -150,11 +150,43 @@ export const SingleElim4Screen: React.FC<SingleElim4ScreenProps> = ({
     });
   }, []);
 
+  // Update tournament in Firebase
+  const updateTournamentInFirebase = useCallback(
+    async (updatedMatches: Match[], tournamentStatus?: TournamentStatus) => {
+      if (!tournamentId) return;
+
+      try {
+        const updatedTournament: Tournament = {
+          id: tournamentId,
+          name: "Single Elimination Tournament",
+          type: "Single Elimination",
+          manager: "David",
+          managerId: "manager-1",
+          players,
+          matches: updatedMatches,
+          format: matchFormat,
+          status: tournamentStatus || "in_progress",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          isPublic: true,
+          maxPlayers: 4,
+          currentRound: Math.max(...updatedMatches.map((m) => m.round)),
+          totalRounds: 2,
+        };
+
+        await TournamentService.saveTournament(updatedTournament);
+      } catch (error) {
+        console.error("❌ Update error:", error);
+      }
+    },
+    [tournamentId, players, matchFormat]
+  );
+
   // Handle game result
   const handleIncrementScore = useCallback(
     (matchId: string, winner: Player, score1: number, score2: number) => {
       setMatches((prevMatches) => {
-        return prevMatches.map((match) => {
+        const updatedMatches = prevMatches.map((match) => {
           if (match.id !== matchId || match.winner) return match;
 
           const newGame = {
@@ -179,36 +211,31 @@ export const SingleElim4Screen: React.FC<SingleElim4ScreenProps> = ({
             const losingPlayer =
               match.player1?.id === winner.id ? match.player2 : match.player1;
             if (losingPlayer) {
-              setTimeout(() => updatePlayerElimination(losingPlayer.id), 0);
+              updatePlayerElimination(losingPlayer.id);
             }
 
-            // Check if this is the final match (round 2, match 1)
-            if (match.round === 2 && match.matchNumber === 1) {
-              setTimeout(() => {
-                setTournamentOver(true);
-                setOverallWinner(winner);
-                setFinalMatch(updatedMatch);
-                const losingPlayer =
-                  updatedMatch.player1?.id === winner.id
-                    ? updatedMatch.player2
-                    : updatedMatch.player1;
-                setRunnerUp(losingPlayer || null);
-                setShowSummaryModal(true);
-                // Alert.alert(
-                //   "Tournament Complete! 🏆",
-                //   `${winner.name} is the Champion!`,
-                //   [{ text: "OK" }]
-                // );
-              }, 100);
-            }
+            // Tournament completion will be handled by executeAdvanceRound
+            // Don't set tournament over here to avoid race conditions
           }
 
           return updatedMatch;
         });
+
+        // Update Firebase with current match state (let useEffect handle status)
+        updateTournamentInFirebase(updatedMatches);
+
+        return updatedMatches;
       });
     },
-    [matchFormat, updatePlayerElimination]
+    [matchFormat, updatePlayerElimination, updateTournamentInFirebase]
   );
+
+  // Update Firebase when tournament completes
+  useEffect(() => {
+    if (hasInitialized && tournamentOver && matches.length > 0) {
+      updateTournamentInFirebase(matches, "completed");
+    }
+  }, [tournamentOver, hasInitialized, matches, updateTournamentInFirebase]);
 
   // Handle set winner
   const handleSetWinner = useCallback((matchId: string, winner: Player) => {
@@ -264,20 +291,23 @@ export const SingleElim4Screen: React.FC<SingleElim4ScreenProps> = ({
         setTournamentOver(true);
         setOverallWinner(winners[0]);
         setShowSummaryModal(true);
-        Alert.alert(
-          "Tournament Complete! 🏆",
-          `${winners[0].name} is the Champion!`,
-          [{ text: "OK" }]
-        );
+
         return;
       }
     }
 
     if (newMatches.length > 0) {
-      setMatches((prev) => [...prev, ...newMatches]);
+      setMatches((prev) => {
+        const allMatches = [...prev, ...newMatches];
+
+        // Update Firebase with new matches
+        updateTournamentInFirebase(allMatches);
+
+        return allMatches;
+      });
       setCurrentRound((prev) => prev + 1);
     }
-  }, [currentRound, matches, matchFormat]);
+  }, [currentRound, matches, matchFormat, updateTournamentInFirebase]);
 
   // Display functions
   const matchesForDisplay = useCallback((): Match[] => {
@@ -295,13 +325,17 @@ export const SingleElim4Screen: React.FC<SingleElim4ScreenProps> = ({
   }, [tournamentOver, overallWinner, currentRound]);
 
   const isMatchLocked = useCallback((match: Match): boolean => {
-    return match.winner !== null || !match.player1 || !match.player2;
+    const isLocked = match.winner !== null || !match.player1 || !match.player2;
+    return isLocked;
   }, []);
 
   const canAdvanceRound = useCallback(() => {
+    // Don't allow advancement if tournament is already complete
+    if (tournamentOver) return false;
+
     const currentMatches = matches.filter((m) => m.round === currentRound);
     return currentMatches.every((m) => m.winner !== null);
-  }, [matches, currentRound]);
+  }, [matches, currentRound, tournamentOver]);
 
   return (
     <SafeAreaView style={styles.safeArea}>

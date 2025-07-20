@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,11 +6,18 @@ import {
   ScrollView,
   Modal,
   TouchableOpacity,
+  RefreshControl,
 } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../types/navigation.types";
 import TournamentBracketView from "../../components/tournament/TournamentBracketView";
 import { Match } from "../../types";
+import { TournamentService } from "../../utils/tournamentService";
+import {
+  calculateTournamentProgress,
+  getLiveMatchInfo,
+  getTotalRequiredMatches,
+} from "../../utils/tournament/progressUtils";
 
 type TournamentDetailsScreenProps = NativeStackScreenProps<
   RootStackParamList,
@@ -21,24 +28,67 @@ const TournamentDetailsScreen: React.FC<TournamentDetailsScreenProps> = ({
   route,
 }) => {
   const { tournament } = route.params;
-  const [showCompletionModal, setShowCompletionModal] = useState(false);
 
-  // Check if tournament is completed (has grand finals with winner)
+  const [refreshing, setRefreshing] = useState(false);
+  const [currentTournament, setCurrentTournament] = useState(tournament);
+
+  // Initial fetch of latest tournament data
   useEffect(() => {
-    const grandFinalsMatches = tournament.matches.filter(
-      (m: Match) => m.bracket === "grandFinals"
-    );
-    const hasCompletedGrandFinals = grandFinalsMatches.some(
-      (m: Match) => m.winner
-    );
+    const fetchLatestTournament = async () => {
+      try {
+        const latestTournament = await TournamentService.getTournament(
+          tournament.id
+        );
 
-    if (hasCompletedGrandFinals) {
-      setShowCompletionModal(true);
+        if (latestTournament) {
+          setCurrentTournament(latestTournament);
+        }
+      } catch (error) {
+        console.error("Error in initial tournament fetch:", error);
+      }
+    };
+
+    fetchLatestTournament();
+  }, [tournament.id]);
+
+  // Real-time updates every 500ms for better sync
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const updatedTournament = await TournamentService.getTournament(
+          tournament.id
+        );
+
+        if (updatedTournament) {
+          setCurrentTournament(updatedTournament);
+        }
+      } catch (error) {
+        console.error("Error updating tournament:", error);
+      }
+    }, 500); // Update every 500ms for immediate sync
+
+    return () => clearInterval(interval);
+  }, [tournament.id]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const updatedTournament = await TournamentService.getTournament(
+        tournament.id
+      );
+
+      if (updatedTournament) {
+        setCurrentTournament(updatedTournament);
+      }
+    } catch (error) {
+      console.error("Error refreshing tournament:", error);
+    } finally {
+      setRefreshing(false);
     }
-  }, [tournament]);
+  }, [tournament.id]);
 
   const getTournamentResults = () => {
-    const grandFinalsMatches = tournament.matches.filter(
+    const grandFinalsMatches = currentTournament.matches.filter(
       (m: Match) => m.bracket === "grandFinals"
     );
     const lastMatch = grandFinalsMatches[grandFinalsMatches.length - 1];
@@ -78,50 +128,52 @@ const TournamentDetailsScreen: React.FC<TournamentDetailsScreenProps> = ({
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <Text style={styles.title}>
-          {Array.isArray(tournament.players)
-            ? tournament.players.length
-            : tournament.players}{" "}
-          Players - Managed by {tournament.manager}
-        </Text>
-        <TournamentBracketView tournament={tournament} readOnly={true} />
-      </ScrollView>
-
-      {/* Tournament Completion Modal */}
-      <Modal
-        visible={showCompletionModal}
-        transparent={true}
-        animationType="fade"
+      <ScrollView
+        contentContainerStyle={styles.scrollContainer}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Tournament Completed!</Text>
-            {results && (
-              <>
-                <View style={styles.resultRow}>
-                  <Text style={styles.resultLabel}>Champion:</Text>
-                  <Text style={styles.resultValue}>{results.champion}</Text>
-                </View>
-                <View style={styles.resultRow}>
-                  <Text style={styles.resultLabel}>Runner Up:</Text>
-                  <Text style={styles.resultValue}>{results.runnerUp}</Text>
-                </View>
-                <View style={styles.resultRow}>
-                  <Text style={styles.resultLabel}>Final Score:</Text>
-                  <Text style={styles.resultValue}>{results.finalScore}</Text>
-                </View>
-              </>
-            )}
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => setShowCompletionModal(false)}
-            >
-              <Text style={styles.closeButtonText}>Close</Text>
-            </TouchableOpacity>
+        <View style={styles.header}>
+          <Text style={styles.title}>
+            {Array.isArray(currentTournament.players)
+              ? currentTournament.players.length
+              : currentTournament.players}{" "}
+            Players - Managed by {currentTournament.manager}
+          </Text>
+          <Text style={styles.lastUpdate}>
+            Last updated: {currentTournament.updatedAt.toLocaleTimeString()}
+          </Text>
+
+          {/* Debug: Tournament Type */}
+          <Text style={styles.debugText}>
+            Debug: Tournament Type = "{currentTournament.type}"
+          </Text>
+
+          {/* Live Tournament Stats */}
+          <View style={styles.statsContainer}>
+            <View style={styles.statItem}>
+              <Text style={styles.statLabel}>Total Matches</Text>
+              <Text style={styles.statValue}>
+                {getTotalRequiredMatches(currentTournament.type)}
+              </Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text style={styles.statLabel}>Completed</Text>
+              <Text style={styles.statValue}>
+                {currentTournament.matches.filter((m) => m.winner).length}
+              </Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text style={styles.statLabel}>Progress</Text>
+              <Text style={styles.statValue}>
+                {calculateTournamentProgress(currentTournament)}%
+              </Text>
+            </View>
           </View>
         </View>
-      </Modal>
+        <TournamentBracketView tournament={currentTournament} readOnly={true} />
+      </ScrollView>
     </View>
   );
 };
@@ -136,12 +188,44 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
     paddingHorizontal: 16,
   },
+  header: {
+    marginBottom: 16,
+  },
   title: {
     fontSize: 20,
     color: "#fff",
     fontWeight: "bold",
-    marginBottom: 12,
+    marginBottom: 8,
     textAlign: "center",
+  },
+  lastUpdate: {
+    fontSize: 12,
+    color: "#7f8c8d",
+    textAlign: "center",
+    fontStyle: "italic",
+  },
+  statsContainer: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    backgroundColor: "rgba(52, 152, 219, 0.1)",
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: "rgba(52, 152, 219, 0.3)",
+  },
+  statItem: {
+    alignItems: "center",
+  },
+  statLabel: {
+    color: "#bdc3c7",
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  statValue: {
+    color: "#4fc3f7",
+    fontSize: 18,
+    fontWeight: "bold",
   },
   subtitle: { fontSize: 14, color: "#bdc3c7", marginBottom: 8 },
   formatText: { fontSize: 14, color: "#bdc3c7", marginBottom: 16 },
@@ -191,6 +275,12 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 14,
     fontWeight: "bold",
+  },
+  debugText: {
+    color: "#ff6b6b",
+    fontSize: 12,
+    textAlign: "center",
+    marginBottom: 8,
   },
 });
 

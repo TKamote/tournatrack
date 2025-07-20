@@ -25,18 +25,21 @@ export class TournamentService {
         createdAt: tournament.createdAt.toISOString(),
         updatedAt: new Date().toISOString(),
       };
-      console.log(
-        "Saving tournament to Firebase:",
-        tournament.id,
-        tournamentData
-      );
+
       await setDoc(
         doc(db, TOURNAMENTS_COLLECTION, tournament.id),
         tournamentData
       );
-      console.log("Tournament saved successfully:", tournament.id);
+
+      // Only log on initial save, not updates
+      if (
+        tournament.status === "in_progress" &&
+        tournament.matches.length <= 4
+      ) {
+        console.log("✅ Created:", tournament.id);
+      }
     } catch (error) {
-      console.error("Error saving tournament:", error);
+      console.error("❌ Save error:", error);
       throw error;
     }
   }
@@ -109,6 +112,7 @@ export class TournamentService {
 
         querySnapshot.forEach((doc) => {
           const data = doc.data();
+
           tournaments.push({
             ...data,
             id: doc.id,
@@ -119,28 +123,15 @@ export class TournamentService {
 
         return tournaments;
       } catch (indexError) {
-        console.log("Index not available, using simple query");
         // Fallback: get all tournaments and filter/sort in memory
         const q = query(collection(db, TOURNAMENTS_COLLECTION));
         const querySnapshot = await getDocs(q);
         const tournaments: Tournament[] = [];
 
-        console.log(
-          "Total documents in tournaments collection:",
-          querySnapshot.size
-        );
+
         querySnapshot.forEach((doc) => {
           const data = doc.data();
-          console.log(
-            "Found tournament in Firebase:",
-            doc.id,
-            "isPublic:",
-            data.isPublic,
-            "type:",
-            data.type,
-            "manager:",
-            data.manager
-          );
+
           if (data.isPublic === true) {
             tournaments.push({
               ...data,

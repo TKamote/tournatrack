@@ -39,7 +39,10 @@ const MatchListItem: React.FC<MatchListItemProps> = ({
     : null;
 
   const handleScore = (player: Player, isPlayer1: boolean) => {
-    if (isMatchLocked(item) || item.winner) return;
+    if (isMatchLocked(item) || item.winner) {
+      return;
+    }
+
     onGameResult(item.id, player, isPlayer1 ? 1 : 0, isPlayer1 ? 0 : 1);
   };
 

@@ -46,7 +46,6 @@ const DoubleElim16Screen: React.FC<DoubleElim16ScreenProps> = ({
     async (tournamentData: Tournament) => {
       try {
         await TournamentService.saveTournament(tournamentData);
-        console.log("Tournament saved to Firebase:", tournamentData.id);
       } catch (error) {
         console.error("Error saving tournament to Firebase:", error);
       }
@@ -130,18 +129,79 @@ const DoubleElim16Screen: React.FC<DoubleElim16ScreenProps> = ({
     });
   }, []);
 
+  // Update tournament in Firebase
+  const updateTournamentInFirebase = useCallback(
+    async (updatedMatches: Match[]) => {
+      if (!tournamentId) return;
+
+      // Check for different types of changes
+      const completedMatches = updatedMatches.filter((match) => match.winner);
+      const newRounds = updatedMatches.filter((match) => match.round > 1);
+      const totalMatches = updatedMatches.length;
+
+      // Always update if we have completed matches OR new rounds OR any game updates
+      const hasChanges =
+        completedMatches.length > 0 ||
+        newRounds.length > 0 ||
+        updatedMatches.some((match) => match.games && match.games.length > 0);
+
+      if (!hasChanges) {
+        return;
+      }
+
+      try {
+        const updatedTournament: Tournament = {
+          id: tournamentId,
+          name: "Double Elimination Tournament",
+          type: "Double Elimination",
+          manager: "David",
+          managerId: "manager-1",
+          players,
+          matches: updatedMatches,
+          format: matchFormat,
+          status: "in_progress",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          isPublic: true,
+          maxPlayers: 16,
+          currentRound: Math.max(...updatedMatches.map((m) => m.round)),
+          totalRounds: 5,
+        };
+
+        try {
+          await TournamentService.saveTournament(updatedTournament);
+        } catch (updateError: any) {
+          console.error(
+            "❌ Error updating tournament in Firebase:",
+            updateError
+          );
+          console.error("❌ Update error details:", {
+            code: updateError?.code,
+            message: updateError?.message,
+            tournamentId: tournamentId,
+          });
+        }
+      } catch (error) {
+        console.error("❌ Error in updateTournamentInFirebase:", error);
+      }
+    },
+    [tournamentId, players, matchFormat]
+  );
+
   // Handle game result
   const handleIncrementScore = useCallback(
     (matchId: string, winner: Player, score1: number, score2: number) => {
       setMatches((prevMatches) => {
-        return prevMatches.map((match) => {
+        const updatedMatches = prevMatches.map((match) => {
           if (match.id !== matchId || match.winner) return match;
+
           const newGame = {
             id: `game-${match.games.length + 1}`,
             winner,
             score1,
             score2,
           };
+
           const updatedGames = [...match.games, newGame];
           const playerScore = updatedGames.filter(
             (g) => g.winner?.id === winner.id
@@ -149,6 +209,7 @@ const DoubleElim16Screen: React.FC<DoubleElim16ScreenProps> = ({
           let updatedMatch = { ...match, games: updatedGames };
           if (playerScore >= matchFormat.gamesNeededToWin) {
             updatedMatch.winner = winner;
+
             // Grand Finals logic
             if (match.bracket === "grandFinals") {
               const wbPlayer =
@@ -236,9 +297,14 @@ const DoubleElim16Screen: React.FC<DoubleElim16ScreenProps> = ({
           }
           return updatedMatch;
         });
+
+        // Update Firebase with current match state
+        updateTournamentInFirebase(updatedMatches);
+
+        return updatedMatches;
       });
     },
-    [matchFormat, updatePlayerLosses]
+    [matchFormat, updatePlayerLosses, updateTournamentInFirebase]
   );
 
   // Advance round logic
@@ -435,10 +501,17 @@ const DoubleElim16Screen: React.FC<DoubleElim16ScreenProps> = ({
     }
 
     if (nextRoundMatches.length > 0) {
-      setMatches((prev) => [...prev, ...nextRoundMatches]);
+      setMatches((prev) => {
+        const allMatches = [...prev, ...nextRoundMatches];
+
+        // Update Firebase with new matches
+        updateTournamentInFirebase(allMatches);
+
+        return allMatches;
+      });
       setCurrentRound(nextRound);
     }
-  }, [matches, currentRound, matchFormat]);
+  }, [matches, currentRound, matchFormat, updateTournamentInFirebase]);
 
   // Advance round logic (simplified for placeholder)
   const canAdvanceRound = useCallback((): boolean => {
@@ -451,6 +524,11 @@ const DoubleElim16Screen: React.FC<DoubleElim16ScreenProps> = ({
       currentRoundMatches.every((match) => match.winner)
     );
   }, [matches, currentRound]);
+
+  const isMatchLocked = useCallback((match: Match): boolean => {
+    const isLocked = match.winner !== null || !match.player1 || !match.player2;
+    return isLocked;
+  }, []);
 
   const handleAdvanceRound = useCallback(() => {
     if (canAdvanceRound()) {
@@ -493,9 +571,7 @@ const DoubleElim16Screen: React.FC<DoubleElim16ScreenProps> = ({
                   item={item}
                   players={players}
                   tournamentType="Double Elimination (16)"
-                  isMatchLocked={(match) =>
-                    match.winner !== null || !match.player1 || !match.player2
-                  }
+                  isMatchLocked={isMatchLocked}
                   onGameResult={handleIncrementScore}
                 />
               </>

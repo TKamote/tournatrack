@@ -116,7 +116,7 @@ const TournamentsDashboard: React.FC<any> = ({ navigation }) => {
     }
   }, [tournaments, fadeAnim]);
 
-  // Real-time updates every 10 seconds
+  // Real-time updates every 1 second to match DetailsScreen sync
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
@@ -127,7 +127,7 @@ const TournamentsDashboard: React.FC<any> = ({ navigation }) => {
       } catch (error) {
         console.error("Error updating tournaments:", error);
       }
-    }, 10000); // Update every 10 seconds
+    }, 1000); // Update every 1 second to match DetailsScreen sync
 
     return () => clearInterval(interval);
   }, []);
@@ -147,10 +147,7 @@ const TournamentsDashboard: React.FC<any> = ({ navigation }) => {
         // Load public tournaments from Firebase
         const publicTournaments =
           await TournamentService.getPublicTournaments();
-        console.log(
-          "Loaded tournaments from Firebase:",
-          publicTournaments.length
-        );
+
         setTournaments(publicTournaments);
         setLastUpdate(new Date());
       } catch (error) {
@@ -172,7 +169,7 @@ const TournamentsDashboard: React.FC<any> = ({ navigation }) => {
       setTournaments(publicTournaments);
       setLastUpdate(new Date());
     } catch (error) {
-      console.error("Error refreshing tournaments:", error);
+      console.error("❌ Error refreshing tournaments:", error);
     } finally {
       setRefreshing(false);
     }
@@ -237,16 +234,27 @@ const TournamentsDashboard: React.FC<any> = ({ navigation }) => {
                 manager={tournament.manager}
                 isLiked={likedTournaments.includes(tournament.id)}
                 onLike={toggleLike}
-                status={
-                  tournament.status === "in_progress"
-                    ? "ongoing"
-                    : tournament.status === "completed"
-                    ? "completed"
-                    : "upcoming"
-                }
+                status={(() => {
+                  // Check if all matches are completed
+                  const allMatchesCompleted = tournament.matches.every(
+                    (match) => match.winner
+                  );
+                  const hasMatches = tournament.matches.length > 0;
+
+                  if (allMatchesCompleted && hasMatches) {
+                    return "completed";
+                  } else if (tournament.status === "in_progress") {
+                    return "ongoing";
+                  } else if (tournament.status === "completed") {
+                    return "completed";
+                  } else {
+                    return "upcoming";
+                  }
+                })()}
                 managerAvatar={tournament.manager.charAt(0)}
                 navigation={navigation}
                 matches={tournament.matches}
+                tournament={tournament}
                 onPress={() => {
                   navigation.navigate("TournamentDetails", {
                     tournament: tournament,

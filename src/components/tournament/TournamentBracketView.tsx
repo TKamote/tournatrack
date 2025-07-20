@@ -52,12 +52,20 @@ const TournamentBracketView: React.FC<TournamentBracketViewProps> = ({
   };
 
   const getMatchScore = (match: Match) => {
-    if (match.games.length === 0) return { score1: 0, score2: 0 };
+    // Always calculate scores from games, even if match is not completed
+    if (!match.games || match.games.length === 0) {
+      return { score1: 0, score2: 0 };
+    }
 
-    const totalScore1 = match.games.reduce((sum, game) => sum + game.score1, 0);
-    const totalScore2 = match.games.reduce((sum, game) => sum + game.score2, 0);
+    // Count games won by each player (live scores)
+    const player1Games = match.games.filter(
+      (g) => g.winner?.id === match.player1?.id
+    ).length;
+    const player2Games = match.games.filter(
+      (g) => g.winner?.id === match.player2?.id
+    ).length;
 
-    return { score1: totalScore1, score2: totalScore2 };
+    return { score1: player1Games, score2: player2Games };
   };
 
   return (
@@ -99,8 +107,14 @@ const TournamentBracketView: React.FC<TournamentBracketViewProps> = ({
                         >
                           {getPlayerDisplayName(match.player1, 0)}
                         </Text>
-                        <Text style={styles.score}>
-                          {match.winner ? score1 : "-"}
+                        <Text
+                          style={[
+                            styles.score,
+                            match.winner?.name === match.player1?.name &&
+                              styles.winningScore,
+                          ]}
+                        >
+                          {score1}
                         </Text>
                       </View>
                       <View style={styles.playerRow}>
@@ -113,8 +127,14 @@ const TournamentBracketView: React.FC<TournamentBracketViewProps> = ({
                         >
                           {getPlayerDisplayName(match.player2, 1)}
                         </Text>
-                        <Text style={styles.score}>
-                          {match.winner ? score2 : "-"}
+                        <Text
+                          style={[
+                            styles.score,
+                            match.winner?.name === match.player2?.name &&
+                              styles.winningScore,
+                          ]}
+                        >
+                          {score2}
                         </Text>
                       </View>
                     </View>
@@ -214,6 +234,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "bold",
     marginLeft: 8,
+  },
+  winningScore: {
+    color: "#2ecc71",
+    fontWeight: "bold",
   },
   winnerText: {
     color: "#bdc3c7",
