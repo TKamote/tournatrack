@@ -295,10 +295,16 @@ export const DoubleElim4Screen: React.FC<DoubleElim4ScreenProps> = ({
 
                 // Update Firebase with completed tournament status
                 updateTournamentInFirebase(updatedMatches, "completed");
-              } else if (winner.id === lbPlayer?.id) {
-                if (wbPlayer) updatePlayerLosses(wbPlayer.id);
+              } else if (
+                winner.id === lbPlayer?.id &&
+                !match.isGrandFinalsReset
+              ) {
+                // L1 player wins first GF → WB player gets 1st loss + Bracket Reset
+                if (wbPlayer) {
+                  setTimeout(() => updatePlayerLosses(wbPlayer.id), 0);
+                }
 
-                if (!match.isGrandFinalsReset) {
+                setTimeout(() => {
                   const resetMatch = createMatch(
                     `de4-gf-reset-${Date.now()}`,
                     match.round,
@@ -309,29 +315,26 @@ export const DoubleElim4Screen: React.FC<DoubleElim4ScreenProps> = ({
                     true,
                     matchFormat
                   );
+
                   setMatches((prev) => [...prev, resetMatch]);
-                } else {
+                }, 100);
+              } else if (match.isGrandFinalsReset) {
+                // Reset match completed → Tournament over
+                const runnerUp =
+                  winner.id === wbPlayer?.id ? lbPlayer : wbPlayer;
+                setTimeout(() => {
                   setTournamentOver(true);
-                  // Clean winner name by removing loss record
-                  const cleanWinner = {
-                    ...winner,
-                    name: winner.name.replace(/ L[0-2]$/, ""),
-                  };
-                  setOverallWinner(cleanWinner);
-                  // Clean runner-up name by removing loss record
-                  const cleanRunnerUp = wbPlayer
-                    ? {
-                        ...wbPlayer,
-                        name: wbPlayer.name.replace(/ L[0-2]$/, ""),
-                      }
-                    : wbPlayer;
-                  setRunnerUp(cleanRunnerUp);
-                  setFinalMatch(updatedMatch);
+                  setOverallWinner(winner);
+                  setRunnerUp(runnerUp);
+                  setFinalMatch({ ...match, winner });
                   setShowSummaryModal(true);
 
-                  // Update Firebase with completed tournament status
+                  // Update Firebase with completed status
+                  const updatedMatches = matches.map((m) =>
+                    m.id === matchId ? { ...m, winner } : m
+                  );
                   updateTournamentInFirebase(updatedMatches, "completed");
-                }
+                }, 100);
               }
             } else {
               // Regular match
@@ -438,19 +441,22 @@ export const DoubleElim4Screen: React.FC<DoubleElim4ScreenProps> = ({
         );
       }
     } else if (currentRound === 3) {
-      // Round 3 → Grand Finals: WB final winner + LB final winner
-      // Find the WB winner from round 2 (the undefeated player)
-      const wbWinner = players.find((p) => p.losses === 0);
-      const lbWinners = lbMatches.map((m) => m.winner!);
+      // Round 4: Grand Finals (WB Champion vs LB Champion)
+      const wbChampion =
+        wbWinners.length === 1
+          ? wbWinners[0]
+          : matches.find(
+              (m) => m.bracket === "winners" && m.round === 2 && m.winner
+            )?.winner;
 
-      if (wbWinner && lbWinners.length === 1) {
+      if (wbChampion && lbWinners.length === 1) {
         nextRoundMatches.push(
           createMatch(
             `de4-gf-1`,
             nextRound,
             1,
-            wbWinner,
-            lbWinners[0],
+            wbChampion, // Undefeated WB champion
+            lbWinners[0], // LB champion
             "grandFinals",
             false,
             matchFormat
@@ -531,12 +537,20 @@ export const DoubleElim4Screen: React.FC<DoubleElim4ScreenProps> = ({
     return isLocked;
   }, []);
 
-  // Update canAdvanceRound to only check for matches that actually exist in the current round
+  // Update canAdvanceRound to check all matches in current round including Grand Finals
   const canAdvanceRound = useCallback((): boolean => {
     const currentRoundMatches = matches.filter(
-      (match) =>
-        match.round === currentRound && !match.bracket.includes("grandFinals")
+      (match) => match.round === currentRound
     );
+
+    // If we're in Grand Finals, check if the Grand Finals match is completed
+    if (currentRoundMatches.some((match) => match.bracket === "grandFinals")) {
+      const grandFinalsMatch = currentRoundMatches.find(
+        (match) => match.bracket === "grandFinals"
+      );
+      return grandFinalsMatch ? !!grandFinalsMatch.winner : false;
+    }
+
     return (
       currentRoundMatches.length > 0 &&
       currentRoundMatches.every((match) => match.winner)

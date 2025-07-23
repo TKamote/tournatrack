@@ -127,6 +127,7 @@ const TournamentCard: React.FC<TournamentCardProps> = ({
               liveMatch.isMatchPoint && styles.matchPointContainer,
               liveMatch.isCloseMatch && styles.closeMatchContainer,
               liveMatch.isCompleted && styles.completedMatchContainer,
+              liveMatch.isTransitionMatch && styles.transitionMatchContainer,
             ]}
           >
             <View style={styles.matchInfo}>
@@ -134,6 +135,9 @@ const TournamentCard: React.FC<TournamentCardProps> = ({
               <Text style={styles.matchFormatText}>
                 {liveMatch.matchFormat}
               </Text>
+              {liveMatch.isTransitionMatch && (
+                <Text style={styles.transitionText}>Last Match</Text>
+              )}
               <View style={styles.scoreContainer}>
                 <Text style={styles.playerName}>{liveMatch.player1}</Text>
                 <Text
@@ -414,6 +418,17 @@ const styles = StyleSheet.create({
   completedMatchContainer: {
     backgroundColor: "rgba(46, 204, 113, 0.1)",
     borderColor: "rgba(46, 204, 113, 0.3)",
+  },
+  transitionMatchContainer: {
+    backgroundColor: "rgba(155, 89, 182, 0.1)",
+    borderColor: "rgba(155, 89, 182, 0.3)",
+  },
+  transitionText: {
+    color: "#9b59b6",
+    fontSize: 10,
+    fontWeight: "bold",
+    marginBottom: 4,
+    textTransform: "uppercase",
   },
   matchPointBadge: {
     backgroundColor: "#e74c3c",

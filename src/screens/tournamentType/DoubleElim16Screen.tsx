@@ -9,6 +9,7 @@ import {
   Alert,
 } from "react-native";
 import { Player, Match, Tournament } from "../../types";
+import { TournamentStatus } from "../../types/tournament.types";
 import { COLORS } from "../../constants/colors";
 import { DoubleElim16ScreenProps } from "../../types/navigation.types";
 import {
@@ -131,7 +132,7 @@ const DoubleElim16Screen: React.FC<DoubleElim16ScreenProps> = ({
 
   // Update tournament in Firebase
   const updateTournamentInFirebase = useCallback(
-    async (updatedMatches: Match[]) => {
+    async (updatedMatches: Match[], updatedStatus?: string) => {
       if (!tournamentId) return;
 
       // Check for different types of changes
@@ -159,7 +160,7 @@ const DoubleElim16Screen: React.FC<DoubleElim16ScreenProps> = ({
           players,
           matches: updatedMatches,
           format: matchFormat,
-          status: "in_progress",
+          status: (updatedStatus as TournamentStatus) || "in_progress",
           createdAt: new Date(),
           updatedAt: new Date(),
           isPublic: true,
@@ -237,6 +238,13 @@ const DoubleElim16Screen: React.FC<DoubleElim16ScreenProps> = ({
                   setRunnerUp(cleanRunnerUp);
                   setFinalMatch(updatedMatch);
                   setShowSummaryModal(true);
+
+                  // Update Firebase with completed status
+                  const finalUpdatedMatches = updatedMatches.map((m) =>
+                    m.id === matchId ? updatedMatch : m
+                  );
+                  updateTournamentInFirebase(finalUpdatedMatches, "completed");
+
                   // Alert.alert(
                   //   "Tournament Complete! 🏆",
                   //   `${cleanWinner.name} is the Champion!`,
@@ -279,6 +287,16 @@ const DoubleElim16Screen: React.FC<DoubleElim16ScreenProps> = ({
                     setRunnerUp(cleanRunnerUp);
                     setFinalMatch(updatedMatch);
                     setShowSummaryModal(true);
+
+                    // Update Firebase with completed status
+                    const finalUpdatedMatches = updatedMatches.map((m) =>
+                      m.id === matchId ? updatedMatch : m
+                    );
+                    updateTournamentInFirebase(
+                      finalUpdatedMatches,
+                      "completed"
+                    );
+
                     // Alert.alert(
                     //   "Tournament Complete! 🏆",
                     //   `${cleanWinner.name} is the Champion!`,

@@ -5,105 +5,161 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
   Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "../constants/colors";
 import { useNavigation } from "@react-navigation/native";
+import TournamentCard from "../components/TournamentCard";
+import { ManagerProvider, useManager } from "../context/ManagerContext";
 
 interface ManagerProfileScreenProps {
-  route: any;
+  route: { params: { managerId: string } };
 }
 
-const ManagerProfileScreen: React.FC<ManagerProfileScreenProps> = ({
-  route,
+const ManagerProfileContent: React.FC<{ managerId: string }> = ({
+  managerId,
 }) => {
   const navigation = useNavigation();
-  // Mock data - will be replaced with real data later
-  const manager = {
-    name: "David",
-    country: "Phil / Naga City",
-    ageBracket: "40+",
-    avatar: "D", // For now just initial, will be photo later
-    tournamentsHosted: 12,
-    starRating: 4.5,
-  };
+  const { manager, tournaments, loading } = useManager();
 
   const renderStars = (rating: number) => {
     const stars = [];
     const fullStars = Math.floor(rating);
     const hasHalfStar = rating % 1 !== 0;
-
     for (let i = 0; i < 5; i++) {
       if (i < fullStars) {
-        stars.push(<Ionicons key={i} name="star" size={20} color="#FFD700" />);
+        stars.push(<Ionicons key={i} name="star" size={16} color="#FFD700" />);
       } else if (i === fullStars && hasHalfStar) {
         stars.push(
-          <Ionicons key={i} name="star-half" size={20} color="#FFD700" />
+          <Ionicons key={i} name="star-half" size={16} color="#FFD700" />
         );
       } else {
         stars.push(
-          <Ionicons key={i} name="star-outline" size={20} color="#FFD700" />
+          <Ionicons key={i} name="star-outline" size={16} color="#FFD700" />
         );
       }
     }
     return stars;
   };
 
+  const renderAvatar = () => {
+    if (
+      manager?.avatar &&
+      typeof manager.avatar === "string" &&
+      manager.avatar.startsWith("http")
+    ) {
+      return (
+        <Image
+          source={{ uri: manager.avatar }}
+          style={styles.avatarImage}
+          resizeMode="cover"
+        />
+      );
+    }
+    // fallback to initial
+    return (
+      <Text style={styles.avatarText}>
+        {manager?.avatar ? String(manager.avatar).charAt(0) : "M"}
+      </Text>
+    );
+  };
+
   return (
     <View style={styles.container}>
       {/* Back button outside ScrollView */}
       <TouchableOpacity
-        style={{
-          position: "absolute",
-          top: 55,
-          left: 20,
-          backgroundColor: "rgba(255, 255, 255, 0.1)",
-          padding: 12,
-          borderRadius: 8,
-          zIndex: 9999,
-        }}
-        onPress={() => {
-          console.log("Back pressed!");
-          navigation.goBack();
-        }}
+        style={styles.backButton}
+        onPress={() => navigation.goBack()}
         activeOpacity={0.7}
       >
         <Text style={{ color: "white", fontSize: 16 }}>← Back</Text>
       </TouchableOpacity>
-
       <ScrollView contentContainerStyle={styles.scrollContainer}>
-        {/* Profile Card */}
+        {/* Compact Profile Card */}
         <View style={styles.profileCard}>
-          {/* Avatar */}
-          <View style={styles.avatarContainer}>
-            <Text style={styles.avatarText}>{manager.avatar}</Text>
-          </View>
-
-          {/* Basic Info */}
-          <Text style={styles.name}>{manager.name}</Text>
-          <Text style={styles.country}>{manager.country}</Text>
-          <Text style={styles.ageBracket}>{manager.ageBracket}</Text>
-
-          {/* Stats */}
-          <View style={styles.statsContainer}>
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>{manager.tournamentsHosted}</Text>
-              <Text style={styles.statLabel}>Tournaments Hosted</Text>
-            </View>
-          </View>
-
-          {/* Rating */}
-          <View style={styles.ratingContainer}>
-            <Text style={styles.ratingLabel}>Rating</Text>
-            <View style={styles.starsContainer}>
-              {renderStars(manager.starRating)}
-            </View>
-            <Text style={styles.ratingText}>{manager.starRating}/5</Text>
-          </View>
+          <View style={styles.avatarContainer}>{renderAvatar()}</View>
+          {!manager ? (
+            <ActivityIndicator
+              size="small"
+              color="#4fc3f7"
+              style={{ marginVertical: 8 }}
+            />
+          ) : (
+            <>
+              <Text style={styles.name}>{manager?.name || "Manager"}</Text>
+              <Text style={styles.country}>{manager?.country || "-"}</Text>
+              <Text style={styles.ageBracket}>
+                {manager?.ageBracket || "-"}
+              </Text>
+              <View style={styles.statsRow}>
+                <Text style={styles.statNumber}>
+                  {manager?.tournamentsHosted || 0}
+                </Text>
+                <Text style={styles.statLabel}>Tournaments</Text>
+                <View style={styles.starsContainer}>
+                  {renderStars(manager?.starRating || 4.5)}
+                </View>
+              </View>
+            </>
+          )}
         </View>
+        {/* Manager's Tournaments */}
+        <Text style={styles.sectionTitle}>
+          Tournaments by {manager?.name || "Manager"}
+        </Text>
+        {loading ? (
+          <ActivityIndicator
+            size="large"
+            color="#4fc3f7"
+            style={{ marginTop: 24 }}
+          />
+        ) : tournaments.length === 0 ? (
+          <Text style={styles.emptyText}>
+            No tournaments found for this manager.
+          </Text>
+        ) : (
+          tournaments.slice(0, 5).map((tournament) => (
+            <TournamentCard
+              key={tournament.id}
+              tournamentId={tournament.id}
+              tournamentType={tournament.type}
+              playerCount={`${tournament.players.length} Players`}
+              manager={tournament.manager}
+              isLiked={false}
+              onLike={() => {}}
+              onPress={() =>
+                (navigation as any).navigate("TournamentDetails", {
+                  tournament,
+                })
+              }
+              status={
+                tournament.status === "completed"
+                  ? "completed"
+                  : tournament.status === "in_progress"
+                  ? "ongoing"
+                  : undefined
+              }
+              managerAvatar={tournament.manager.charAt(0)}
+              matches={tournament.matches}
+              tournament={tournament}
+            />
+          ))
+        )}
       </ScrollView>
     </View>
+  );
+};
+
+const ManagerProfileScreen: React.FC<ManagerProfileScreenProps> = ({
+  route,
+}) => {
+  const { managerId } = route.params;
+  return (
+    <ManagerProvider managerId={managerId}>
+      <ManagerProfileContent managerId={managerId} />
+    </ManagerProvider>
   );
 };
 
@@ -114,118 +170,99 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     flexGrow: 1,
-    paddingVertical: 110,
-    paddingHorizontal: 20,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    marginBottom: 24,
-    zIndex: 999,
-    elevation: 999,
+    paddingVertical: 32,
+    paddingHorizontal: 12,
   },
   backButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 8,
+    position: "absolute",
+    top: 30,
+    left: 16,
     backgroundColor: "rgba(255, 255, 255, 0.1)",
+    padding: 8,
     borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    zIndex: 999,
-    elevation: 999,
-  },
-  backText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "500",
-    marginLeft: 4,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#fff",
-    marginLeft: 16,
+    zIndex: 9999,
   },
   profileCard: {
     backgroundColor: "rgba(34, 48, 66, 0.8)",
-    borderRadius: 20,
-    padding: 32,
+    borderRadius: 16,
+    padding: 16,
     alignItems: "center",
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.1)",
-    marginBottom: 20,
+    marginBottom: 12,
+    marginTop: 48, // Add margin to push profile card below back button
   },
   avatarContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: "rgba(52, 152, 219, 0.3)",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 20,
-    borderWidth: 2,
+    marginBottom: 8,
+    borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.2)",
+    overflow: "hidden",
+  },
+  avatarImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
   },
   avatarText: {
     color: "#fff",
-    fontSize: 40,
+    fontSize: 24,
     fontWeight: "bold",
   },
   name: {
-    fontSize: 28,
+    fontSize: 18,
     fontWeight: "bold",
     color: "#fff",
-    marginBottom: 12,
+    marginBottom: 2,
   },
   country: {
-    fontSize: 18,
-    color: "#bdc3c7",
-    marginBottom: 6,
-  },
-  ageBracket: {
-    fontSize: 16,
-    color: "#bdc3c7",
-    marginBottom: 32,
-  },
-  statsContainer: {
-    width: "100%",
-    marginBottom: 24,
-  },
-  statItem: {
-    alignItems: "center",
-    paddingVertical: 16,
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
-    borderRadius: 16,
-    paddingHorizontal: 24,
-  },
-  statNumber: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: "#4fc3f7",
-  },
-  statLabel: {
     fontSize: 14,
     color: "#bdc3c7",
-    marginTop: 4,
+    marginBottom: 2,
   },
-  ratingContainer: {
-    alignItems: "center",
-  },
-  ratingLabel: {
-    fontSize: 16,
+  ageBracket: {
+    fontSize: 12,
     color: "#bdc3c7",
-    marginBottom: 8,
+    marginBottom: 4,
+  },
+  statsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 4,
+    marginBottom: 2,
+  },
+  statNumber: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#4fc3f7",
+    marginRight: 6,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: "#bdc3c7",
+    marginRight: 8,
   },
   starsContainer: {
     flexDirection: "row",
-    marginBottom: 8,
   },
-  ratingText: {
-    fontSize: 14,
+  sectionTitle: {
+    fontSize: 16,
     color: "#fff",
     fontWeight: "bold",
+    marginTop: 8,
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  emptyText: {
+    color: "#bdc3c7",
+    fontSize: 14,
+    textAlign: "center",
+    marginTop: 24,
   },
 });
 

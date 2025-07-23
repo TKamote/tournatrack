@@ -9,6 +9,7 @@ import {
   Alert,
 } from "react-native";
 import { Player, Match, MatchFormat, Tournament } from "../../types";
+import { TournamentStatus } from "../../types/tournament.types";
 import { COLORS } from "../../constants/colors";
 import MatchListItem from "../../components/MatchListItem";
 import {
@@ -150,7 +151,7 @@ export const SingleElim16Screen: React.FC<SingleElim16ScreenProps> = ({
 
   // Update tournament in Firebase
   const updateTournamentInFirebase = useCallback(
-    async (updatedMatches: Match[]) => {
+    async (updatedMatches: Match[], updatedStatus?: string) => {
       if (!tournamentId) return;
 
       // Check for different types of changes
@@ -178,7 +179,7 @@ export const SingleElim16Screen: React.FC<SingleElim16ScreenProps> = ({
           players,
           matches: updatedMatches,
           format: matchFormat,
-          status: "in_progress",
+          status: (updatedStatus as TournamentStatus) || "in_progress",
           createdAt: new Date(),
           updatedAt: new Date(),
           isPublic: true,
@@ -189,14 +190,14 @@ export const SingleElim16Screen: React.FC<SingleElim16ScreenProps> = ({
 
         try {
           await TournamentService.saveTournament(updatedTournament);
-        } catch (updateError) {
+        } catch (updateError: any) {
           console.error(
             "❌ Error updating tournament in Firebase:",
             updateError
           );
           console.error("❌ Update error details:", {
-            code: updateError.code,
-            message: updateError.message,
+            code: updateError?.code,
+            message: updateError?.message,
             tournamentId: tournamentId,
           });
         }
@@ -246,6 +247,12 @@ export const SingleElim16Screen: React.FC<SingleElim16ScreenProps> = ({
                 setOverallWinner(winner);
                 setFinalMatch(updatedMatch);
                 setShowSummaryModal(true);
+
+                // Update Firebase with completed status
+                const finalUpdatedMatches = updatedMatches.map((m) =>
+                  m.id === matchId ? updatedMatch : m
+                );
+                updateTournamentInFirebase(finalUpdatedMatches, "completed");
               }, 100);
             }
           }

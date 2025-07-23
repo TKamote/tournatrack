@@ -5,6 +5,7 @@ import { RootStackParamList } from "../types/navigation.types";
 import { TabNavigator } from "./TabNavigator";
 import AuthScreen from "../screens/AuthScreen";
 import { UserProvider } from "../context/UserContext";
+import { TournamentProvider } from "../context/TournamentContext";
 import { auth } from "../utils/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { View, ActivityIndicator } from "react-native";
@@ -40,22 +41,24 @@ export const AppNavigator = () => {
 
   return (
     <UserProvider>
-      <NavigationContainer>
-        <Stack.Navigator
-          initialRouteName={isAuthenticated ? "MainTabs" : "Auth"}
-        >
-          <Stack.Screen
-            name="Auth"
-            component={AuthScreen}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="MainTabs"
-            component={TabNavigator}
-            options={{ headerShown: false }}
-          />
-        </Stack.Navigator>
-      </NavigationContainer>
+      <TournamentProvider>
+        <NavigationContainer>
+          <Stack.Navigator
+            initialRouteName={isAuthenticated ? "MainTabs" : "Auth"}
+          >
+            <Stack.Screen
+              name="Auth"
+              component={AuthScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="MainTabs"
+              component={TabNavigator}
+              options={{ headerShown: false }}
+            />
+          </Stack.Navigator>
+        </NavigationContainer>
+      </TournamentProvider>
     </UserProvider>
   );
 };

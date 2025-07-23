@@ -1,29 +1,45 @@
 import { Tournament, Match } from "../../types";
 
-// Calculate total required matches based on tournament type
-export const getTotalRequiredMatches = (tournamentType: string): number => {
-  if (tournamentType.includes("Single Elimination")) {
-    if (tournamentType.includes("4")) return 3; // 4 players = 3 matches
-    if (tournamentType.includes("8")) return 7; // 8 players = 7 matches
-    if (tournamentType.includes("16")) return 15; // 16 players = 15 matches
+// Calculate total required matches based on tournament type and player count
+export const getTotalRequiredMatches = (
+  tournamentType: string,
+  maxPlayers?: number
+): number => {
+  // Handle different tournament type formats
+  if (
+    tournamentType.includes("Single Elimination") ||
+    tournamentType === "Single Elimination"
+  ) {
+    if (maxPlayers === 4 || tournamentType.includes("4")) return 3; // 4 players = 3 matches
+    if (maxPlayers === 8 || tournamentType.includes("8")) return 7; // 8 players = 7 matches
+    if (maxPlayers === 16 || tournamentType.includes("16")) return 15; // 16 players = 15 matches
   }
-  if (tournamentType.includes("Double Elimination")) {
-    if (tournamentType.includes("4")) return 7; // 4 players = 7 matches (2 winners + 2 losers + 1 losers final + 1 grand final + 1 grand final reset if needed)
-    if (tournamentType.includes("8")) return 13; // 8 players = 13 matches
-    if (tournamentType.includes("16")) return 29; // 16 players = 29 matches
+  if (
+    tournamentType.includes("Double Elimination") ||
+    tournamentType === "Double Elimination"
+  ) {
+    if (maxPlayers === 4 || tournamentType.includes("4")) return 7; // 4 players = 7 matches
+    if (maxPlayers === 8 || tournamentType.includes("8")) return 15; // 8 players = 15 matches
+    if (maxPlayers === 16 || tournamentType.includes("16")) return 31; // 16 players = 31 matches
   }
   return 3; // Default fallback
 };
 
 // Calculate tournament progress percentage
 export const calculateTournamentProgress = (tournament: Tournament): number => {
-  const totalRequiredMatches = getTotalRequiredMatches(tournament.type);
+  const totalRequiredMatches = getTotalRequiredMatches(
+    tournament.type,
+    tournament.maxPlayers
+  );
   const completedMatches = tournament.matches.filter(
     (match: Match) => match.winner
   ).length;
-  
+
   // Cap progress at 100% even if completed matches exceed total
-  const progressPercentage = Math.min((completedMatches / totalRequiredMatches) * 100, 100);
+  const progressPercentage = Math.min(
+    (completedMatches / totalRequiredMatches) * 100,
+    100
+  );
   return Math.round(progressPercentage);
 };
 
@@ -33,10 +49,30 @@ export const getTournamentCompletionInfo = (tournament: Tournament) => {
 
   // Check if tournament status is completed
   if (tournament.status === "completed") {
-    // Find the final match (highest round with winner)
-    const finalMatch = tournament.matches
-      .filter((match: Match) => match.winner)
-      .sort((a: Match, b: Match) => b.round - a.round)[0];
+    // Find the final match - prioritize Grand Finals reset matches, then highest round
+    const completedMatches = tournament.matches.filter(
+      (match: Match) => match.winner
+    );
+
+    // First, look for Grand Finals reset matches (these are the true final matches)
+    const grandFinalsResetMatch = completedMatches.find(
+      (match: Match) =>
+        match.bracket === "grandFinals" && match.isGrandFinalsReset === true
+    );
+
+    // If no reset match, look for regular Grand Finals
+    const grandFinalsMatch = completedMatches.find(
+      (match: Match) =>
+        match.bracket === "grandFinals" && match.isGrandFinalsReset !== true
+    );
+
+    // Fallback to highest round match
+    const highestRoundMatch = completedMatches.sort(
+      (a: Match, b: Match) => b.round - a.round
+    )[0];
+
+    const finalMatch =
+      grandFinalsResetMatch || grandFinalsMatch || highestRoundMatch;
 
     if (finalMatch && finalMatch.winner) {
       const winner = finalMatch.winner;
@@ -53,9 +89,14 @@ export const getTournamentCompletionInfo = (tournament: Tournament) => {
             .length || 0
         : 0;
 
+      // Clean player names by removing loss suffixes (L0, L1, L2)
+      const cleanChampionName = winner.name.replace(/ L[0-2]$/, "");
+      const cleanRunnerUpName =
+        runnerUp?.name.replace(/ L[0-2]$/, "") || "Unknown";
+
       return {
-        champion: winner.name,
-        runnerUp: runnerUp?.name || "Unknown",
+        champion: cleanChampionName,
+        runnerUp: cleanRunnerUpName,
         championScore: winnerScore,
         runnerUpScore: runnerUpScore,
         isCompleted: true,
@@ -115,7 +156,7 @@ export const getLiveMatchInfo = (tournament: Tournament) => {
     };
   }
 
-  // FALLBACK: Find the most recent completed match
+  // FALLBACK: Find the most recent completed match (for round transitions)
   const completedMatches = tournament.matches.filter(
     (match: Match) => match.winner
   );
@@ -153,6 +194,7 @@ export const getLiveMatchInfo = (tournament: Tournament) => {
         matchFormat: mostRecentCompleted.format?.label || "Best of 3",
         isCompleted: true,
         winner: mostRecentCompleted.winner?.name,
+        isTransitionMatch: true, // Flag to indicate this is shown during transition
       };
     }
   }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,174 +6,69 @@ import {
   TouchableOpacity,
   ScrollView,
   SafeAreaView,
-  ActivityIndicator,
-  Animated,
   RefreshControl,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Tournament, Match, Game } from "../types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import TournamentCard from "../components/TournamentCard";
-import { TournamentService } from "../utils/tournamentService";
-
-// Helper function to convert old mock data format to new Match format
-const convertOldMatchToNewFormat = (oldMatch: any): Match => {
-  const games: Game[] = [];
-
-  // If the old match has score1 and score2, create a single game
-  if (oldMatch.score1 !== undefined && oldMatch.score2 !== undefined) {
-    games.push({
-      id: `${oldMatch.round}-${oldMatch.bracket}-game-1`,
-      winner: oldMatch.winner,
-      score1: oldMatch.score1,
-      score2: oldMatch.score2,
-    });
-  }
-
-  return {
-    id: `${oldMatch.round}-${oldMatch.bracket}-${oldMatch.matchNumber || 1}`,
-    round: oldMatch.round,
-    matchNumber: oldMatch.matchNumber || 1,
-    player1: oldMatch.player1,
-    player2: oldMatch.player2,
-    winner: oldMatch.winner,
-    bracket: oldMatch.bracket,
-    isGrandFinalsReset: oldMatch.isGrandFinalsReset || false,
-    format: oldMatch.format || {
-      type: "raceTo",
-      gamesNeededToWin: 3,
-      label: "Race to 3",
-    },
-    games,
-    status: oldMatch.status || "completed",
-    isLive: false,
-    lastUpdated: new Date(),
-    createdBy: "mock-data",
-  };
-};
-
-// Helper function to convert old tournament data to new format
-const convertOldTournamentToNewFormat = (oldTournament: any): Tournament => {
-  const convertedMatches = oldTournament.matches.map(
-    (match: any, index: number) =>
-      convertOldMatchToNewFormat({ ...match, matchNumber: index + 1 })
-  );
-
-  return {
-    id: `mock-${Date.now()}`,
-    name: `${oldTournament.type} Tournament`,
-    type: oldTournament.type,
-    manager: oldTournament.manager,
-    managerId: "mock-manager",
-    players: Array.isArray(oldTournament.players)
-      ? oldTournament.players.map((p: any, index: number) => ({
-          id: `player-${index}`,
-          name: p.name,
-          seed: index + 1,
-          losses: 0,
-          isEliminated: false,
-          totalMatches: 0,
-          wins: 0,
-          winPercentage: 0,
-          averageScore: 0,
-          isActive: true,
-        }))
-      : [],
-    matches: convertedMatches,
-    format: oldTournament.format || {
-      type: "raceTo",
-      gamesNeededToWin: 3,
-      label: "Race to 3",
-    },
-    status: oldTournament.status || "in_progress",
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    isPublic: true,
-    maxPlayers: Array.isArray(oldTournament.players)
-      ? oldTournament.players.length
-      : oldTournament.players,
-    currentRound: Math.max(...convertedMatches.map((m: Match) => m.round)),
-    totalRounds: Math.max(...convertedMatches.map((m: Match) => m.round)),
-  };
-};
+import { useTournamentContext } from "../context/TournamentContext";
 
 const TournamentsDashboard: React.FC<any> = ({ navigation }) => {
+  const { tournaments, loading, error, refreshTournaments } =
+    useTournamentContext();
   const [likedTournaments, setLikedTournaments] = useState<string[]>([]);
-  const [tournaments, setTournaments] = useState<Tournament[]>([]);
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
-  const fadeAnim = new Animated.Value(0);
+  const [showCompletedOnly, setShowCompletedOnly] = useState(false);
 
-  // Animate in tournaments
-  useEffect(() => {
-    if (tournaments.length > 0) {
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-      }).start();
-    }
-  }, [tournaments, fadeAnim]);
-
-  // Real-time updates every 1 second to match DetailsScreen sync
-  useEffect(() => {
-    const interval = setInterval(async () => {
+  // Load liked tournaments on component mount
+  React.useEffect(() => {
+    const loadLikedTournaments = async () => {
       try {
-        const publicTournaments =
-          await TournamentService.getPublicTournaments();
-        setTournaments(publicTournaments);
-        setLastUpdate(new Date());
-      } catch (error) {
-        console.error("Error updating tournaments:", error);
-      }
-    }, 1000); // Update every 1 second to match DetailsScreen sync
-
-    return () => clearInterval(interval);
-  }, []);
-
-  // Load tournaments and liked tournaments on component mount
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        setLoading(true);
-
-        // Load liked tournaments
         const stored = await AsyncStorage.getItem("likedTournaments");
         if (stored) {
           setLikedTournaments(JSON.parse(stored));
         }
-
-        // Load public tournaments from Firebase
-        const publicTournaments =
-          await TournamentService.getPublicTournaments();
-
-        setTournaments(publicTournaments);
-        setLastUpdate(new Date());
       } catch (error) {
-        console.error("Error loading data:", error);
-        // If Firebase fails, just show empty state
-        setTournaments([]);
-      } finally {
-        setLoading(false);
+        console.error("Error loading liked tournaments:", error);
       }
     };
 
-    loadData();
+    loadLikedTournaments();
   }, []);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    try {
-      const publicTournaments = await TournamentService.getPublicTournaments();
-      setTournaments(publicTournaments);
-      setLastUpdate(new Date());
-    } catch (error) {
-      console.error("❌ Error refreshing tournaments:", error);
-    } finally {
-      setRefreshing(false);
-    }
-  }, []);
+    await refreshTournaments();
+    setRefreshing(false);
+  }, [refreshTournaments]);
+
+  // Filter tournaments to show only relevant ones
+  const filteredTournaments = tournaments.filter((tournament) => {
+    // Show completed tournaments
+    if (tournament.status === "completed") return true;
+
+    // Show tournaments that are in progress (regardless of match completion)
+    if (tournament.status === "in_progress") return true;
+
+    // Show tournaments with at least one completed match (active)
+    const hasCompletedMatches = tournament.matches.some(
+      (match) => match.winner
+    );
+    if (hasCompletedMatches) return true;
+
+    // Show tournaments with active matches (not completed but in progress)
+    const hasActiveMatches = tournament.matches.some(
+      (match) => !match.winner && match.player1 && match.player2
+    );
+    if (hasActiveMatches) return true;
+
+    // Show tournaments created in the last 24 hours
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const isRecent = tournament.createdAt > oneDayAgo;
+    if (isRecent) return true;
+
+    return false;
+  });
 
   const toggleLike = async (tournamentId: string) => {
     try {
@@ -195,8 +90,23 @@ const TournamentsDashboard: React.FC<any> = ({ navigation }) => {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#4fc3f7" />
           <Text style={styles.loadingText}>Loading tournaments...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>Error: {error}</Text>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={refreshTournaments}
+          >
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
@@ -213,19 +123,14 @@ const TournamentsDashboard: React.FC<any> = ({ navigation }) => {
         <View style={styles.header}>
           <Text style={styles.title}>🏆 Live Tournaments</Text>
           <Text style={styles.subtitle}>
-            {tournaments.length > 0
-              ? `Watching ${tournaments.length} active tournaments`
-              : "No tournaments available yet"}
+            {filteredTournaments.length > 0
+              ? `Showing ${filteredTournaments.length} relevant tournaments (filtered from ${tournaments.length} total)`
+              : "No relevant tournaments available yet"}
           </Text>
-          {tournaments.length > 0 && (
-            <Text style={styles.lastUpdate}>
-              Last updated: {lastUpdate.toLocaleTimeString()}
-            </Text>
-          )}
         </View>
         <View style={styles.cardContainer}>
-          {tournaments.length > 0 ? (
-            tournaments.map((tournament) => (
+          {filteredTournaments.length > 0 ? (
+            filteredTournaments.map((tournament) => (
               <TournamentCard
                 key={tournament.id}
                 tournamentId={tournament.id}
@@ -265,10 +170,10 @@ const TournamentsDashboard: React.FC<any> = ({ navigation }) => {
           ) : (
             <View style={styles.emptyState}>
               <Text style={styles.emptyStateText}>
-                No tournaments available yet
+                No relevant tournaments available
               </Text>
               <Text style={styles.emptyStateSubtext}>
-                Create a tournament to get started!
+                Create a new tournament or check back later!
               </Text>
             </View>
           )}
@@ -294,6 +199,30 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginTop: 16,
   },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#1a252f",
+    padding: 20,
+  },
+  errorText: {
+    color: "#e74c3c",
+    fontSize: 16,
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  retryButton: {
+    backgroundColor: "#3498db",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "bold",
+  },
   container: {
     flexGrow: 1,
     padding: 16,
@@ -312,53 +241,9 @@ const styles = StyleSheet.create({
     color: "#bdc3c7",
     marginBottom: 8,
   },
-  lastUpdate: {
-    fontSize: 12,
-    color: "#7f8c8d",
-    fontStyle: "italic",
-  },
   cardContainer: {
     gap: 16,
-  },
-  card: {
-    backgroundColor: "#223042",
-    borderRadius: 14,
-    padding: 20,
-    marginBottom: 18,
-    width: 320,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 4,
-    borderWidth: 1,
-    borderColor: "#2c3e50",
-    position: "relative",
-  },
-  likeButton: {
-    position: "absolute",
-    top: 15,
-    right: 15,
-    zIndex: 1,
-    padding: 5,
-  },
-  cardContent: {
-    flex: 1,
-  },
-  tournamentType: {
-    color: "#4fc3f7",
-    fontSize: 16,
-    fontWeight: "bold",
-    marginBottom: 6,
-  },
-  tournamentDetails: {
-    color: "#fff",
-    fontSize: 12,
-    marginBottom: 4,
-  },
-  manager: {
-    color: "#bdc3c7",
-    fontSize: 14,
+    alignItems: "center",
   },
   emptyState: {
     alignItems: "center",

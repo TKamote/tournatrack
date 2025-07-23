@@ -9,6 +9,7 @@ import {
   Alert,
 } from "react-native";
 import { Player, Match, MatchFormat, Tournament } from "../../types";
+import { TournamentStatus } from "../../types/tournament.types";
 import { COLORS } from "../../constants/colors";
 import MatchListItem from "../../components/MatchListItem";
 import {
@@ -150,7 +151,7 @@ export const SingleElim8Screen: React.FC<SingleElim8ScreenProps> = ({
 
   // Update tournament in Firebase
   const updateTournamentInFirebase = useCallback(
-    async (updatedMatches: Match[]) => {
+    async (updatedMatches: Match[], updatedStatus?: string) => {
       if (!tournamentId) return;
 
       // Check for different types of changes
@@ -178,7 +179,7 @@ export const SingleElim8Screen: React.FC<SingleElim8ScreenProps> = ({
           players,
           matches: updatedMatches,
           format: matchFormat,
-          status: "in_progress",
+          status: (updatedStatus as TournamentStatus) || "in_progress",
           createdAt: new Date(),
           updatedAt: new Date(),
           isPublic: true,
@@ -190,14 +191,14 @@ export const SingleElim8Screen: React.FC<SingleElim8ScreenProps> = ({
         try {
           await TournamentService.saveTournament(updatedTournament);
           // Only log when there are actual updates
-        } catch (updateError) {
+        } catch (updateError: any) {
           console.error(
             "❌ Error updating tournament in Firebase:",
             updateError
           );
           console.error("❌ Update error details:", {
-            code: updateError.code,
-            message: updateError.message,
+            code: updateError?.code,
+            message: updateError?.message,
             tournamentId: tournamentId,
           });
         }
@@ -252,26 +253,7 @@ export const SingleElim8Screen: React.FC<SingleElim8ScreenProps> = ({
                 const finalUpdatedMatches = updatedMatches.map((m) =>
                   m.id === matchId ? updatedMatch : m
                 );
-                if (tournamentId) {
-                  const completedTournament: Tournament = {
-                    id: tournamentId,
-                    name: "Single Elimination Tournament",
-                    type: "Single Elimination",
-                    manager: "David",
-                    managerId: "manager-1",
-                    players,
-                    matches: finalUpdatedMatches,
-                    format: matchFormat,
-                    status: "completed",
-                    createdAt: new Date(),
-                    updatedAt: new Date(),
-                    isPublic: true,
-                    maxPlayers: 8,
-                    currentRound: 3,
-                    totalRounds: 3,
-                  };
-                  TournamentService.saveTournament(completedTournament);
-                }
+                updateTournamentInFirebase(finalUpdatedMatches, "completed");
               }, 100);
             }
           }

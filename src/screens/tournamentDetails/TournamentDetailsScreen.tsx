@@ -1,124 +1,57 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
-  Modal,
-  TouchableOpacity,
   RefreshControl,
 } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../types/navigation.types";
 import TournamentBracketView from "../../components/tournament/TournamentBracketView";
-import { Match } from "../../types";
-import { TournamentService } from "../../utils/tournamentService";
 import {
   calculateTournamentProgress,
-  getLiveMatchInfo,
   getTotalRequiredMatches,
+  getTournamentCompletionInfo,
 } from "../../utils/tournament/progressUtils";
+import { useTournamentContext } from "../../context/TournamentContext";
+import { Tournament, Match, Game } from "../../types";
 
-type TournamentDetailsScreenProps = NativeStackScreenProps<
-  RootStackParamList,
-  "TournamentDetails"
->;
+type TournamentDetailsScreenProps = {
+  route: {
+    params: {
+      tournament: Tournament;
+    };
+  };
+  navigation: any;
+};
 
 const TournamentDetailsScreen: React.FC<TournamentDetailsScreenProps> = ({
   route,
 }) => {
   const { tournament } = route.params;
-
+  const { tournaments, refreshTournaments } = useTournamentContext();
   const [refreshing, setRefreshing] = useState(false);
-  const [currentTournament, setCurrentTournament] = useState(tournament);
 
-  // Initial fetch of latest tournament data
-  useEffect(() => {
-    const fetchLatestTournament = async () => {
-      try {
-        const latestTournament = await TournamentService.getTournament(
-          tournament.id
-        );
-
-        if (latestTournament) {
-          setCurrentTournament(latestTournament);
-        }
-      } catch (error) {
-        console.error("Error in initial tournament fetch:", error);
-      }
-    };
-
-    fetchLatestTournament();
-  }, [tournament.id]);
-
-  // Real-time updates every 500ms for better sync
-  useEffect(() => {
-    const interval = setInterval(async () => {
-      try {
-        const updatedTournament = await TournamentService.getTournament(
-          tournament.id
-        );
-
-        if (updatedTournament) {
-          setCurrentTournament(updatedTournament);
-        }
-      } catch (error) {
-        console.error("Error updating tournament:", error);
-      }
-    }, 500); // Update every 500ms for immediate sync
-
-    return () => clearInterval(interval);
-  }, [tournament.id]);
+  // Get the latest tournament data from centralized context
+  const currentTournament =
+    tournaments.find((t) => t.id === tournament.id) || tournament;
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    try {
-      const updatedTournament = await TournamentService.getTournament(
-        tournament.id
-      );
-
-      if (updatedTournament) {
-        setCurrentTournament(updatedTournament);
-      }
-    } catch (error) {
-      console.error("Error refreshing tournament:", error);
-    } finally {
-      setRefreshing(false);
-    }
-  }, [tournament.id]);
+    await refreshTournaments();
+    setRefreshing(false);
+  }, [refreshTournaments]);
 
   const getTournamentResults = () => {
-    const grandFinalsMatches = currentTournament.matches.filter(
-      (m: Match) => m.bracket === "grandFinals"
-    );
-    const lastMatch = grandFinalsMatches[grandFinalsMatches.length - 1];
+    // Use the centralized completion info function
+    const completionInfo = getTournamentCompletionInfo(currentTournament);
 
-    if (
-      lastMatch &&
-      lastMatch.winner &&
-      lastMatch.player1 &&
-      lastMatch.player2
-    ) {
-      const champion = lastMatch.winner;
-      const runnerUp =
-        lastMatch.winner.name === lastMatch.player1.name
-          ? lastMatch.player2
-          : lastMatch.player1;
-
-      // Calculate final score from games
-      const totalScore1 = (lastMatch.games ?? []).reduce(
-        (sum, game) => sum + game.score1,
-        0
-      );
-      const totalScore2 = lastMatch.games.reduce(
-        (sum, game) => sum + game.score2,
-        0
-      );
-
+    if (completionInfo) {
       return {
-        champion: champion.name,
-        runnerUp: runnerUp.name,
-        finalScore: `${totalScore1} - ${totalScore2}`,
+        champion: completionInfo.champion,
+        runnerUp: completionInfo.runnerUp,
+        finalScore: `${completionInfo.championScore} - ${completionInfo.runnerUpScore}`,
       };
     }
     return null;
@@ -145,23 +78,24 @@ const TournamentDetailsScreen: React.FC<TournamentDetailsScreenProps> = ({
             Last updated: {currentTournament.updatedAt.toLocaleTimeString()}
           </Text>
 
-          {/* Debug: Tournament Type */}
-          <Text style={styles.debugText}>
-            Debug: Tournament Type = "{currentTournament.type}"
-          </Text>
-
           {/* Live Tournament Stats */}
           <View style={styles.statsContainer}>
             <View style={styles.statItem}>
               <Text style={styles.statLabel}>Total Matches</Text>
               <Text style={styles.statValue}>
-                {getTotalRequiredMatches(currentTournament.type)}
+                {getTotalRequiredMatches(
+                  currentTournament.type,
+                  currentTournament.maxPlayers
+                )}
               </Text>
             </View>
             <View style={styles.statItem}>
               <Text style={styles.statLabel}>Completed</Text>
               <Text style={styles.statValue}>
-                {currentTournament.matches.filter((m) => m.winner).length}
+                {
+                  currentTournament.matches.filter((m: Match) => m.winner)
+                    .length
+                }
               </Text>
             </View>
             <View style={styles.statItem}>
@@ -226,61 +160,6 @@ const styles = StyleSheet.create({
     color: "#4fc3f7",
     fontSize: 18,
     fontWeight: "bold",
-  },
-  subtitle: { fontSize: 14, color: "#bdc3c7", marginBottom: 8 },
-  formatText: { fontSize: 14, color: "#bdc3c7", marginBottom: 16 },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalContent: {
-    backgroundColor: "#223042",
-    borderRadius: 12,
-    padding: 24,
-    margin: 20,
-    minWidth: 300,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#fff",
-    textAlign: "center",
-    marginBottom: 20,
-  },
-  resultRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 12,
-  },
-  resultLabel: {
-    color: "#bdc3c7",
-    fontSize: 14,
-  },
-  resultValue: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "bold",
-  },
-  closeButton: {
-    backgroundColor: "#3498db",
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    marginTop: 20,
-    alignItems: "center",
-  },
-  closeButtonText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "bold",
-  },
-  debugText: {
-    color: "#ff6b6b",
-    fontSize: 12,
-    textAlign: "center",
-    marginBottom: 8,
   },
 });
 

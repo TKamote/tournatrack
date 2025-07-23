@@ -4,8 +4,19 @@ import { Ionicons } from "@expo/vector-icons";
 import TournamentsDashboard from "../screens/TournamentsDashboard";
 import TournamentDetailsScreen from "../screens/tournamentDetails/TournamentDetailsScreen";
 import ManagerProfileScreen from "../screens/ManagerProfileScreen";
+import { Tournament } from "../types";
 
-const Stack = createNativeStackNavigator();
+type SupporterStackParamList = {
+  TournamentsDashboard: undefined;
+  TournamentDetails: {
+    tournament: Tournament;
+  };
+  ManagerProfile: {
+    managerId: string;
+  };
+};
+
+const Stack = createNativeStackNavigator<SupporterStackParamList>();
 
 export const SupporterStack = () => {
   return (

@@ -9,6 +9,7 @@ import {
   Alert,
 } from "react-native";
 import { Player, Match, MatchFormat, Tournament } from "../../types";
+import { TournamentStatus } from "../../types/tournament.types";
 import { COLORS } from "../../constants/colors";
 import MatchListItem from "../../components/MatchListItem";
 import {
@@ -94,7 +95,7 @@ export const DoubleElimination8Screen: React.FC<
           players,
           matches: updatedMatches,
           format: matchFormat,
-          status: updatedStatus || "in_progress",
+          status: (updatedStatus as TournamentStatus) || "in_progress",
           createdAt: new Date(),
           updatedAt: new Date(),
           isPublic: true,

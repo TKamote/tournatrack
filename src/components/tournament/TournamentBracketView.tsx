@@ -45,10 +45,17 @@ const TournamentBracketView: React.FC<TournamentBracketViewProps> = ({
 
   const getPlayerDisplayName = (player: any, losses: number = 0) => {
     const name = player?.name ?? player;
-    if (tournament.type === "Double Elimination") {
-      return `${name} L${losses}`;
+    // Clean the name by removing existing loss suffixes first
+    const cleanName = name.replace(/ L[0-2]$/, "");
+
+    // For Double Elimination, show loss count for active matches, but clean names for completed tournaments
+    if (
+      tournament.type === "Double Elimination" &&
+      tournament.status !== "completed"
+    ) {
+      return `${cleanName} L${losses}`;
     }
-    return name;
+    return cleanName;
   };
 
   const getMatchScore = (match: Match) => {
