@@ -18,6 +18,7 @@ import { auth } from "../utils/firebase";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  sendPasswordResetEmail,
 } from "firebase/auth";
 import { COLORS } from "../constants/colors";
 import { FONT_SIZES, FONT_WEIGHTS } from "../constants/typography";
@@ -28,7 +29,7 @@ const AuthScreen: React.FC<any> = ({ navigation, route }) => {
   const [password, setPassword] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { setUserRole } = useUser();
+  const { setUserRole, setUserName, setUserId } = useUser();
 
   // Check if user is already authenticated and load their role
   useEffect(() => {
@@ -38,6 +39,8 @@ const AuthScreen: React.FC<any> = ({ navigation, route }) => {
         console.log("User already authenticated:", currentUser.uid);
         const role = await getUserRole(currentUser.uid);
         setUserRole(role);
+        setUserId(currentUser.uid);
+        setUserName(currentUser.email?.split("@")[0] || "User");
         navigation.navigate("MainTabs");
       }
     };
@@ -86,6 +89,8 @@ const AuthScreen: React.FC<any> = ({ navigation, route }) => {
         role: "supporter", // Default to supporter for new signups
       });
       setUserRole("supporter"); // Set role in context
+      setUserId(userCredential.user.uid); // Set userId in context
+      setUserName(userCredential.user.email?.split("@")[0] || "User"); // Set userName in context
       navigation.navigate("MainTabs");
     } catch (error: any) {
       let message = error.message;
@@ -125,6 +130,8 @@ const AuthScreen: React.FC<any> = ({ navigation, route }) => {
       const role = await getUserRole(userCredential.user.uid);
       console.log("Setting user role in context:", role);
       setUserRole(role); // Set role in context
+      setUserId(userCredential.user.uid); // Set userId in context
+      setUserName(userCredential.user.email?.split("@")[0] || "User"); // Set userName in context
       console.log("Role set, navigating to MainTabs");
       navigation.navigate("MainTabs");
     } catch (error: any) {
@@ -141,6 +148,19 @@ const AuthScreen: React.FC<any> = ({ navigation, route }) => {
       Alert.alert("Sign in error", message);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handlePasswordReset = async () => {
+    if (!email) {
+      Alert.alert("Error", "Please enter your email address first.");
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, email);
+      Alert.alert("Password Reset", "Check your email for a reset link.");
+    } catch (error: any) {
+      Alert.alert("Error", error.message);
     }
   };
 
@@ -186,6 +206,18 @@ const AuthScreen: React.FC<any> = ({ navigation, route }) => {
                 onChangeText={setPassword}
                 editable={!isLoading}
               />
+
+              <TouchableOpacity onPress={handlePasswordReset}>
+                <Text
+                  style={{
+                    color: "#3498db",
+                    marginTop: 16,
+                    textAlign: "center",
+                  }}
+                >
+                  Forgot Password?
+                </Text>
+              </TouchableOpacity>
 
               <TouchableOpacity
                 style={[

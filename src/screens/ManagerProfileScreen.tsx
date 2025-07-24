@@ -7,20 +7,20 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Image,
+  SafeAreaView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "../constants/colors";
 import { useNavigation } from "@react-navigation/native";
 import TournamentCard from "../components/TournamentCard";
 import { ManagerProvider, useManager } from "../context/ManagerContext";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 interface ManagerProfileScreenProps {
   route: { params: { managerId: string } };
 }
 
-const ManagerProfileContent: React.FC<{ managerId: string }> = ({
-  managerId,
-}) => {
+const ManagerProfileContent: React.FC = () => {
   const navigation = useNavigation();
   const { manager, tournaments, loading } = useManager();
 
@@ -67,88 +67,150 @@ const ManagerProfileContent: React.FC<{ managerId: string }> = ({
   };
 
   return (
-    <View style={styles.container}>
-      {/* Back button outside ScrollView */}
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: "#1a252f", position: "relative" }}
+    >
+      {/* Always-visible debug logout button at the top */}
       <TouchableOpacity
-        style={styles.backButton}
-        onPress={() => navigation.goBack()}
-        activeOpacity={0.7}
+        style={{
+          backgroundColor: "red",
+          padding: 10,
+          margin: 10,
+          borderRadius: 8,
+          zIndex: 9999,
+        }}
+        onPress={async () => {
+          await AsyncStorage.clear();
+          navigation.reset({
+            index: 0,
+            routes: [{ name: "Auth" }],
+          } as any);
+        }}
       >
-        <Text style={{ color: "white", fontSize: 16 }}>← Back</Text>
+        <Text style={{ color: "white", fontWeight: "bold" }}>Logout (Dev)</Text>
       </TouchableOpacity>
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        {/* Compact Profile Card */}
-        <View style={styles.profileCard}>
-          <View style={styles.avatarContainer}>{renderAvatar()}</View>
-          {!manager ? (
-            <ActivityIndicator
-              size="small"
-              color="#4fc3f7"
-              style={{ marginVertical: 8 }}
-            />
-          ) : (
-            <>
-              <Text style={styles.name}>{manager?.name || "Manager"}</Text>
-              <Text style={styles.country}>{manager?.country || "-"}</Text>
-              <Text style={styles.ageBracket}>
-                {manager?.ageBracket || "-"}
-              </Text>
-              <View style={styles.statsRow}>
-                <Text style={styles.statNumber}>
-                  {manager?.tournamentsHosted || 0}
+      <View style={[styles.container, { flex: 1, position: "relative" }]}>
+        {/* Back button outside ScrollView */}
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+        >
+          <Text style={{ color: "white", fontSize: 16 }}>← Back</Text>
+        </TouchableOpacity>
+        <ScrollView
+          contentContainerStyle={[
+            styles.scrollContainer,
+            { paddingBottom: 120 },
+          ]}
+        >
+          {" "}
+          {/* Add extra bottom padding */} {/* Add extra bottom padding */}
+          {/* Compact Profile Card */}
+          <View style={styles.profileCard}>
+            <View style={styles.avatarContainer}>{renderAvatar()}</View>
+            {!manager ? (
+              <ActivityIndicator
+                size="small"
+                color="#4fc3f7"
+                style={{ marginVertical: 8 }}
+              />
+            ) : (
+              <>
+                <Text style={styles.name}>{manager?.name || "Manager"}</Text>
+                <Text style={styles.country}>{manager?.country || "-"}</Text>
+                <Text style={styles.ageBracket}>
+                  {manager?.ageBracket || "-"}
                 </Text>
-                <Text style={styles.statLabel}>Tournaments</Text>
-                <View style={styles.starsContainer}>
-                  {renderStars(manager?.starRating || 4.5)}
+                <View style={styles.statsRow}>
+                  <Text style={styles.statNumber}>
+                    {manager?.tournamentsHosted || 0}
+                  </Text>
+                  <Text style={styles.statLabel}>Tournaments</Text>
+                  <View style={styles.starsContainer}>
+                    {renderStars(manager?.starRating || 4.5)}
+                  </View>
                 </View>
-              </View>
-            </>
-          )}
-        </View>
-        {/* Manager's Tournaments */}
-        <Text style={styles.sectionTitle}>
-          Tournaments by {manager?.name || "Manager"}
-        </Text>
-        {loading ? (
-          <ActivityIndicator
-            size="large"
-            color="#4fc3f7"
-            style={{ marginTop: 24 }}
-          />
-        ) : tournaments.length === 0 ? (
-          <Text style={styles.emptyText}>
-            No tournaments found for this manager.
+              </>
+            )}
+          </View>
+          {/* Manager's Tournaments */}
+          <Text style={styles.sectionTitle}>
+            Tournaments by {manager?.name || "Manager"}
           </Text>
-        ) : (
-          tournaments.slice(0, 5).map((tournament) => (
-            <TournamentCard
-              key={tournament.id}
-              tournamentId={tournament.id}
-              tournamentType={tournament.type}
-              playerCount={`${tournament.players.length} Players`}
-              manager={tournament.manager}
-              isLiked={false}
-              onLike={() => {}}
-              onPress={() =>
-                (navigation as any).navigate("TournamentDetails", {
-                  tournament,
-                })
-              }
-              status={
-                tournament.status === "completed"
-                  ? "completed"
-                  : tournament.status === "in_progress"
-                  ? "ongoing"
-                  : undefined
-              }
-              managerAvatar={tournament.manager.charAt(0)}
-              matches={tournament.matches}
-              tournament={tournament}
+          {loading ? (
+            <ActivityIndicator
+              size="large"
+              color="#4fc3f7"
+              style={{ marginTop: 24 }}
             />
-          ))
-        )}
-      </ScrollView>
-    </View>
+          ) : tournaments.length === 0 ? (
+            <Text style={styles.emptyText}>
+              No tournaments found for this manager.
+            </Text>
+          ) : (
+            tournaments.slice(0, 5).map((tournament) => (
+              <TournamentCard
+                key={tournament.id}
+                tournamentId={tournament.id}
+                tournamentType={tournament.type}
+                playerCount={`${tournament.players.length} Players`}
+                manager={tournament.manager}
+                isLiked={false}
+                onLike={() => {}}
+                onPress={() =>
+                  (navigation as any).navigate("TournamentDetails", {
+                    tournament,
+                  })
+                }
+                status={
+                  tournament.status === "completed"
+                    ? "completed"
+                    : tournament.status === "in_progress"
+                    ? "ongoing"
+                    : undefined
+                }
+                managerAvatar={tournament.manager.charAt(0)}
+                matches={tournament.matches}
+                tournament={tournament}
+              />
+            ))
+          )}
+        </ScrollView>
+        {/* Temporary Logout Button */}
+        <TouchableOpacity
+          style={{
+            position: "absolute",
+            bottom: 32,
+            left: 32,
+            right: 32,
+            backgroundColor: "#e74c3c",
+            padding: 14,
+            borderRadius: 10,
+            alignItems: "center",
+            borderWidth: 2,
+            borderColor: "#fff",
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.3,
+            shadowRadius: 4,
+            elevation: 5,
+            zIndex: 9999,
+          }}
+          onPress={async () => {
+            await AsyncStorage.clear();
+            navigation.reset({
+              index: 0,
+              routes: [{ name: "Auth" }],
+            } as any);
+          }}
+        >
+          <Text style={{ color: "white", fontWeight: "bold", fontSize: 16 }}>
+            Logout (Dev)
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
   );
 };
 
@@ -158,7 +220,7 @@ const ManagerProfileScreen: React.FC<ManagerProfileScreenProps> = ({
   const { managerId } = route.params;
   return (
     <ManagerProvider managerId={managerId}>
-      <ManagerProfileContent managerId={managerId} />
+      <ManagerProfileContent />
     </ManagerProvider>
   );
 };

@@ -25,6 +25,7 @@ import { RoundSeparator } from "../../components/RoundSeparator";
 import { Ionicons } from "@expo/vector-icons";
 import TournamentBracketView from "../../components/tournament/TournamentBracketView";
 import { TournamentService } from "../../utils/tournamentService";
+import { useUser } from "../../context/UserContext";
 
 interface DoubleElimination8ScreenProps {
   route: {
@@ -40,6 +41,7 @@ export const DoubleElimination8Screen: React.FC<
   DoubleElimination8ScreenProps
 > = ({ route, navigation }) => {
   const { playerNames, matchFormat } = route.params;
+  const { userName, userId } = useUser();
 
   // State
   const [players, setPlayers] = useState<Player[]>([]);
@@ -90,8 +92,8 @@ export const DoubleElimination8Screen: React.FC<
           id: tournamentId,
           name: "Double Elimination Tournament",
           type: "Double Elimination",
-          manager: "David",
-          managerId: "manager-1",
+          manager: userName,
+          managerId: userId,
           players,
           matches: updatedMatches,
           format: matchFormat,
@@ -109,7 +111,7 @@ export const DoubleElimination8Screen: React.FC<
         console.error("Error updating tournament in Firebase:", error);
       }
     },
-    [tournamentId, players, matchFormat, currentRound]
+    [tournamentId, players, matchFormat, currentRound, userName, userId]
   );
 
   // Initialize tournament
@@ -120,6 +122,12 @@ export const DoubleElimination8Screen: React.FC<
       matchFormat &&
       !hasInitialized
     ) {
+      console.log(
+        "[TournamentCreation] userName:",
+        userName,
+        "userId:",
+        userId
+      );
       const initialPlayers = playerNames.map((name, i) => ({
         id: `player-${i + 1}`,
         name: `${name} L0`,
@@ -145,8 +153,8 @@ export const DoubleElimination8Screen: React.FC<
         id: tournamentId,
         name: "Double Elimination Tournament",
         type: "Double Elimination",
-        manager: "David", // TODO: Get from user context
-        managerId: "manager-1", // TODO: Get from user context
+        manager: userName,
+        managerId: userId,
         players: shuffledPlayers,
         matches: initialMatches,
         format: matchFormat,
@@ -167,7 +175,14 @@ export const DoubleElimination8Screen: React.FC<
       // Save to Firebase
       saveTournamentToFirebase(tournament);
     }
-  }, [playerNames, matchFormat, hasInitialized, saveTournamentToFirebase]);
+  }, [
+    playerNames,
+    matchFormat,
+    hasInitialized,
+    saveTournamentToFirebase,
+    userName,
+    userId,
+  ]);
 
   // Update player losses
   const updatePlayerLosses = useCallback((playerId: string) => {

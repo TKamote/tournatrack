@@ -46,6 +46,10 @@ export const ManagerProvider: React.FC<ManagerProviderProps> = ({
   const fetchData = async () => {
     setLoading(true);
     try {
+      console.log(
+        "[ManagerProvider] Fetching profile for managerId:",
+        managerId
+      );
       // Fetch manager profile
       const userDoc = await getDoc(doc(db, "users", managerId));
       let profile: ManagerProfile = {
@@ -58,6 +62,12 @@ export const ManagerProvider: React.FC<ManagerProviderProps> = ({
       };
       if (userDoc.exists()) {
         profile = userDoc.data() as ManagerProfile;
+        console.log("[ManagerProvider] Found userDoc:", profile);
+      } else {
+        console.warn(
+          "[ManagerProvider] No userDoc found for managerId:",
+          managerId
+        );
       }
       // Fetch tournaments
       const tournaments = await TournamentService.getTournamentsByManager(
@@ -66,7 +76,9 @@ export const ManagerProvider: React.FC<ManagerProviderProps> = ({
       profile.tournamentsHosted = tournaments.length;
       setManager(profile);
       setTournaments(tournaments);
+      console.log("[ManagerProvider] Tournaments fetched:", tournaments.length);
     } catch (e) {
+      console.error("[ManagerProvider] Error fetching manager profile:", e);
       setManager({
         name: "Manager",
         avatar: "M",

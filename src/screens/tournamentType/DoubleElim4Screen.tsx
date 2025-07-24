@@ -25,12 +25,14 @@ import TournamentSummaryModal from "../../components/TournamentSummaryModal";
 import { RoundSeparator } from "../../components/RoundSeparator";
 import { Ionicons } from "@expo/vector-icons";
 import { TournamentService } from "../../utils/tournamentService";
+import { useUser } from "../../context/UserContext";
 
 export const DoubleElim4Screen: React.FC<DoubleElim4ScreenProps> = ({
   route,
   navigation,
 }) => {
   const { playerNames, matchFormat } = route.params;
+  const { userName, userId } = useUser();
 
   const [players, setPlayers] = useState<Player[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
@@ -81,6 +83,12 @@ export const DoubleElim4Screen: React.FC<DoubleElim4ScreenProps> = ({
       matchFormat &&
       !hasInitialized
     ) {
+      console.log(
+        "[TournamentCreation] userName:",
+        userName,
+        "userId:",
+        userId
+      );
       const initialPlayers = playerNames.map((name, i) => ({
         id: `player-${i + 1}`,
         name: `${name} L0`,
@@ -105,8 +113,8 @@ export const DoubleElim4Screen: React.FC<DoubleElim4ScreenProps> = ({
         id: tournamentId,
         name: "Double Elimination Tournament",
         type: "Double Elimination",
-        manager: "David",
-        managerId: "manager-1",
+        manager: userName,
+        managerId: userId,
         players: shuffledPlayers,
         matches: round1Matches,
         format: matchFormat,
@@ -127,7 +135,14 @@ export const DoubleElim4Screen: React.FC<DoubleElim4ScreenProps> = ({
       // Save to Firebase
       saveTournamentToFirebase(tournament);
     }
-  }, [playerNames, matchFormat, hasInitialized, saveTournamentToFirebase]);
+  }, [
+    playerNames,
+    matchFormat,
+    hasInitialized,
+    saveTournamentToFirebase,
+    userName,
+    userId,
+  ]);
 
   // Update player losses
   const updatePlayerLosses = useCallback((playerId: string) => {
@@ -165,8 +180,8 @@ export const DoubleElim4Screen: React.FC<DoubleElim4ScreenProps> = ({
           id: tournamentId,
           name: "Double Elimination Tournament",
           type: "Double Elimination",
-          manager: "David",
-          managerId: "manager-1",
+          manager: userName,
+          managerId: userId,
           players,
           matches: updatedMatches,
           format: matchFormat,
@@ -216,7 +231,7 @@ export const DoubleElim4Screen: React.FC<DoubleElim4ScreenProps> = ({
         console.error("❌ Error in updateTournamentInFirebase:", error);
       }
     },
-    [tournamentId, players, matchFormat]
+    [tournamentId, players, matchFormat, userName, userId]
   );
 
   // Handle game result
@@ -361,7 +376,13 @@ export const DoubleElim4Screen: React.FC<DoubleElim4ScreenProps> = ({
         return updatedMatches;
       });
     },
-    [matchFormat, updatePlayerLosses, updateTournamentInFirebase]
+    [
+      matchFormat,
+      updatePlayerLosses,
+      updateTournamentInFirebase,
+      userName,
+      userId,
+    ]
   );
 
   // **DE-4 COMPLETE ADVANCE ROUND LOGIC**

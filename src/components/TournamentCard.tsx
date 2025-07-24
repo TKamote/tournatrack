@@ -217,11 +217,15 @@ const TournamentCard: React.FC<TournamentCardProps> = ({
           }}
         >
           {managerAvatar && (
-            <View style={styles.avatarContainer}>
-              <Text style={styles.avatarText}>{manager.charAt(0)}</Text>
+            <View className={styles.avatarContainer}>
+              <Text style={styles.avatarText}>
+                {manager && manager.length > 0 ? manager.charAt(0) : "U"}
+              </Text>
             </View>
           )}
-          <Text style={styles.manager}>Manager: {manager}</Text>
+          <Text style={styles.manager}>
+            Manager: {manager && manager.length > 0 ? manager : "Unknown"}
+          </Text>
         </TouchableOpacity>
       </TouchableOpacity>
     </View>

@@ -8,8 +8,39 @@ import TermsOfUseScreen from "../screens/TermsOfUseScreen";
 import AuthScreen from "../screens/AuthScreen";
 import { useUser } from "../context/UserContext";
 import { View, ActivityIndicator } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { auth } from "../utils/firebase";
 
 const Tab = createBottomTabNavigator();
+
+function LogoutScreen({ navigation }: any) {
+  useEffect(() => {
+    (async () => {
+      try {
+        await auth.signOut();
+      } catch (e) {
+        console.warn("Error signing out from Firebase Auth:", e);
+      }
+      await AsyncStorage.clear();
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Auth" }],
+      } as any);
+    })();
+  }, [navigation]);
+  return (
+    <View
+      style={{
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        backgroundColor: "#1a252f",
+      }}
+    >
+      <ActivityIndicator size="large" color="#e74c3c" />
+    </View>
+  );
+}
 
 export const TabNavigator = () => {
   const { userRole, isLoading } = useUser();
@@ -89,6 +120,16 @@ export const TabNavigator = () => {
         name="Terms"
         component={TermsOfUseScreen}
         options={{ title: "Terms & Privacy" }}
+      />
+      <Tab.Screen
+        name="Logout"
+        component={LogoutScreen}
+        options={{
+          title: "Logout",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="log-out-outline" color={color} size={size} />
+          ),
+        }}
       />
       {/* Sign Out functionality removed - supporters should stay logged in */}
     </Tab.Navigator>

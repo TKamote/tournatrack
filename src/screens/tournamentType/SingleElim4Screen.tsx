@@ -23,6 +23,7 @@ import TournamentSummaryModal from "../../components/TournamentSummaryModal";
 import { RoundSeparator } from "../../components/RoundSeparator";
 import { Ionicons } from "@expo/vector-icons";
 import { TournamentService } from "../../utils/tournamentService";
+import { useUser } from "../../context/UserContext";
 
 interface SingleElim4ScreenProps {
   route: {
@@ -39,6 +40,7 @@ export const SingleElim4Screen: React.FC<SingleElim4ScreenProps> = ({
   navigation,
 }) => {
   const { playerNames, matchFormat } = route.params;
+  const { userName, userId } = useUser();
 
   const [players, setPlayers] = useState<Player[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
@@ -73,6 +75,12 @@ export const SingleElim4Screen: React.FC<SingleElim4ScreenProps> = ({
       matchFormat &&
       !hasInitialized
     ) {
+      console.log(
+        "[TournamentCreation] userName:",
+        userName,
+        "userId:",
+        userId
+      );
       const initialPlayers = playerNames.map((name, i) => ({
         id: `player-${i + 1}`,
         name,
@@ -111,8 +119,8 @@ export const SingleElim4Screen: React.FC<SingleElim4ScreenProps> = ({
         id: tournamentId,
         name: "Single Elimination Tournament",
         type: "Single Elimination",
-        manager: "David",
-        managerId: "manager-1",
+        manager: userName,
+        managerId: userId,
         players: shuffledPlayers,
         matches: round1Matches,
         format: matchFormat,
@@ -133,7 +141,14 @@ export const SingleElim4Screen: React.FC<SingleElim4ScreenProps> = ({
       // Save to Firebase
       saveTournamentToFirebase(tournament);
     }
-  }, [playerNames, matchFormat, hasInitialized, saveTournamentToFirebase]);
+  }, [
+    playerNames,
+    matchFormat,
+    hasInitialized,
+    saveTournamentToFirebase,
+    userName,
+    userId,
+  ]);
 
   // Update player elimination status
   const updatePlayerElimination = useCallback((playerId: string) => {
@@ -160,8 +175,8 @@ export const SingleElim4Screen: React.FC<SingleElim4ScreenProps> = ({
           id: tournamentId,
           name: "Single Elimination Tournament",
           type: "Single Elimination",
-          manager: "David",
-          managerId: "manager-1",
+          manager: userName,
+          managerId: userId,
           players,
           matches: updatedMatches,
           format: matchFormat,
@@ -179,7 +194,7 @@ export const SingleElim4Screen: React.FC<SingleElim4ScreenProps> = ({
         console.error("❌ Update error:", error);
       }
     },
-    [tournamentId, players, matchFormat]
+    [tournamentId, players, matchFormat, userName, userId]
   );
 
   // Handle game result

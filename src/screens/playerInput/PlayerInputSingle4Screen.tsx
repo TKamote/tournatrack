@@ -66,7 +66,15 @@ const PlayerInputSingle4Screen: React.FC<PlayerInputSingle4ScreenProps> = ({
       ]);
       return;
     }
-
+    // Duplicate name check (case-insensitive, trimmed)
+    const normalizedNames = validNames.map((n) => n.trim().toLowerCase());
+    const nameSet = new Set(normalizedNames);
+    if (nameSet.size !== normalizedNames.length) {
+      Alert.alert("Duplicate Names", "Each player must have a unique name.", [
+        { text: "OK" },
+      ]);
+      return;
+    }
     navigation.navigate("SingleElim4", {
       playerNames: validNames,
       matchFormat: selectedFormat,

@@ -22,12 +22,14 @@ import MatchListItem from "../../components/MatchListItem";
 import ConfirmActionModal from "../../components/ConfirmActionModal";
 import { Ionicons } from "@expo/vector-icons";
 import { TournamentService } from "../../utils/tournamentService";
+import { useUser } from "../../context/UserContext";
 
 const DoubleElim16Screen: React.FC<DoubleElim16ScreenProps> = ({
   route,
   navigation,
 }) => {
   const { playerNames, matchFormat } = route.params;
+  const { userName, userId } = useUser();
 
   const [players, setPlayers] = useState<Player[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
@@ -62,6 +64,12 @@ const DoubleElim16Screen: React.FC<DoubleElim16ScreenProps> = ({
       matchFormat &&
       !hasInitialized
     ) {
+      console.log(
+        "[TournamentCreation] userName:",
+        userName,
+        "userId:",
+        userId
+      );
       const initialPlayers = playerNames.map((name, i) => ({
         id: `player-${i + 1}`,
         name: `${name} L0`,
@@ -86,8 +94,8 @@ const DoubleElim16Screen: React.FC<DoubleElim16ScreenProps> = ({
         id: tournamentId,
         name: "Double Elimination Tournament",
         type: "Double Elimination",
-        manager: "David",
-        managerId: "manager-1",
+        manager: userName,
+        managerId: userId,
         players: shuffledPlayers,
         matches: round1Matches,
         format: matchFormat,
@@ -108,7 +116,14 @@ const DoubleElim16Screen: React.FC<DoubleElim16ScreenProps> = ({
       // Save to Firebase
       saveTournamentToFirebase(tournament);
     }
-  }, [playerNames, matchFormat, hasInitialized, saveTournamentToFirebase]);
+  }, [
+    playerNames,
+    matchFormat,
+    hasInitialized,
+    saveTournamentToFirebase,
+    userName,
+    userId,
+  ]);
 
   // Update player losses
   const updatePlayerLosses = useCallback((playerId: string) => {
@@ -155,8 +170,8 @@ const DoubleElim16Screen: React.FC<DoubleElim16ScreenProps> = ({
           id: tournamentId,
           name: "Double Elimination Tournament",
           type: "Double Elimination",
-          manager: "David",
-          managerId: "manager-1",
+          manager: userName,
+          managerId: userId,
           players,
           matches: updatedMatches,
           format: matchFormat,
@@ -186,7 +201,7 @@ const DoubleElim16Screen: React.FC<DoubleElim16ScreenProps> = ({
         console.error("❌ Error in updateTournamentInFirebase:", error);
       }
     },
-    [tournamentId, players, matchFormat]
+    [tournamentId, players, matchFormat, userName, userId]
   );
 
   // Handle game result
@@ -322,7 +337,13 @@ const DoubleElim16Screen: React.FC<DoubleElim16ScreenProps> = ({
         return updatedMatches;
       });
     },
-    [matchFormat, updatePlayerLosses, updateTournamentInFirebase]
+    [
+      matchFormat,
+      updatePlayerLosses,
+      updateTournamentInFirebase,
+      userName,
+      userId,
+    ]
   );
 
   // Advance round logic
@@ -529,7 +550,14 @@ const DoubleElim16Screen: React.FC<DoubleElim16ScreenProps> = ({
       });
       setCurrentRound(nextRound);
     }
-  }, [matches, currentRound, matchFormat, updateTournamentInFirebase]);
+  }, [
+    matches,
+    currentRound,
+    matchFormat,
+    updateTournamentInFirebase,
+    userName,
+    userId,
+  ]);
 
   // Advance round logic (simplified for placeholder)
   const canAdvanceRound = useCallback((): boolean => {
