@@ -66,6 +66,19 @@ const PlayerInputSingle16Screen: React.FC<PlayerInputSingle16ScreenProps> = ({
       return;
     }
 
+    // Check for duplicate names
+    const uniqueNames = new Set(
+      validNames.map((name) => name.trim().toLowerCase())
+    );
+    if (uniqueNames.size !== validNames.length) {
+      Alert.alert(
+        "Invalid Input",
+        "Please enter unique names for each player.",
+        [{ text: "OK" }]
+      );
+      return;
+    }
+
     navigation.navigate("SingleElim16", {
       playerNames: validNames,
       matchFormat: selectedFormat,
@@ -83,8 +96,8 @@ const PlayerInputSingle16Screen: React.FC<PlayerInputSingle16ScreenProps> = ({
           <ScreenHeader
             title="Enter 16 Players to Begin"
             subtitle={undefined}
-            titleColor={COLORS.doubleElimText}
-            subtitleColor={COLORS.doubleElimSubtitleText}
+            titleColor={COLORS.glassmorphism.text}
+            subtitleColor={COLORS.glassmorphism.textSecondary}
           />
 
           <ScrollView
@@ -103,7 +116,7 @@ const PlayerInputSingle16Screen: React.FC<PlayerInputSingle16ScreenProps> = ({
                     value={name}
                     onChangeText={(text) => handlePlayerNameChange(index, text)}
                     placeholder={`Player ${index + 1}`}
-                    placeholderTextColor={COLORS.textLight}
+                    placeholderTextColor={COLORS.glassmorphism.textSecondary}
                     returnKeyType="next"
                   />
                 </View>
@@ -162,7 +175,7 @@ const PlayerInputSingle16Screen: React.FC<PlayerInputSingle16ScreenProps> = ({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.doubleElimBackground,
+    backgroundColor: COLORS.singleElimBackground,
   },
   keyboardAvoidingView: {
     flex: 1,
@@ -170,6 +183,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
+    backgroundColor: COLORS.singleElimBackground,
   },
   scrollContent: {
     flexGrow: 1,
@@ -179,7 +193,7 @@ const styles = StyleSheet.create({
   instruction: {
     fontSize: 18,
     fontWeight: "600",
-    color: COLORS.doubleElimText,
+    color: COLORS.glassmorphism.text,
     marginBottom: 24,
     textAlign: "center",
   },
@@ -195,17 +209,17 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: "500",
-    color: COLORS.doubleElimText,
+    color: COLORS.glassmorphism.text,
     marginBottom: 4,
   },
   input: {
-    backgroundColor: COLORS.doubleElimSectionBackground,
+    backgroundColor: COLORS.glassmorphism.background,
     borderWidth: 1,
-    borderColor: COLORS.doubleElimPrimary,
+    borderColor: COLORS.glassmorphism.border,
     borderRadius: 6,
     padding: 8,
     fontSize: 14,
-    color: COLORS.doubleElimText,
+    color: COLORS.glassmorphism.text,
   },
   formatSection: {
     marginTop: 24,
@@ -214,7 +228,7 @@ const styles = StyleSheet.create({
   formatTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: COLORS.doubleElimText,
+    color: COLORS.glassmorphism.text,
     marginBottom: 12,
     textAlign: "center",
   },
@@ -226,9 +240,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   formatButton: {
-    backgroundColor: COLORS.doubleElimSectionBackground,
+    backgroundColor: COLORS.glassmorphism.background,
     borderWidth: 1,
-    borderColor: COLORS.doubleElimPrimary,
+    borderColor: COLORS.glassmorphism.border,
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -236,20 +250,21 @@ const styles = StyleSheet.create({
     minWidth: 80,
   },
   formatButtonSelected: {
-    backgroundColor: COLORS.doubleElimPrimary,
-    borderColor: COLORS.doubleElimPrimary,
+    backgroundColor: COLORS.backgroundWhite,
+    borderColor: COLORS.singleElimPrimary,
   },
   formatButtonText: {
     fontSize: 14,
     fontWeight: "500",
-    color: COLORS.doubleElimText,
+    color: COLORS.glassmorphism.text,
     textAlign: "center",
   },
   formatButtonTextSelected: {
-    color: COLORS.textWhite,
+    color: COLORS.textDark,
+    fontWeight: "bold",
   },
   startButton: {
-    backgroundColor: COLORS.doubleElimPrimary,
+    backgroundColor: COLORS.glassmorphism.backgroundMedium,
     paddingVertical: 16,
     borderRadius: 8,
     marginTop: 32,
@@ -258,9 +273,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3,
     elevation: 3,
+    borderWidth: 1,
+    borderColor: COLORS.glassmorphism.border,
   },
   startButtonText: {
-    color: COLORS.textWhite,
+    color: COLORS.glassmorphism.text,
     fontSize: 18,
     fontWeight: "600",
     textAlign: "center",

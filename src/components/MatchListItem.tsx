@@ -97,9 +97,13 @@ const styles = StyleSheet.create({
   matchContainer: {
     backgroundColor: COLORS.backgroundWhite,
     padding: 16,
-    marginVertical: 8,
-    borderRadius: 8,
-    elevation: 2,
+    marginVertical: 12,
+    borderRadius: 12,
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
   },
   byeContainer: {
     padding: 12,

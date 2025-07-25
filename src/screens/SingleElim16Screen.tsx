@@ -354,9 +354,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
+    backgroundColor: COLORS.backgroundDark,
   },
   formatBanner: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.singleElimPrimary,
     padding: 8,
     borderRadius: 4,
     marginBottom: 16,
@@ -370,7 +371,7 @@ const styles = StyleSheet.create({
     paddingBottom: 80,
   },
   advanceButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.singleElimPrimary,
     padding: 16,
     borderRadius: 4,
     alignItems: "center",

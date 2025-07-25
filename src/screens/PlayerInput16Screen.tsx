@@ -66,6 +66,19 @@ const PlayerInput16Screen: React.FC<PlayerInput16ScreenProps> = ({
       return;
     }
 
+    // Check for duplicate names
+    const uniqueNames = new Set(
+      validNames.map((name) => name.trim().toLowerCase())
+    );
+    if (uniqueNames.size !== validNames.length) {
+      Alert.alert(
+        "Invalid Input",
+        "Please enter unique names for each player.",
+        [{ text: "OK" }]
+      );
+      return;
+    }
+
     navigation.navigate("DoubleElim16", {
       playerNames: validNames,
       matchFormat: selectedFormat,
@@ -83,8 +96,8 @@ const PlayerInput16Screen: React.FC<PlayerInput16ScreenProps> = ({
           <ScreenHeader
             title="Enter 16 Players to Begin"
             subtitle={undefined}
-            titleColor={COLORS.singleElimText}
-            subtitleColor={COLORS.singleElimSubtitleText}
+            titleColor={COLORS.glassmorphism.text}
+            subtitleColor={COLORS.glassmorphism.textSecondary}
           />
 
           <ScrollView
@@ -236,8 +249,8 @@ const styles = StyleSheet.create({
     minWidth: 80,
   },
   formatButtonSelected: {
-    backgroundColor: COLORS.singleElimPrimary,
-    borderColor: COLORS.singleElimPrimary,
+    backgroundColor: COLORS.backgroundWhite,
+    borderColor: COLORS.primary,
   },
   formatButtonText: {
     fontSize: 14,
@@ -246,7 +259,8 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   formatButtonTextSelected: {
-    color: COLORS.textWhite,
+    color: COLORS.textDark,
+    fontWeight: "bold",
   },
   startButton: {
     backgroundColor: COLORS.singleElimPrimary,

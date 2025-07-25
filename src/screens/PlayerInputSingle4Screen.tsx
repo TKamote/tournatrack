@@ -8,6 +8,8 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../types/navigation.types";
@@ -64,6 +66,19 @@ const PlayerInputSingle4Screen: React.FC<PlayerInputSingle4ScreenProps> = ({
       return;
     }
 
+    // Check for duplicate names
+    const uniqueNames = new Set(
+      validNames.map((name) => name.trim().toLowerCase())
+    );
+    if (uniqueNames.size !== validNames.length) {
+      Alert.alert(
+        "Invalid Input",
+        "Please enter unique names for each player.",
+        [{ text: "OK" }]
+      );
+      return;
+    }
+
     navigation.navigate("SingleElim4", {
       playerNames: validNames,
       matchFormat: selectedFormat,
@@ -72,74 +87,80 @@ const PlayerInputSingle4Screen: React.FC<PlayerInputSingle4ScreenProps> = ({
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <ScreenHeader
-          title="Enter 4 Players to Begin"
-          subtitle={undefined}
-          titleColor={COLORS.doubleElimText}
-          subtitleColor={COLORS.doubleElimSubtitleText}
-        />
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={80}
+      >
+        <View style={styles.container}>
+          <ScreenHeader
+            title="Enter 4 Players to Begin"
+            subtitle={undefined}
+            titleColor={COLORS.glassmorphism.text}
+            subtitleColor={COLORS.glassmorphism.textSecondary}
+          />
 
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          {/* Removed instruction text for more space */}
+          <ScrollView contentContainerStyle={styles.scrollContent}>
+            {/* Removed instruction text for more space */}
 
-          {playerNames.map((name, index) => (
-            <View key={index} style={styles.inputContainer}>
-              <Text style={styles.label}>Player {index + 1}:</Text>
-              <TextInput
-                style={styles.input}
-                value={name}
-                onChangeText={(text) => handlePlayerNameChange(index, text)}
-                placeholder={`Enter Player ${index + 1} name`}
-                placeholderTextColor={COLORS.textLight}
-              />
-            </View>
-          ))}
+            {playerNames.map((name, index) => (
+              <View key={index} style={styles.inputContainer}>
+                <Text style={styles.label}>Player {index + 1}:</Text>
+                <TextInput
+                  style={styles.input}
+                  value={name}
+                  onChangeText={(text) => handlePlayerNameChange(index, text)}
+                  placeholder={`Enter Player ${index + 1} name`}
+                  placeholderTextColor={COLORS.glassmorphism.textSecondary}
+                />
+              </View>
+            ))}
 
-          {/* Race Format Section */}
-          <View style={styles.formatSection}>
-            <Text style={styles.formatTitle}>Race Format</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.formatScrollView}
-            >
-              <View style={styles.formatContainer}>
-                {formatOptions.map((option) => (
-                  <TouchableOpacity
-                    key={option.label}
-                    style={[
-                      styles.formatButton,
-                      selectedFormat.gamesNeededToWin ===
-                        option.value.gamesNeededToWin &&
-                        styles.formatButtonSelected,
-                    ]}
-                    onPress={() => setSelectedFormat(option.value)}
-                  >
-                    <Text
+            {/* Race Format Section */}
+            <View style={styles.formatSection}>
+              <Text style={styles.formatTitle}>Race Format</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.formatScrollView}
+              >
+                <View style={styles.formatContainer}>
+                  {formatOptions.map((option) => (
+                    <TouchableOpacity
+                      key={option.label}
                       style={[
-                        styles.formatButtonText,
+                        styles.formatButton,
                         selectedFormat.gamesNeededToWin ===
                           option.value.gamesNeededToWin &&
-                          styles.formatButtonTextSelected,
+                          styles.formatButtonSelected,
                       ]}
+                      onPress={() => setSelectedFormat(option.value)}
                     >
-                      {option.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </ScrollView>
-          </View>
+                      <Text
+                        style={[
+                          styles.formatButtonText,
+                          selectedFormat.gamesNeededToWin ===
+                            option.value.gamesNeededToWin &&
+                            styles.formatButtonTextSelected,
+                        ]}
+                      >
+                        {option.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
+            </View>
 
-          <TouchableOpacity
-            style={styles.startButton}
-            onPress={handleStartTournament}
-          >
-            <Text style={styles.startButtonText}>Start Tournament</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </View>
+            <TouchableOpacity
+              style={styles.startButton}
+              onPress={handleStartTournament}
+            >
+              <Text style={styles.startButtonText}>Start Tournament</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -147,11 +168,12 @@ const PlayerInputSingle4Screen: React.FC<PlayerInputSingle4ScreenProps> = ({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.doubleElimBackground,
+    backgroundColor: COLORS.singleElimBackground,
   },
   container: {
     flex: 1,
     padding: 16,
+    backgroundColor: COLORS.singleElimBackground,
   },
   scrollContent: {
     flexGrow: 1,
@@ -160,7 +182,7 @@ const styles = StyleSheet.create({
   instruction: {
     fontSize: 18,
     fontWeight: "600",
-    color: COLORS.doubleElimText,
+    color: COLORS.glassmorphism.text,
     marginBottom: 24,
     textAlign: "center",
   },
@@ -170,17 +192,17 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: "500",
-    color: COLORS.doubleElimText,
+    color: COLORS.glassmorphism.text,
     marginBottom: 8,
   },
   input: {
-    backgroundColor: COLORS.doubleElimSectionBackground,
+    backgroundColor: COLORS.glassmorphism.background,
     borderWidth: 1,
-    borderColor: COLORS.doubleElimPrimary,
+    borderColor: COLORS.glassmorphism.border,
     borderRadius: 8,
     padding: 12,
     fontSize: 14,
-    color: COLORS.doubleElimText,
+    color: COLORS.glassmorphism.text,
   },
   formatSection: {
     marginTop: 24,
@@ -189,7 +211,7 @@ const styles = StyleSheet.create({
   formatTitle: {
     fontSize: 14,
     fontWeight: "600",
-    color: COLORS.doubleElimText,
+    color: COLORS.glassmorphism.text,
     marginBottom: 12,
     textAlign: "center",
   },
@@ -201,9 +223,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   formatButton: {
-    backgroundColor: COLORS.doubleElimSectionBackground,
+    backgroundColor: COLORS.glassmorphism.background,
     borderWidth: 1,
-    borderColor: COLORS.doubleElimPrimary,
+    borderColor: COLORS.glassmorphism.border,
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -211,20 +233,21 @@ const styles = StyleSheet.create({
     minWidth: 80,
   },
   formatButtonSelected: {
-    backgroundColor: COLORS.doubleElimPrimary,
-    borderColor: COLORS.doubleElimPrimary,
+    backgroundColor: COLORS.backgroundWhite,
+    borderColor: COLORS.singleElimPrimary,
   },
   formatButtonText: {
     fontSize: 12,
     fontWeight: "500",
-    color: COLORS.doubleElimText,
+    color: COLORS.glassmorphism.text,
     textAlign: "center",
   },
   formatButtonTextSelected: {
-    color: COLORS.textWhite,
+    color: COLORS.textDark,
+    fontWeight: "bold",
   },
   startButton: {
-    backgroundColor: COLORS.doubleElimPrimary,
+    backgroundColor: COLORS.glassmorphism.backgroundMedium,
     paddingVertical: 16,
     borderRadius: 8,
     marginTop: 32,
@@ -233,9 +256,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3,
     elevation: 3,
+    borderWidth: 1,
+    borderColor: COLORS.glassmorphism.border,
   },
   startButtonText: {
-    color: COLORS.textWhite,
+    color: COLORS.glassmorphism.text,
     fontSize: 16,
     fontWeight: "600",
     textAlign: "center",
