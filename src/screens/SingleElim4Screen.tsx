@@ -289,16 +289,20 @@ export const SingleElim4Screen: React.FC<SingleElim4ScreenProps> = ({
         />
 
         {!tournamentOver && (
-          <TouchableOpacity
-            style={[
-              styles.advanceButton,
-              !canAdvanceRound() && styles.advanceButtonDisabled,
-            ]}
-            onPress={() => setShowAdvanceModal(true)}
-            disabled={!canAdvanceRound()}
-          >
-            <Text style={styles.advanceButtonText}>Advance to Next Round</Text>
-          </TouchableOpacity>
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={[
+                styles.advanceButton,
+                !canAdvanceRound() && styles.advanceButtonDisabled,
+              ]}
+              onPress={() => setShowAdvanceModal(true)}
+              disabled={!canAdvanceRound()}
+            >
+              <Text style={styles.advanceButtonText}>
+                Advance to Next Round
+              </Text>
+            </TouchableOpacity>
+          </View>
         )}
 
         <ConfirmActionModal
@@ -352,16 +356,19 @@ const styles = StyleSheet.create({
   },
   advanceButton: {
     backgroundColor: COLORS.singleElimPrimary,
-    padding: 16,
-    borderRadius: 4,
-    alignItems: "center",
-    marginTop: 16,
+    paddingVertical: 16,
+    borderRadius: 8,
   },
   advanceButtonDisabled: {
     backgroundColor: COLORS.textLight,
   },
   advanceButtonText: {
     color: COLORS.backgroundWhite,
-    fontWeight: "bold",
+    fontSize: 16,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  buttonContainer: {
+    // Removed padding and backgroundColor for a cleaner look
   },
 });

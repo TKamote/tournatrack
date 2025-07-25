@@ -456,16 +456,18 @@ const DoubleElim16Screen: React.FC<DoubleElim16ScreenProps> = ({
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
         />
-        <TouchableOpacity
-          style={[
-            styles.advanceButton,
-            !canAdvanceRound() && styles.advanceButtonDisabled,
-          ]}
-          onPress={handleAdvanceRound}
-          disabled={!canAdvanceRound()}
-        >
-          <Text style={styles.advanceButtonText}>Advance to Next Round</Text>
-        </TouchableOpacity>
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity
+            style={[
+              styles.advanceButton,
+              !canAdvanceRound() && styles.advanceButtonDisabled,
+            ]}
+            onPress={handleAdvanceRound}
+            disabled={!canAdvanceRound()}
+          >
+            <Text style={styles.advanceButtonText}>Advance to Next Round</Text>
+          </TouchableOpacity>
+        </View>
 
         <ConfirmActionModal
           visible={showAdvanceModal}
@@ -527,7 +529,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   listContent: {
-    paddingBottom: 24,
+    paddingBottom: 80,
   },
   advanceButton: {
     backgroundColor: COLORS.primary,
