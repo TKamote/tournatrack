@@ -387,12 +387,12 @@ export const DoubleElim4Screen: React.FC<DoubleElim4ScreenProps> = ({
             );
           }}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={{ ...styles.listContent, paddingBottom: 100 }}
           showsVerticalScrollIndicator={true}
         />
 
-        {/* Add the Advance Button */}
-        <View style={styles.buttonContainer}>
+        {/* Absolutely positioned Advance Button */}
+        <View style={styles.absoluteButtonContainer}>
           <TouchableOpacity
             style={[
               styles.advanceButton,
@@ -470,5 +470,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     textAlign: "center",
+  },
+  absoluteButtonContainer: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 34,
+    padding: 16,
+    backgroundColor: "transparent",
+    alignItems: "center",
   },
 });

@@ -387,4 +387,13 @@ const styles = StyleSheet.create({
   buttonContainer: {
     // Removed padding and backgroundColor for a cleaner look
   },
+  absoluteButtonContainer: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 34,
+    padding: 16,
+    backgroundColor: "transparent",
+    alignItems: "center",
+  },
 });

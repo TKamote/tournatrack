@@ -454,9 +454,9 @@ const DoubleElim16Screen: React.FC<DoubleElim16ScreenProps> = ({
             );
           }}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={{ ...styles.listContent, paddingBottom: 100 }}
         />
-        <View style={styles.buttonContainer}>
+        <View style={styles.absoluteButtonContainer}>
           <TouchableOpacity
             style={[
               styles.advanceButton,
@@ -545,8 +545,14 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     textAlign: "center",
   },
-  buttonContainer: {
-    // Removed padding and backgroundColor for a cleaner look
+  absoluteButtonContainer: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 34,
+    padding: 16,
+    backgroundColor: "transparent",
+    alignItems: "center",
   },
 });
 

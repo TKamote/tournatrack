@@ -284,26 +284,23 @@ export const SingleElim4Screen: React.FC<SingleElim4ScreenProps> = ({
             );
           }}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={{ ...styles.listContent, paddingBottom: 100 }}
           showsVerticalScrollIndicator={true}
         />
 
-        {!tournamentOver && (
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[
-                styles.advanceButton,
-                !canAdvanceRound() && styles.advanceButtonDisabled,
-              ]}
-              onPress={() => setShowAdvanceModal(true)}
-              disabled={!canAdvanceRound()}
-            >
-              <Text style={styles.advanceButtonText}>
-                Advance to Next Round
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
+        {/* Absolutely positioned Advance Button */}
+        <View style={styles.absoluteButtonContainer}>
+          <TouchableOpacity
+            style={[
+              styles.advanceButton,
+              !canAdvanceRound() && styles.advanceButtonDisabled,
+            ]}
+            onPress={() => setShowAdvanceModal(true)}
+            disabled={!canAdvanceRound()}
+          >
+            <Text style={styles.advanceButtonText}>Advance to Next Round</Text>
+          </TouchableOpacity>
+        </View>
 
         <ConfirmActionModal
           visible={showAdvanceModal}
@@ -368,7 +365,13 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     textAlign: "center",
   },
-  buttonContainer: {
-    // Removed padding and backgroundColor for a cleaner look
+  absoluteButtonContainer: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 34,
+    padding: 16,
+    backgroundColor: "transparent",
+    alignItems: "center",
   },
 });

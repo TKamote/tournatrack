@@ -570,12 +570,12 @@ export const DoubleElimination8Screen: React.FC<
             );
           }}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={{ ...styles.listContent, paddingBottom: 100 }}
           showsVerticalScrollIndicator={true}
         />
 
-        {/* Add the Advance Button - DEBUG VERSION */}
-        <View style={styles.buttonContainer}>
+        {/* Absolutely positioned Advance Button */}
+        <View style={styles.absoluteButtonContainer}>
           <TouchableOpacity
             style={[
               styles.advanceButton,
@@ -637,8 +637,14 @@ const styles = StyleSheet.create({
   listContent: {
     paddingBottom: 80,
   },
-  buttonContainer: {
-    // Removed padding and backgroundColor for a cleaner look
+  absoluteButtonContainer: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 34,
+    padding: 16,
+    backgroundColor: "transparent",
+    alignItems: "center",
   },
   advanceButton: {
     backgroundColor: COLORS.primary,
