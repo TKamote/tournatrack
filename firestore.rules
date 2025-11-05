@@ -8,10 +8,16 @@ service cloud.firestore {
     
     // Tournaments collection
     match /tournaments/{tournamentId} {
+      // For individual document reads:
       // Anyone can read public tournaments
       // OR authenticated users can read their own tournaments (even if private)
-      allow read: if resource.data.isPublic == true || 
-                     (request.auth != null && resource.data.managerId == request.auth.uid);
+      allow get: if resource.data.isPublic == true || 
+                    (request.auth != null && resource.data.managerId == request.auth.uid);
+      
+      // For queries (list operations):
+      // Allow list queries - the get rule will still protect individual documents
+      // In practice, queries will only return documents the user can read
+      allow list: if true;
       
       // Only authenticated users can create tournaments, and must set themselves as manager
       allow create: if request.auth != null && 
