@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -12,7 +12,8 @@ import {
   ScrollView,
   ActivityIndicator,
 } from "react-native";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { Ionicons } from "@expo/vector-icons";
+import { doc, setDoc } from "firebase/firestore";
 import { db } from "../utils/firebase";
 import { auth } from "../utils/firebase";
 import {
@@ -22,53 +23,15 @@ import {
 } from "firebase/auth";
 import { COLORS } from "../constants/colors";
 import { FONT_SIZES, FONT_WEIGHTS } from "../constants/typography";
-import { useUser } from "../context/UserContext";
 
 const AuthScreen: React.FC<any> = ({ navigation, route }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { setUserRole, setUserName, setUserId } = useUser();
-
-  // Check if user is already authenticated and load their role
-  useEffect(() => {
-    const checkAuthState = async () => {
-      const currentUser = auth.currentUser;
-      if (currentUser) {
-        console.log("User already authenticated:", currentUser.uid);
-        const role = await getUserRole(currentUser.uid);
-        setUserRole(role);
-        setUserId(currentUser.uid);
-        setUserName(currentUser.email?.split("@")[0] || "User");
-        navigation.navigate("MainTabs");
-      }
-    };
-
-    checkAuthState();
-  }, []);
-
-  const getUserRole = async (userId: string) => {
-    try {
-      console.log("Fetching user role for UID:", userId);
-      const userDoc = await getDoc(doc(db, "users", userId));
-      console.log("User document exists:", userDoc.exists());
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        console.log("User data:", userData);
-        // Remove extra quotes from the role value
-        const role = (userData.role || "supporter").replace(/"/g, "");
-        console.log("Returning role:", role);
-        return role;
-      }
-      console.log("User document does not exist, returning supporter");
-      return "supporter"; // Default role for existing users
-    } catch (error) {
-      console.error("Error getting user role:", error);
-      // Return supporter as fallback when offline or error
-      return "supporter";
-    }
-  };
+  const [showPassword, setShowPassword] = useState(false);
+  // UserContext now handles all user data syncing automatically
+  // No need to manually set user data here
 
   const handleSignUp = async () => {
     if (!email || !password) {
@@ -88,9 +51,8 @@ const AuthScreen: React.FC<any> = ({ navigation, route }) => {
         email: userCredential.user.email,
         role: "supporter", // Default to supporter for new signups
       });
-      setUserRole("supporter"); // Set role in context
-      setUserId(userCredential.user.uid); // Set userId in context
-      setUserName(userCredential.user.email?.split("@")[0] || "User"); // Set userName in context
+      // UserContext will automatically sync user data via onAuthStateChanged
+      // No need to manually set user data - just navigate
       navigation.navigate("MainTabs");
     } catch (error: any) {
       let message = error.message;
@@ -116,9 +78,6 @@ const AuthScreen: React.FC<any> = ({ navigation, route }) => {
     // Clean the email - remove mailto: prefix and trim
     const cleanEmail = email.replace(/^mailto:/, "").trim();
 
-    console.log("Original email:", email);
-    console.log("Clean email:", cleanEmail);
-    console.log("Email length:", cleanEmail.length);
     setIsLoading(true);
     try {
       const userCredential = await signInWithEmailAndPassword(
@@ -126,26 +85,32 @@ const AuthScreen: React.FC<any> = ({ navigation, route }) => {
         cleanEmail,
         password
       );
-      console.log("Sign in successful for user:", userCredential.user.uid);
-      const role = await getUserRole(userCredential.user.uid);
-      console.log("Setting user role in context:", role);
-      setUserRole(role); // Set role in context
-      setUserId(userCredential.user.uid); // Set userId in context
-      setUserName(userCredential.user.email?.split("@")[0] || "User"); // Set userName in context
-      console.log("Role set, navigating to MainTabs");
+      // Sign in successful - clear password and navigate
+      setPassword("");
+      // UserContext will automatically sync user data via onAuthStateChanged
+      // No need to manually set user data here - it will be handled by UserContext
+      // Just navigate - the UserContext will update automatically
       navigation.navigate("MainTabs");
     } catch (error: any) {
-      console.error("Sign in error:", error.code, error.message);
-      console.error("Full error object:", error);
-      let message = error.message;
-      if (error.code === "auth/user-not-found") {
-        message = "No user found with this email.";
-      } else if (error.code === "auth/wrong-password") {
-        message = "Incorrect password.";
-      } else if (error.code === "auth/invalid-email") {
-        message = "The email address is invalid. Please check the format.";
+      // Only show error if it's a real authentication error
+      // Don't log errors if navigation is already happening
+      if (error.code && error.code.startsWith("auth/")) {
+        let message = error.message;
+        if (error.code === "auth/user-not-found") {
+          message = "No user found with this email. Please sign up first.";
+        } else if (error.code === "auth/wrong-password") {
+          message = "Incorrect password. Please try again.";
+        } else if (error.code === "auth/invalid-credential") {
+          message = "Invalid email or password. Please check your credentials and try again.";
+        } else if (error.code === "auth/invalid-email") {
+          message = "The email address is invalid. Please check the format.";
+        } else if (error.code === "auth/too-many-requests") {
+          message = "Too many failed attempts. Please try again later.";
+        } else if (error.code === "auth/user-disabled") {
+          message = "This account has been disabled. Please contact support.";
+        }
+        Alert.alert("Sign in error", message);
       }
-      Alert.alert("Sign in error", message);
     } finally {
       setIsLoading(false);
     }
@@ -197,15 +162,28 @@ const AuthScreen: React.FC<any> = ({ navigation, route }) => {
                 onChangeText={setEmail}
                 editable={!isLoading}
               />
-              <TextInput
-                style={styles.input}
-                placeholder="Password"
-                placeholderTextColor={COLORS.textLight}
-                secureTextEntry
-                value={password}
-                onChangeText={setPassword}
-                editable={!isLoading}
-              />
+              <View style={styles.passwordContainer}>
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder="Password"
+                  placeholderTextColor={COLORS.textLight}
+                  secureTextEntry={!showPassword}
+                  value={password}
+                  onChangeText={setPassword}
+                  editable={!isLoading}
+                />
+                <TouchableOpacity
+                  style={styles.eyeIcon}
+                  onPress={() => setShowPassword(!showPassword)}
+                  disabled={isLoading}
+                >
+                  <Ionicons
+                    name={showPassword ? "eye-off" : "eye"}
+                    size={20}
+                    color={COLORS.textLight}
+                  />
+                </TouchableOpacity>
+              </View>
 
               <TouchableOpacity onPress={handlePasswordReset}>
                 <Text
@@ -294,6 +272,29 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     fontSize: FONT_SIZES.md,
     color: COLORS.textWhite,
+  },
+  passwordContainer: {
+    position: "relative",
+    marginBottom: 16,
+  },
+  passwordInput: {
+    backgroundColor: COLORS.glassmorphism.background,
+    borderWidth: 1,
+    borderColor: COLORS.glassmorphism.border,
+    borderRadius: 12,
+    padding: 16,
+    paddingRight: 50,
+    fontSize: FONT_SIZES.md,
+    color: COLORS.textWhite,
+  },
+  eyeIcon: {
+    position: "absolute",
+    right: 16,
+    top: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    width: 40,
   },
   submitButton: {
     backgroundColor: COLORS.primary,
