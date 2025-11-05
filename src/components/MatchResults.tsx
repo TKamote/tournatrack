@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 12,
+    paddingVertical: 6,
     paddingHorizontal: 2,
     backgroundColor: COLORS.backgroundWhite,
     borderRadius: 8,
@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: COLORS.textDark,
     flex: 1,
-    paddingVertical: 4,
+    paddingVertical: 2,
     textAlign: "center",
     borderRadius: 6,
     backgroundColor: "#fff",
@@ -136,17 +136,17 @@ const styles = StyleSheet.create({
     color: COLORS.textDark,
     minWidth: 26,
     textAlign: "center",
-    marginHorizontal: 4,
+    marginHorizontal: 2,
   },
   separator: {
     fontSize: 24,
     color: COLORS.textLight,
-    marginHorizontal: 8, // Reduced from 16
+    marginHorizontal: 4,
     fontWeight: "300",
   },
   winnerContainer: {
     alignItems: "center",
-    marginTop: 4,
+    marginTop: 2,
   },
   winnerText: {
     fontSize: 14,
@@ -154,10 +154,10 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   byeMatchContainer: {
-    padding: 16,
+    padding: 8,
     backgroundColor: COLORS.backgroundLight,
     borderRadius: 8,
     alignItems: "center",
-    marginTop: 8,
+    marginTop: 4,
   },
 });

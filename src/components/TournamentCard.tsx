@@ -90,11 +90,11 @@ const TournamentCard: React.FC<TournamentCardProps> = ({
           <View
             style={[
               styles.statusBadge,
-              styles[
-                `status${
-                  actualStatus.charAt(0).toUpperCase() + actualStatus.slice(1)
-                }`
-              ],
+              actualStatus === "completed"
+                ? styles.statusCompleted
+                : actualStatus === "ongoing"
+                ? styles.statusOngoing
+                : styles.statusUpcoming,
             ]}
           >
             <Text style={styles.statusText}>{getStatusText()}</Text>
@@ -217,7 +217,7 @@ const TournamentCard: React.FC<TournamentCardProps> = ({
           }}
         >
           {managerAvatar && (
-            <View className={styles.avatarContainer}>
+            <View style={styles.avatarContainer}>
               <Text style={styles.avatarText}>
                 {manager && manager.length > 0 ? manager.charAt(0) : "U"}
               </Text>
@@ -234,7 +234,7 @@ const TournamentCard: React.FC<TournamentCardProps> = ({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "rgba(34, 48, 66, 0.8)",
+    backgroundColor: "rgba(34, 48, 66, 0.7)",
     borderRadius: 20,
     padding: 24,
     marginBottom: 20,
@@ -247,9 +247,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.1)",
     position: "relative",
-    backdropFilter: "blur(10px)",
-    // Glassmorphism effect
-    backgroundColor: "rgba(34, 48, 66, 0.7)",
     borderTopColor: "rgba(255, 255, 255, 0.2)",
     borderLeftColor: "rgba(255, 255, 255, 0.1)",
   },

@@ -193,18 +193,18 @@ const PlayerInput4Screen: React.FC<PlayerInput4ScreenProps> = ({
             </View>
 
             <View style={styles.playersGrid}>
-              {playerNames.map((name, index) => (
-                <View key={index} style={styles.inputContainer}>
-                  <Text style={styles.label}>Player {index + 1}:</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={name}
-                    onChangeText={(text) => handlePlayerNameChange(index, text)}
+            {playerNames.map((name, index) => (
+              <View key={index} style={styles.inputContainer}>
+                <Text style={styles.label}>Player {index + 1}:</Text>
+                <TextInput
+                  style={styles.input}
+                  value={name}
+                  onChangeText={(text) => handlePlayerNameChange(index, text)}
                     placeholder={`Player ${index + 1}`}
-                    placeholderTextColor={COLORS.textLight}
-                  />
-                </View>
-              ))}
+                  placeholderTextColor={COLORS.textLight}
+                />
+              </View>
+            ))}
             </View>
 
             {/* Race Format Section */}

@@ -20,6 +20,7 @@ import {
 import ScreenHeader from "../../components/ScreenHeader";
 import MatchListItem from "../../components/MatchListItem";
 import ConfirmActionModal from "../../components/ConfirmActionModal";
+import TournamentSummaryModal from "../../components/TournamentSummaryModal";
 import { Ionicons } from "@expo/vector-icons";
 import { TournamentService } from "../../utils/tournamentService";
 import { useUser } from "../../context/UserContext";
@@ -50,7 +51,7 @@ const DoubleElim16Screen: React.FC<DoubleElim16ScreenProps> = ({
       try {
         await TournamentService.saveTournament(tournamentData);
       } catch (error) {
-        console.error("Error saving tournament to Firebase:", error);
+        // Error saving tournament
       }
     },
     []
@@ -64,12 +65,6 @@ const DoubleElim16Screen: React.FC<DoubleElim16ScreenProps> = ({
       matchFormat &&
       !hasInitialized
     ) {
-      console.log(
-        "[TournamentCreation] userName:",
-        userName,
-        "userId:",
-        userId
-      );
       const initialPlayers = playerNames.map((name, i) => ({
         id: `player-${i + 1}`,
         name: `${name} L0`,
@@ -187,18 +182,10 @@ const DoubleElim16Screen: React.FC<DoubleElim16ScreenProps> = ({
         try {
           await TournamentService.saveTournament(updatedTournament);
         } catch (updateError: any) {
-          console.error(
-            "❌ Error updating tournament in Firebase:",
-            updateError
-          );
-          console.error("❌ Update error details:", {
-            code: updateError?.code,
-            message: updateError?.message,
-            tournamentId: tournamentId,
-          });
+          // Error updating tournament
         }
       } catch (error) {
-        console.error("❌ Error in updateTournamentInFirebase:", error);
+        // Error in updateTournamentInFirebase
       }
     },
     [tournamentId, players, matchFormat, userName, userId]
@@ -344,6 +331,75 @@ const DoubleElim16Screen: React.FC<DoubleElim16ScreenProps> = ({
       userName,
       userId,
     ]
+  );
+
+  // Handle reset score
+  const handleResetScore = useCallback(
+    (matchId: string) => {
+      setMatches((prevMatches) => {
+        const matchToReset = prevMatches.find((m) => m.id === matchId);
+        if (!matchToReset) return prevMatches;
+
+        // Only allow reset if match is in current round
+        if (matchToReset.round !== currentRound) {
+          Alert.alert(
+            "Cannot Reset",
+            "You can only reset scores for matches in the current round."
+          );
+          return prevMatches;
+        }
+
+        // Check if round has been advanced (matches exist in higher rounds)
+        const hasAdvancedRound = prevMatches.some(
+          (m) => m.round > currentRound
+        );
+        if (hasAdvancedRound) {
+          Alert.alert(
+            "Cannot Reset",
+            "You cannot reset scores after advancing to the next round."
+          );
+          return prevMatches;
+        }
+
+        // If match had a winner, undo player elimination/loss
+        if (matchToReset.winner) {
+          const losingPlayer =
+            matchToReset.player1?.id === matchToReset.winner.id
+              ? matchToReset.player2
+              : matchToReset.player1;
+          if (losingPlayer) {
+            setPlayers((prevPlayers) =>
+              prevPlayers.map((p) =>
+                p.id === losingPlayer.id ? { ...p, isEliminated: false } : p
+              )
+            );
+          }
+
+          // If this was the grand finals, undo tournament completion
+          if (matchToReset.bracket === "grandFinals") {
+            setTournamentOver(false);
+            setOverallWinner(null);
+            setRunnerUp(null);
+            setFinalMatch(null);
+            setShowSummaryModal(false);
+          }
+        }
+
+        // Reset the match: clear games and winner
+        const updatedMatches = prevMatches.map((match) => {
+          if (match.id === matchId) {
+            return { ...match, games: [], winner: null };
+          }
+          return match;
+        });
+
+        // Update Firebase
+        updateTournamentInFirebase(updatedMatches);
+
+        return updatedMatches;
+      });
+    },
+    [currentRound, updateTournamentInFirebase]
   );
 
   // Advance round logic
@@ -610,6 +666,10 @@ const DoubleElim16Screen: React.FC<DoubleElim16ScreenProps> = ({
               prevItem.round !== item.round ||
               (prevItem.round === item.round &&
                 prevItem.bracket !== item.bracket);
+
+            // Check if round can be reset (no matches in higher rounds)
+            const canResetRound = !matches.some((m) => m.round > currentRound);
+
             return (
               <>
                 {/* Optionally add a round/bracket separator here */}
@@ -619,6 +679,9 @@ const DoubleElim16Screen: React.FC<DoubleElim16ScreenProps> = ({
                   tournamentType="Double Elimination (16)"
                   isMatchLocked={isMatchLocked}
                   onGameResult={handleIncrementScore}
+                  onResetScore={handleResetScore}
+                  currentRound={currentRound}
+                  canResetRound={canResetRound}
                 />
               </>
             );
@@ -644,6 +707,17 @@ const DoubleElim16Screen: React.FC<DoubleElim16ScreenProps> = ({
           onConfirm={executeAdvanceRound}
           onCancel={() => setShowAdvanceModal(false)}
         />
+
+        <TournamentSummaryModal
+          visible={showSummaryModal}
+          winner={overallWinner}
+          runnerUp={runnerUp}
+          finalMatch={finalMatch}
+          matches={matches}
+          tournamentType="Double Elimination (16 Players)"
+          matchFormat={matchFormat}
+          onClose={() => setShowSummaryModal(false)}
+        />
       </View>
     </SafeAreaView>
   );
@@ -662,7 +736,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.glassmorphism.background,
     padding: 8,
     borderRadius: 8,
-    marginBottom: 16,
+    marginBottom: 8,
     borderWidth: 1,
     borderColor: COLORS.glassmorphism.border,
   },
@@ -702,11 +776,11 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   listContent: {
-    paddingBottom: 24,
+    paddingBottom: 12,
   },
   advanceButton: {
     backgroundColor: "#111",
-    paddingVertical: 16,
+    paddingVertical: 8,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: COLORS.glassmorphism.border,

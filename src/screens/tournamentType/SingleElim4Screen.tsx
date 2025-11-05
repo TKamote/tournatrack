@@ -61,7 +61,7 @@ export const SingleElim4Screen: React.FC<SingleElim4ScreenProps> = ({
       try {
         await TournamentService.saveTournament(tournamentData);
       } catch (error) {
-        console.error("❌ Save error:", error);
+        // Error saving tournament
       }
     },
     []
@@ -75,12 +75,6 @@ export const SingleElim4Screen: React.FC<SingleElim4ScreenProps> = ({
       matchFormat &&
       !hasInitialized
     ) {
-      console.log(
-        "[TournamentCreation] userName:",
-        userName,
-        "userId:",
-        userId
-      );
       const initialPlayers = playerNames.map((name, i) => ({
         id: `player-${i + 1}`,
         name,
@@ -191,7 +185,7 @@ export const SingleElim4Screen: React.FC<SingleElim4ScreenProps> = ({
 
         await TournamentService.saveTournament(updatedTournament);
       } catch (error) {
-        console.error("❌ Update error:", error);
+        // Error updating tournament
       }
     },
     [tournamentId, players, matchFormat, userName, userId]
@@ -229,8 +223,17 @@ export const SingleElim4Screen: React.FC<SingleElim4ScreenProps> = ({
               updatePlayerElimination(losingPlayer.id);
             }
 
-            // Tournament completion will be handled by executeAdvanceRound
-            // Don't set tournament over here to avoid race conditions
+            // Check if tournament is complete (Round 2 is the final round)
+            if (match.round === 2) {
+              // Tournament is complete - set winner and show modal
+              setTimeout(() => {
+                setTournamentOver(true);
+                setOverallWinner(winner);
+                setRunnerUp(losingPlayer || null);
+                setFinalMatch(updatedMatch);
+                setShowSummaryModal(true);
+              }, 100);
+            }
           }
 
           return updatedMatch;
@@ -263,6 +266,75 @@ export const SingleElim4Screen: React.FC<SingleElim4ScreenProps> = ({
       });
     });
   }, []);
+
+  // Handle reset score
+  const handleResetScore = useCallback(
+    (matchId: string) => {
+      setMatches((prevMatches) => {
+        const matchToReset = prevMatches.find((m) => m.id === matchId);
+        if (!matchToReset) return prevMatches;
+
+        // Only allow reset if match is in current round
+        if (matchToReset.round !== currentRound) {
+          Alert.alert(
+            "Cannot Reset",
+            "You can only reset scores for matches in the current round."
+          );
+          return prevMatches;
+        }
+
+        // Check if round has been advanced (matches exist in higher rounds)
+        const hasAdvancedRound = prevMatches.some(
+          (m) => m.round > currentRound
+        );
+        if (hasAdvancedRound) {
+          Alert.alert(
+            "Cannot Reset",
+            "You cannot reset scores after advancing to the next round."
+          );
+          return prevMatches;
+        }
+
+        // If match had a winner, undo player elimination
+        if (matchToReset.winner) {
+          const losingPlayer =
+            matchToReset.player1?.id === matchToReset.winner.id
+              ? matchToReset.player2
+              : matchToReset.player1;
+          if (losingPlayer) {
+            setPlayers((prevPlayers) =>
+              prevPlayers.map((p) =>
+                p.id === losingPlayer.id ? { ...p, isEliminated: false } : p
+              )
+            );
+          }
+
+          // If this was the final match (Round 2), undo tournament completion
+          if (matchToReset.round === 2) {
+            setTournamentOver(false);
+            setOverallWinner(null);
+            setRunnerUp(null);
+            setFinalMatch(null);
+            setShowSummaryModal(false);
+          }
+        }
+
+        // Reset the match: clear games and winner
+        const updatedMatches = prevMatches.map((match) => {
+          if (match.id === matchId) {
+            return { ...match, games: [], winner: null };
+          }
+          return match;
+        });
+
+        // Update Firebase
+        updateTournamentInFirebase(updatedMatches);
+
+        return updatedMatches;
+      });
+    },
+    [currentRound, updateTournamentInFirebase]
+  );
 
   // Advance to next round
   const executeAdvanceRound = useCallback(() => {
@@ -373,6 +445,9 @@ export const SingleElim4Screen: React.FC<SingleElim4ScreenProps> = ({
             const showSeparator =
               index === 0 || !prevItem || prevItem.round !== item.round;
 
+            // Check if round can be reset (no matches in higher rounds)
+            const canResetRound = !matches.some((m) => m.round > currentRound);
+
             return (
               <>
                 {showSeparator && (
@@ -384,6 +459,9 @@ export const SingleElim4Screen: React.FC<SingleElim4ScreenProps> = ({
                   tournamentType="Single Elimination (4)"
                   isMatchLocked={isMatchLocked}
                   onGameResult={handleIncrementScore}
+                  onResetScore={handleResetScore}
+                  currentRound={currentRound}
+                  canResetRound={canResetRound}
                 />
               </>
             );
@@ -424,6 +502,9 @@ export const SingleElim4Screen: React.FC<SingleElim4ScreenProps> = ({
           winner={overallWinner}
           runnerUp={runnerUp}
           finalMatch={finalMatch}
+          matches={matches}
+          tournamentType="Single Elimination (4 Players)"
+          matchFormat={matchFormat}
           onClose={() => setShowSummaryModal(false)}
         />
       </View>
@@ -444,7 +525,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.glassmorphism.background,
     padding: 8,
     borderRadius: 8,
-    marginBottom: 16,
+    marginBottom: 8,
     borderWidth: 1,
     borderColor: COLORS.glassmorphism.border,
   },
@@ -454,11 +535,11 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   listContent: {
-    paddingBottom: 80,
+    paddingBottom: 40,
   },
   advanceButton: {
     backgroundColor: "#111",
-    paddingVertical: 16,
+    paddingVertical: 8,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: COLORS.glassmorphism.border,

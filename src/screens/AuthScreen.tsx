@@ -95,21 +95,21 @@ const AuthScreen: React.FC<any> = ({ navigation, route }) => {
       // Only show error if it's a real authentication error
       // Don't log errors if navigation is already happening
       if (error.code && error.code.startsWith("auth/")) {
-        let message = error.message;
-        if (error.code === "auth/user-not-found") {
+      let message = error.message;
+      if (error.code === "auth/user-not-found") {
           message = "No user found with this email. Please sign up first.";
-        } else if (error.code === "auth/wrong-password") {
+      } else if (error.code === "auth/wrong-password") {
           message = "Incorrect password. Please try again.";
         } else if (error.code === "auth/invalid-credential") {
           message = "Invalid email or password. Please check your credentials and try again.";
-        } else if (error.code === "auth/invalid-email") {
-          message = "The email address is invalid. Please check the format.";
+      } else if (error.code === "auth/invalid-email") {
+        message = "The email address is invalid. Please check the format.";
         } else if (error.code === "auth/too-many-requests") {
           message = "Too many failed attempts. Please try again later.";
         } else if (error.code === "auth/user-disabled") {
           message = "This account has been disabled. Please contact support.";
-        }
-        Alert.alert("Sign in error", message);
+      }
+      Alert.alert("Sign in error", message);
       }
     } finally {
       setIsLoading(false);
@@ -163,15 +163,15 @@ const AuthScreen: React.FC<any> = ({ navigation, route }) => {
                 editable={!isLoading}
               />
               <View style={styles.passwordContainer}>
-                <TextInput
+              <TextInput
                   style={styles.passwordInput}
-                  placeholder="Password"
-                  placeholderTextColor={COLORS.textLight}
+                placeholder="Password"
+                placeholderTextColor={COLORS.textLight}
                   secureTextEntry={!showPassword}
-                  value={password}
-                  onChangeText={setPassword}
-                  editable={!isLoading}
-                />
+                value={password}
+                onChangeText={setPassword}
+                editable={!isLoading}
+              />
                 <TouchableOpacity
                   style={styles.eyeIcon}
                   onPress={() => setShowPassword(!showPassword)}

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Modal,
   View,
@@ -8,16 +8,22 @@ import {
   Animated,
   Easing,
   Dimensions,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "../constants/colors";
-// Update the import path below if your types are located elsewhere, e.g. '../../types'
-import { Match, Player, TournamentType } from "../types";
+import { Match, Player, TournamentType, MatchFormat } from "../types";
+import { generateTournamentPDF } from "../utils/pdfGenerator";
 
 interface TournamentSummaryModalProps {
   visible: boolean;
-  winner: Player | null; // Changed from Player
-  runnerUp: Player | null; // Changed from Player
-  finalMatch: Match | null; // Changed from Match
+  winner: Player | null;
+  runnerUp: Player | null;
+  finalMatch: Match | null;
+  matches?: Match[];
+  tournamentType?: string;
+  matchFormat?: MatchFormat;
   onClose: () => void;
 }
 
@@ -29,8 +35,12 @@ const TournamentSummaryModal: React.FC<TournamentSummaryModalProps> = ({
   winner,
   runnerUp,
   finalMatch,
+  matches = [],
+  tournamentType = "Tournament",
+  matchFormat,
 }) => {
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
   useEffect(() => {
     if (visible) {
@@ -58,6 +68,33 @@ const TournamentSummaryModal: React.FC<TournamentSummaryModalProps> = ({
   const runnerUpScore = runnerUp
     ? finalMatch.games.filter((g) => g.winner?.id === runnerUp.id).length
     : 0;
+
+  const handleGeneratePDF = async () => {
+    if (!winner || !matchFormat) {
+      Alert.alert("Error", "Missing tournament data for PDF generation.");
+      return;
+    }
+
+    setIsGeneratingPDF(true);
+    try {
+      await generateTournamentPDF({
+        tournamentType,
+        winner,
+        runnerUp,
+        matches: matches.length > 0 ? matches : [finalMatch],
+        matchFormat,
+        completedDate: new Date(),
+      });
+    } catch (error) {
+      Alert.alert(
+        "Error",
+        "Failed to generate PDF. Please try again."
+      );
+      console.error("PDF generation error:", error);
+    } finally {
+      setIsGeneratingPDF(false);
+    }
+  };
 
   return (
     <Modal
@@ -100,9 +137,31 @@ const TournamentSummaryModal: React.FC<TournamentSummaryModalProps> = ({
             </Text>
           </View>
 
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={[styles.button, styles.pdfButton]}
+              onPress={handleGeneratePDF}
+              disabled={isGeneratingPDF}
+            >
+              {isGeneratingPDF ? (
+                <ActivityIndicator color={COLORS.textWhite} size="small" />
+              ) : (
+                <>
+                  <Ionicons
+                    name="document-text-outline"
+                    size={20}
+                    color={COLORS.textWhite}
+                    style={styles.buttonIcon}
+                  />
+                  <Text style={styles.buttonText}>Generate PDF</Text>
+                </>
+              )}
+            </TouchableOpacity>
+
           <TouchableOpacity style={styles.button} onPress={onClose}>
             <Text style={styles.buttonText}>Close</Text>
           </TouchableOpacity>
+          </View>
         </Animated.View>
       </View>
     </Modal>
@@ -132,8 +191,8 @@ const styles = StyleSheet.create({
     elevation: 5,
     margin: 20,
     width: "90%",
-    borderWidth: 1,
-    borderColor: COLORS.glassmorphism.border,
+    borderWidth: 4,
+    borderColor: "#FFD700",
   },
   titleText: {
     fontSize: 22,
@@ -173,6 +232,10 @@ const styles = StyleSheet.create({
     marginTop: 10,
     textAlign: "center",
   },
+  buttonContainer: {
+    width: "100%",
+    gap: 10,
+  },
   button: {
     backgroundColor: COLORS.glassmorphism.background,
     paddingVertical: 10,
@@ -180,12 +243,21 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: COLORS.glassmorphism.border,
-    marginTop: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+  },
+  pdfButton: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
   },
   buttonText: {
     color: COLORS.textWhite,
     fontSize: 16,
     fontWeight: "600",
+  },
+  buttonIcon: {
+    marginRight: 8,
   },
 });
 

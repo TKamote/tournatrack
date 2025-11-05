@@ -38,7 +38,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
 
   // Fetch user role from Firestore
   const fetchUserRoleFromFirestore = useCallback(async (uid: string) => {
-    try {
+      try {
       const userDoc = await getDoc(doc(db, "users", uid));
       if (userDoc.exists()) {
         const userData = userDoc.data();
@@ -46,7 +46,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
         return "manager" as UserRole;
       }
       return "manager" as UserRole;
-    } catch (error) {
+      } catch (error) {
       // Error fetching role - default to manager
       return "manager" as UserRole;
     }

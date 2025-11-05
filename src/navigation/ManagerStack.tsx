@@ -30,7 +30,7 @@ export const ManagerStack = () => {
       />
       <Stack.Screen
         name="PlayerInput"
-        component={PlayerInputScreen}
+        component={PlayerInputScreen as any}
         options={({ navigation }) => ({
           title: "Double Elimination",
           headerBackTitleVisible: false,
@@ -47,7 +47,7 @@ export const ManagerStack = () => {
       />
       <Stack.Screen
         name="DoubleElim8"
-        component={DoubleElimination8Screen}
+        component={DoubleElimination8Screen as any}
         options={({ navigation }) => ({
           title: "Double Elimination",
           headerBackTitleVisible: false,
@@ -64,7 +64,7 @@ export const ManagerStack = () => {
       />
       <Stack.Screen
         name="SingleElim8"
-        component={SingleElim8Screen}
+        component={SingleElim8Screen as any}
         options={({ navigation }) => ({
           title: "Single Elimination",
           headerBackTitleVisible: false,

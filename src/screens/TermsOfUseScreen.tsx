@@ -353,7 +353,7 @@ const TermsOfUseScreen: React.FC = () => {
               Use, please contact us at:
             </Text>
             <Text style={styles.paragraph}>
-              • Email: admin@TournaTrack.site
+              • Email: support@tournatracker.com
             </Text>
             <Text style={styles.paragraph}>
               • App Store Reviews: You can also contact us through the app store

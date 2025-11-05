@@ -51,25 +51,9 @@ export const DoubleElim4Screen: React.FC<DoubleElim4ScreenProps> = ({
   const saveTournamentToFirebase = useCallback(
     async (tournamentData: Tournament) => {
       try {
-        console.log("🔥🔥🔥 INITIAL SAVE TO FIREBASE 🔥🔥🔥");
-        console.log("📊 Tournament data:", {
-          id: tournamentData.id,
-          name: tournamentData.name,
-          type: tournamentData.type,
-          players: tournamentData.players.length,
-          matches: tournamentData.matches.length,
-          status: tournamentData.status,
-          isPublic: tournamentData.isPublic,
-        });
-
         await TournamentService.saveTournament(tournamentData);
-        console.log("✅ Tournament saved to Firebase:", tournamentData.id);
       } catch (error) {
-        console.error("❌ Error saving tournament to Firebase:", error);
-        console.error("❌ Error details:", {
-          message: error instanceof Error ? error.message : "Unknown error",
-          tournamentId: tournamentData.id,
-        });
+        // Error saving tournament
       }
     },
     []
@@ -83,12 +67,6 @@ export const DoubleElim4Screen: React.FC<DoubleElim4ScreenProps> = ({
       matchFormat &&
       !hasInitialized
     ) {
-      console.log(
-        "[TournamentCreation] userName:",
-        userName,
-        "userId:",
-        userId
-      );
       const initialPlayers = playerNames.map((name, i) => ({
         id: `player-${i + 1}`,
         name: `${name} L0`,
@@ -167,12 +145,6 @@ export const DoubleElim4Screen: React.FC<DoubleElim4ScreenProps> = ({
   // Update tournament in Firebase
   const updateTournamentInFirebase = useCallback(
     async (updatedMatches: Match[], tournamentStatus?: TournamentStatus) => {
-      console.log("🔥🔥🔥 FIREBASE UPDATE FUNCTION CALLED 🔥🔥🔥");
-      console.log(
-        "🔄 UPDATE FUNCTION CALLED with",
-        updatedMatches.length,
-        "matches"
-      );
       if (!tournamentId) return;
 
       try {
@@ -194,41 +166,13 @@ export const DoubleElim4Screen: React.FC<DoubleElim4ScreenProps> = ({
           totalRounds: 3,
         };
 
-        console.log(
-          "🔥 Attempting to update tournament in Firebase:",
-          tournamentId
-        );
-        console.log("📊 Data being saved:", {
-          tournamentId: updatedTournament.id,
-          matchesCount: updatedTournament.matches.length,
-          completedMatches: updatedTournament.matches.filter((m) => m.winner)
-            .length,
-          rounds: updatedTournament.matches.map((m) => m.round),
-          status: updatedTournament.status,
-        });
-
         try {
           await TournamentService.saveTournament(updatedTournament);
-          console.log(
-            "✅ Tournament updated in Firebase:",
-            tournamentId,
-            "with",
-            updatedMatches.filter((m) => m.winner).length,
-            "completed matches"
-          );
         } catch (updateError: any) {
-          console.error(
-            "❌ Error updating tournament in Firebase:",
-            updateError
-          );
-          console.error("❌ Update error details:", {
-            code: updateError?.code,
-            message: updateError?.message,
-            tournamentId: tournamentId,
-          });
+          // Error updating tournament
         }
       } catch (error) {
-        console.error("❌ Error in updateTournamentInFirebase:", error);
+        // Error in updateTournamentInFirebase
       }
     },
     [tournamentId, players, matchFormat, userName, userId]
@@ -237,13 +181,6 @@ export const DoubleElim4Screen: React.FC<DoubleElim4ScreenProps> = ({
   // Handle game result
   const handleIncrementScore = useCallback(
     (matchId: string, winner: Player, score1: number, score2: number) => {
-      console.log("🎯 HANDLE INCREMENT SCORE CALLED:", {
-        matchId,
-        winner: winner.name,
-        score1,
-        score2,
-      });
-
       setMatches((prevMatches) => {
         const updatedMatches = prevMatches.map((match) => {
           if (match.id !== matchId || match.winner) return match;
@@ -255,14 +192,6 @@ export const DoubleElim4Screen: React.FC<DoubleElim4ScreenProps> = ({
             score2,
           };
 
-          console.log("🎮 GAME PLAYED:", {
-            matchId: match.id,
-            gameId: newGame.id,
-            winner: winner.name,
-            score: `${score1}-${score2}`,
-            totalGames: match.games.length + 1,
-          });
-
           const updatedGames = [...match.games, newGame];
           const playerScore = updatedGames.filter(
             (g) => g.winner?.id === winner.id
@@ -270,17 +199,6 @@ export const DoubleElim4Screen: React.FC<DoubleElim4ScreenProps> = ({
           let updatedMatch = { ...match, games: updatedGames };
           if (playerScore >= matchFormat.gamesNeededToWin) {
             updatedMatch.winner = winner;
-
-            console.log("🏆 MATCH COMPLETED:", {
-              matchId: match.id,
-              round: match.round,
-              bracket: match.bracket,
-              winner: winner.name,
-              score: `${playerScore}-${
-                matchFormat.gamesNeededToWin - playerScore
-              }`,
-              gamesPlayed: updatedGames.length,
-            });
             // Grand Finals logic
             if (match.bracket === "grandFinals") {
               const wbPlayer =
@@ -362,15 +280,8 @@ export const DoubleElim4Screen: React.FC<DoubleElim4ScreenProps> = ({
         });
 
         // Update Firebase with current match state
-        console.log("🔥🔥🔥 ABOUT TO CALL FIREBASE UPDATE 🔥🔥🔥");
-        console.log(
-          "🔥🔥🔥 updateTournamentInFirebase function:",
-          typeof updateTournamentInFirebase
-        );
         if (updateTournamentInFirebase) {
           updateTournamentInFirebase(updatedMatches);
-        } else {
-          console.log("❌ updateTournamentInFirebase is undefined!");
         }
 
         return updatedMatches;
@@ -383,6 +294,77 @@ export const DoubleElim4Screen: React.FC<DoubleElim4ScreenProps> = ({
       userName,
       userId,
     ]
+  );
+
+  // Handle reset score
+  const handleResetScore = useCallback(
+    (matchId: string) => {
+      setMatches((prevMatches) => {
+        const matchToReset = prevMatches.find((m) => m.id === matchId);
+        if (!matchToReset) return prevMatches;
+
+        // Only allow reset if match is in current round
+        if (matchToReset.round !== currentRound) {
+          Alert.alert(
+            "Cannot Reset",
+            "You can only reset scores for matches in the current round."
+          );
+          return prevMatches;
+        }
+
+        // Check if round has been advanced (matches exist in higher rounds)
+        const hasAdvancedRound = prevMatches.some(
+          (m) => m.round > currentRound
+        );
+        if (hasAdvancedRound) {
+          Alert.alert(
+            "Cannot Reset",
+            "You cannot reset scores after advancing to the next round."
+          );
+          return prevMatches;
+        }
+
+        // If match had a winner, undo player elimination/loss
+        if (matchToReset.winner) {
+          const losingPlayer =
+            matchToReset.player1?.id === matchToReset.winner.id
+              ? matchToReset.player2
+              : matchToReset.player1;
+          if (losingPlayer) {
+            // For double elimination, we need to undo loss tracking
+            // This is more complex, but we'll reset the player's elimination status
+            setPlayers((prevPlayers) =>
+              prevPlayers.map((p) =>
+                p.id === losingPlayer.id ? { ...p, isEliminated: false } : p
+              )
+            );
+          }
+
+          // If this was the grand finals, undo tournament completion
+          if (matchToReset.bracket === "grandFinals") {
+            setTournamentOver(false);
+            setOverallWinner(null);
+            setRunnerUp(null);
+            setFinalMatch(null);
+            setShowSummaryModal(false);
+          }
+        }
+
+        // Reset the match: clear games and winner
+        const updatedMatches = prevMatches.map((match) => {
+          if (match.id === matchId) {
+            return { ...match, games: [], winner: null };
+          }
+          return match;
+        });
+
+        // Update Firebase
+        updateTournamentInFirebase(updatedMatches);
+
+        return updatedMatches;
+      });
+    },
+    [currentRound, updateTournamentInFirebase]
   );
 
   // **DE-4 COMPLETE ADVANCE ROUND LOGIC**
@@ -487,18 +469,6 @@ export const DoubleElim4Screen: React.FC<DoubleElim4ScreenProps> = ({
     }
 
     if (nextRoundMatches.length > 0) {
-      console.log("🎯 CREATING NEW ROUND:", {
-        currentRound,
-        newMatchesCount: nextRoundMatches.length,
-        newMatches: nextRoundMatches.map((m) => ({
-          id: m.id,
-          round: m.round,
-          bracket: m.bracket,
-          player1: m.player1?.name,
-          player2: m.player2?.name,
-        })),
-      });
-
       const allMatches = [...matches, ...nextRoundMatches];
       setMatches(allMatches);
 
@@ -512,13 +482,6 @@ export const DoubleElim4Screen: React.FC<DoubleElim4ScreenProps> = ({
   useEffect(() => {
     if (hasInitialized && matches.length > 0) {
       const status = tournamentOver ? "completed" : "in_progress";
-      console.log("🔄 Tournament state changed, updating Firebase:", {
-        tournamentId,
-        status,
-        matchesCount: matches.length,
-        completedMatches: matches.filter((m) => m.winner).length,
-        tournamentOver,
-      });
       updateTournamentInFirebase(matches, status);
     }
   }, [
@@ -612,6 +575,9 @@ export const DoubleElim4Screen: React.FC<DoubleElim4ScreenProps> = ({
               (prevItem.round === item.round &&
                 prevItem.bracket !== item.bracket);
 
+            // Check if round can be reset (no matches in higher rounds)
+            const canResetRound = !matches.some((m) => m.round > currentRound);
+
             return (
               <>
                 {showSeparator && (
@@ -623,6 +589,9 @@ export const DoubleElim4Screen: React.FC<DoubleElim4ScreenProps> = ({
                   tournamentType="Double Elimination (4)"
                   isMatchLocked={isMatchLocked}
                   onGameResult={handleIncrementScore}
+                  onResetScore={handleResetScore}
+                  currentRound={currentRound}
+                  canResetRound={canResetRound}
                 />
               </>
             );
@@ -664,6 +633,9 @@ export const DoubleElim4Screen: React.FC<DoubleElim4ScreenProps> = ({
           winner={overallWinner}
           runnerUp={runnerUp}
           finalMatch={finalMatch}
+          matches={matches}
+          tournamentType="Double Elimination (4 Players)"
+          matchFormat={matchFormat}
           onClose={() => setShowSummaryModal(false)}
         />
       </View>
@@ -684,7 +656,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.glassmorphism.background,
     padding: 8,
     borderRadius: 8,
-    marginBottom: 16,
+    marginBottom: 8,
     borderWidth: 1,
     borderColor: COLORS.glassmorphism.border,
   },
@@ -694,14 +666,14 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   listContent: {
-    paddingBottom: 80,
+    paddingBottom: 40,
   },
   buttonContainer: {
     // Removed padding and backgroundColor for a cleaner look
   },
   advanceButton: {
     backgroundColor: "#111",
-    paddingVertical: 16,
+    paddingVertical: 8,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: COLORS.glassmorphism.border,

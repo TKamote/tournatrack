@@ -63,7 +63,7 @@ export const DoubleElimination8Screen: React.FC<
       try {
         await TournamentService.saveTournament(tournamentData);
       } catch (error) {
-        console.error("Error saving tournament to Firebase:", error);
+        // Error saving tournament
       }
     },
     []
@@ -108,7 +108,7 @@ export const DoubleElimination8Screen: React.FC<
 
         await TournamentService.saveTournament(updatedTournament);
       } catch (error) {
-        console.error("Error updating tournament in Firebase:", error);
+        // Error updating tournament
       }
     },
     [tournamentId, players, matchFormat, currentRound, userName, userId]
@@ -122,12 +122,6 @@ export const DoubleElimination8Screen: React.FC<
       matchFormat &&
       !hasInitialized
     ) {
-      console.log(
-        "[TournamentCreation] userName:",
-        userName,
-        "userId:",
-        userId
-      );
       const initialPlayers = playerNames.map((name, i) => ({
         id: `player-${i + 1}`,
         name: `${name} L0`,
@@ -453,6 +447,75 @@ export const DoubleElimination8Screen: React.FC<
     [updatePlayerLosses, matchFormat, updateTournamentInFirebase]
   );
 
+  // Handle reset score
+  const handleResetScore = useCallback(
+    (matchId: string) => {
+      setMatches((prevMatches) => {
+        const matchToReset = prevMatches.find((m) => m.id === matchId);
+        if (!matchToReset) return prevMatches;
+
+        // Only allow reset if match is in current round
+        if (matchToReset.round !== currentRound) {
+          Alert.alert(
+            "Cannot Reset",
+            "You can only reset scores for matches in the current round."
+          );
+          return prevMatches;
+        }
+
+        // Check if round has been advanced (matches exist in higher rounds)
+        const hasAdvancedRound = prevMatches.some(
+          (m) => m.round > currentRound
+        );
+        if (hasAdvancedRound) {
+          Alert.alert(
+            "Cannot Reset",
+            "You cannot reset scores after advancing to the next round."
+          );
+          return prevMatches;
+        }
+
+        // If match had a winner, undo player elimination/loss
+        if (matchToReset.winner) {
+          const losingPlayer =
+            matchToReset.player1?.id === matchToReset.winner.id
+              ? matchToReset.player2
+              : matchToReset.player1;
+          if (losingPlayer) {
+            setPlayers((prevPlayers) =>
+              prevPlayers.map((p) =>
+                p.id === losingPlayer.id ? { ...p, isEliminated: false } : p
+              )
+            );
+          }
+
+          // If this was the grand finals, undo tournament completion
+          if (matchToReset.bracket === "grandFinals") {
+            setTournamentOver(false);
+            setOverallWinner(null);
+            setRunnerUp(null);
+            setFinalMatch(null);
+            setShowSummaryModal(false);
+          }
+        }
+
+        // Reset the match: clear games and winner
+        const updatedMatches = prevMatches.map((match) => {
+          if (match.id === matchId) {
+            return { ...match, games: [], winner: null };
+          }
+          return match;
+        });
+
+        // Update Firebase
+        updateTournamentInFirebase(updatedMatches);
+
+        return updatedMatches;
+      });
+    },
+    [currentRound, updateTournamentInFirebase]
+  );
+
   // Check if we can advance to next round
   const canAdvanceRound = useCallback((): boolean => {
     const currentRoundMatches = matches.filter(
@@ -690,6 +753,9 @@ export const DoubleElimination8Screen: React.FC<
               (prevItem.round === item.round &&
                 prevItem.bracket !== item.bracket);
 
+            // Check if round can be reset (no matches in higher rounds)
+            const canResetRound = !matches.some((m) => m.round > currentRound);
+
             return (
               <>
                 {showSeparator && (
@@ -701,6 +767,9 @@ export const DoubleElimination8Screen: React.FC<
                   tournamentType="Double Elimination (8)"
                   isMatchLocked={isMatchLocked}
                   onGameResult={handleIncrementScore}
+                  onResetScore={handleResetScore}
+                  currentRound={currentRound}
+                  canResetRound={canResetRound}
                 />
               </>
             );
@@ -742,6 +811,9 @@ export const DoubleElimination8Screen: React.FC<
           winner={overallWinner}
           runnerUp={runnerUp}
           finalMatch={finalMatch}
+          matches={matches}
+          tournamentType="Double Elimination (8 Players)"
+          matchFormat={matchFormat}
           onClose={() => setShowSummaryModal(false)}
         />
       </View>
@@ -762,7 +834,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.glassmorphism.background,
     padding: 8,
     borderRadius: 8,
-    marginBottom: 16,
+    marginBottom: 8,
     borderWidth: 1,
     borderColor: COLORS.glassmorphism.border,
   },
@@ -772,14 +844,14 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   listContent: {
-    paddingBottom: 80,
+    paddingBottom: 40,
   },
   buttonContainer: {
     // Removed padding and backgroundColor for a cleaner look
   },
   advanceButton: {
     backgroundColor: "#111",
-    paddingVertical: 16,
+    paddingVertical: 8,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: COLORS.glassmorphism.border,

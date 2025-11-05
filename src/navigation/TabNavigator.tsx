@@ -88,10 +88,10 @@ export const TabNavigator = () => {
         headerShown: false,
       })}
     >
-      <Tab.Screen
-        name="Manager"
-        component={ManagerStack}
-        options={{ title: "Manager" }}
+        <Tab.Screen
+          name="Manager"
+          component={ManagerStack}
+          options={{ title: "Manager" }}
       />
       <Tab.Screen
         name="Terms"

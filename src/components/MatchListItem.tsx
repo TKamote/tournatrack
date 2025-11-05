@@ -1,5 +1,6 @@
 import React from "react";
-import { View, StyleSheet, Text } from "react-native";
+import { View, StyleSheet, Text, TouchableOpacity } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { Match, Player } from "../types";
 import { COLORS } from "../constants/colors";
 import { MatchFormat } from "../types";
@@ -17,6 +18,9 @@ interface MatchListItemProps {
     score1: number,
     score2: number
   ) => void;
+  onResetScore?: (matchId: string) => void;
+  currentRound?: number;
+  canResetRound?: boolean;
 }
 
 const MatchListItem: React.FC<MatchListItemProps> = ({
@@ -24,6 +28,9 @@ const MatchListItem: React.FC<MatchListItemProps> = ({
   players,
   isMatchLocked,
   onGameResult,
+  onResetScore,
+  currentRound,
+  canResetRound = true,
 }) => {
   // ✅ Helper function to get updated player data
   const getCurrentPlayer = (playerId: string): Player | null => {
@@ -64,9 +71,24 @@ const MatchListItem: React.FC<MatchListItemProps> = ({
     );
   }
 
+  // Check if reset should be available
+  const canReset =
+    onResetScore &&
+    item.round === currentRound &&
+    item.games.length > 0 &&
+    canResetRound;
+
   // Regular match display
   return (
     <View style={styles.matchContainer}>
+      {canReset && (
+        <TouchableOpacity
+          style={styles.resetIconButton}
+          onPress={() => onResetScore(item.id)}
+        >
+          <Ionicons name="refresh-outline" size={18} color={COLORS.textLight} />
+        </TouchableOpacity>
+      )}
       <MatchInfo
         round={item.round}
         bracket={item.bracket}
@@ -99,16 +121,24 @@ const MatchListItem: React.FC<MatchListItemProps> = ({
 const styles = StyleSheet.create({
   matchContainer: {
     backgroundColor: COLORS.backgroundWhite,
-    padding: 16,
-    marginVertical: 8,
+    padding: 8,
+    marginVertical: 4,
     borderRadius: 8,
     elevation: 2,
+    position: "relative",
+  },
+  resetIconButton: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    zIndex: 10,
+    padding: 4,
   },
   byeContainer: {
-    padding: 12,
+    padding: 6,
     backgroundColor: COLORS.backgroundLight,
     borderRadius: 4,
-    marginTop: 8,
+    marginTop: 4,
   },
   byeText: {
     fontSize: 16,
@@ -119,7 +149,7 @@ const styles = StyleSheet.create({
     color: COLORS.textLight,
     fontStyle: "italic",
     textAlign: "center",
-    marginTop: 8,
+    marginTop: 4,
   },
 });
 

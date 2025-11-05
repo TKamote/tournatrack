@@ -35,8 +35,8 @@ export const RoundSeparator: React.FC<{
 const styles = StyleSheet.create({
   roundSeparator: {
     backgroundColor: COLORS.backgroundLight,
-    padding: 8,
-    marginVertical: 8,
+    padding: 4,
+    marginVertical: 4,
     borderRadius: 4,
     borderLeftWidth: 4,
     borderLeftColor: COLORS.primary,
