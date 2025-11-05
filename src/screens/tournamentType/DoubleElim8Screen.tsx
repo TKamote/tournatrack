@@ -161,7 +161,7 @@ export const DoubleElimination8Screen: React.FC<
         status: "in_progress",
         createdAt: new Date(),
         updatedAt: new Date(),
-        isPublic: true, // Make it public so supporters can see it
+        isPublic: true, // Make tournament public
         maxPlayers: 8,
         currentRound: 1,
         totalRounds: 4,

@@ -27,6 +27,7 @@ const PlayerInputSingle4Screen: React.FC<PlayerInputSingle4ScreenProps> = ({
   navigation,
 }) => {
   const [playerNames, setPlayerNames] = useState<string[]>(["", "", "", ""]);
+  const [bulkInput, setBulkInput] = useState<string>("");
   const [selectedFormat, setSelectedFormat] = useState<MatchFormat>({
     type: "raceTo",
     gamesNeededToWin: 3,
@@ -56,6 +57,68 @@ const PlayerInputSingle4Screen: React.FC<PlayerInputSingle4ScreenProps> = ({
     const newPlayerNames = [...playerNames];
     newPlayerNames[index] = name;
     setPlayerNames(newPlayerNames);
+  };
+
+  const handleBulkFill = () => {
+    if (!bulkInput.trim()) {
+      Alert.alert("Empty Input", "Please enter player names separated by commas.");
+      return;
+    }
+
+    const parsedNames = bulkInput
+      .split(",")
+      .map((name) => name.trim())
+      .filter((name) => name.length > 0);
+
+    if (parsedNames.length === 0) {
+      Alert.alert("Invalid Input", "No valid player names found. Please separate names with commas.");
+      return;
+    }
+
+    const normalizedParsed = parsedNames.map((n) => n.toLowerCase());
+    const uniqueNames: string[] = [];
+    const seenNames = new Set<string>();
+    const duplicates: string[] = [];
+
+    parsedNames.forEach((name, index) => {
+      const normalized = normalizedParsed[index];
+      if (!seenNames.has(normalized)) {
+        seenNames.add(normalized);
+        uniqueNames.push(name);
+      } else {
+        duplicates.push(name);
+      }
+    });
+
+    const newPlayerNames = [...playerNames];
+    const slotsToFill = Math.min(uniqueNames.length, playerNames.length);
+
+    for (let i = 0; i < slotsToFill; i++) {
+      newPlayerNames[i] = uniqueNames[i];
+    }
+
+    setPlayerNames(newPlayerNames);
+
+    if (duplicates.length > 0) {
+      Alert.alert(
+        "Duplicate Names Removed",
+        `The following duplicate names were ignored: ${duplicates.join(", ")}`
+      );
+    }
+
+    if (uniqueNames.length > playerNames.length) {
+      Alert.alert(
+        "Too Many Players",
+        `Only the first ${playerNames.length} players were added. Please remove extra names.`
+      );
+    } else if (uniqueNames.length < playerNames.length) {
+      Alert.alert(
+        "Players Added",
+        "The new name may override existing player"
+      );
+    }
+
+    setBulkInput("");
   };
 
   const handleStartTournament = () => {
@@ -97,20 +160,47 @@ const PlayerInputSingle4Screen: React.FC<PlayerInputSingle4ScreenProps> = ({
           />
 
           <ScrollView contentContainerStyle={styles.scrollContent}>
-            {/* Removed instruction text for more space */}
+            {/* Bulk Add Section */}
+            <View style={styles.bulkSection}>
+              <Text style={styles.bulkTitle}>Bulk Add Players</Text>
+              <Text style={styles.bulkHint}>
+                Input players separated by commas
+              </Text>
+              <TextInput
+                style={styles.bulkInput}
+                value={bulkInput}
+                onChangeText={setBulkInput}
+                placeholder="Player1, Player2, Player3, Player4"
+                placeholderTextColor={COLORS.textLight}
+                multiline
+                numberOfLines={3}
+              />
+              <TouchableOpacity
+                style={[
+                  styles.bulkButton,
+                  !bulkInput.trim() && styles.bulkButtonDisabled,
+                ]}
+                onPress={handleBulkFill}
+                disabled={!bulkInput.trim()}
+              >
+                <Text style={styles.bulkButtonText}>Fill Players</Text>
+              </TouchableOpacity>
+            </View>
 
-            {playerNames.map((name, index) => (
-              <View key={index} style={styles.inputContainer}>
-                <Text style={styles.label}>Player {index + 1}:</Text>
-                <TextInput
-                  style={styles.input}
-                  value={name}
-                  onChangeText={(text) => handlePlayerNameChange(index, text)}
-                  placeholder={`Enter Player ${index + 1} name`}
-                  placeholderTextColor={COLORS.textLight}
-                />
-              </View>
-            ))}
+            <View style={styles.playersGrid}>
+              {playerNames.map((name, index) => (
+                <View key={index} style={styles.inputContainer}>
+                  <Text style={styles.label}>Player {index + 1}:</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={name}
+                    onChangeText={(text) => handlePlayerNameChange(index, text)}
+                    placeholder={`Player ${index + 1}`}
+                    placeholderTextColor={COLORS.textLight}
+                  />
+                </View>
+              ))}
+            </View>
 
             {/* Race Format Section */}
             <View style={styles.formatSection}>
@@ -181,8 +271,62 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     textAlign: "center",
   },
-  inputContainer: {
+  bulkSection: {
+    backgroundColor: COLORS.glassmorphism.background,
+    borderWidth: 1,
+    borderColor: COLORS.glassmorphism.border,
+    borderRadius: 0,
+    padding: 12,
     marginBottom: 20,
+  },
+  bulkTitle: {
+    fontSize: FONT_SIZES.sm,
+    fontWeight: FONT_WEIGHTS.semiBold,
+    color: COLORS.glassmorphism.text,
+    marginBottom: 6,
+  },
+  bulkHint: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textLight,
+    marginBottom: 8,
+  },
+  bulkInput: {
+    backgroundColor: COLORS.singleElimBackground,
+    borderWidth: 1,
+    borderColor: COLORS.glassmorphism.border,
+    borderRadius: 0,
+    padding: 10,
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.glassmorphism.text,
+    minHeight: 60,
+    textAlignVertical: "top",
+    marginBottom: 10,
+  },
+  bulkButton: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 0,
+    alignItems: "center",
+  },
+  bulkButtonDisabled: {
+    backgroundColor: COLORS.glassmorphism.textSecondary,
+    opacity: 0.6,
+  },
+  bulkButtonText: {
+    color: COLORS.textWhite,
+    fontSize: FONT_SIZES.sm,
+    fontWeight: FONT_WEIGHTS.semiBold,
+  },
+  playersGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    marginBottom: 20,
+  },
+  inputContainer: {
+    width: "48%",
+    marginBottom: 16,
   },
   label: {
     fontSize: FONT_SIZES.sm,
@@ -194,8 +338,8 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.glassmorphism.background,
     borderWidth: 1,
     borderColor: COLORS.glassmorphism.border,
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: 0,
+    padding: 11,
     fontSize: FONT_SIZES.sm,
     color: COLORS.glassmorphism.text,
   },
@@ -221,9 +365,9 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.glassmorphism.background,
     borderWidth: 1,
     borderColor: COLORS.glassmorphism.border,
-    borderRadius: 12,
+    borderRadius: 0,
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 9,
     marginHorizontal: 4,
     minWidth: 80,
   },
@@ -242,9 +386,9 @@ const styles = StyleSheet.create({
   },
   startButton: {
     backgroundColor: COLORS.glassmorphism.background,
-    paddingVertical: 16,
-    borderRadius: 12,
-    marginTop: 32,
+    paddingVertical: 15,
+    borderRadius: 0,
+    marginTop: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,

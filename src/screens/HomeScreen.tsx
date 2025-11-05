@@ -26,9 +26,7 @@ const HomeScreen: React.FC<any> = ({ navigation, route }) => {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.title}>TournaTrack</Text>
-        <Text style={styles.subtitle}>
-          Choose the tournament you will manage:
-        </Text>
+        <Text style={styles.subtitle}>Choose tournament</Text>
 
         {/* Double Elimination Section - Featured */}
         <View style={[styles.section, styles.featuredSection]}>
@@ -103,8 +101,8 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   subtitle: {
-    fontSize: 18, // was 14, increased by 4px
-    color: COLORS.homeScreenTitleText, // match title color
+    fontSize: 17,
+    color: COLORS.homeScreenTitleText,
     marginBottom: 30,
     textAlign: "center",
   },

@@ -3,7 +3,6 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "../constants/colors";
 import { ManagerStack } from "./ManagerStack";
-import { SupporterStack } from "./SupporterStack";
 import TermsOfUseScreen from "../screens/TermsOfUseScreen";
 import AuthScreen from "../screens/AuthScreen";
 import { useUser } from "../context/UserContext";
@@ -19,7 +18,7 @@ function LogoutScreen({ navigation }: any) {
       try {
         await auth.signOut();
       } catch (e) {
-        console.warn("Error signing out from Firebase Auth:", e);
+        // Error signing out - continue with logout anyway
       }
       await AsyncStorage.clear();
       navigation.reset({
@@ -43,20 +42,9 @@ function LogoutScreen({ navigation }: any) {
 }
 
 export const TabNavigator = () => {
-  const { userRole, isLoading } = useUser();
+  const { isLoading } = useUser();
 
-  console.log(
-    "TabNavigator - Current userRole:",
-    userRole,
-    "Loading:",
-    isLoading,
-    "Should show Manager tab:",
-    userRole === "manager"
-  );
-
-  // Note: initialRouteName should handle the correct tab selection
-
-  // Show loading screen while role is being determined
+  // Show loading screen while auth is being determined
   if (isLoading) {
     return (
       <View
@@ -72,19 +60,15 @@ export const TabNavigator = () => {
     );
   }
 
-  console.log("Rendering Manager tab:", userRole === "manager");
-
   return (
     <Tab.Navigator
-      initialRouteName={userRole === "manager" ? "Manager" : "Supporter"}
+      initialRouteName="Manager"
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
           let iconName: keyof typeof Ionicons.glyphMap;
 
           if (route.name === "Manager") {
             iconName = focused ? "trophy" : "trophy-outline";
-          } else if (route.name === "Supporter") {
-            iconName = focused ? "people" : "people-outline";
           } else if (route.name === "Terms") {
             iconName = focused ? "document-text" : "document-text-outline";
           } else {
@@ -104,17 +88,10 @@ export const TabNavigator = () => {
         headerShown: false,
       })}
     >
-      {userRole === "manager" && (
-        <Tab.Screen
-          name="Manager"
-          component={ManagerStack}
-          options={{ title: "Manager" }}
-        />
-      )}
       <Tab.Screen
-        name="Supporter"
-        component={SupporterStack}
-        options={{ title: "Supporter" }}
+        name="Manager"
+        component={ManagerStack}
+        options={{ title: "Manager" }}
       />
       <Tab.Screen
         name="Terms"
@@ -131,7 +108,6 @@ export const TabNavigator = () => {
           ),
         }}
       />
-      {/* Sign Out functionality removed - supporters should stay logged in */}
     </Tab.Navigator>
   );
 };

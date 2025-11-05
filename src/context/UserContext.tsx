@@ -12,7 +12,7 @@ import { onAuthStateChanged, User } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "../utils/firebase";
 
-type UserRole = "manager" | "supporter";
+type UserRole = "manager";
 
 interface UserContextType {
   userRole: UserRole;
@@ -30,7 +30,7 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 export const UserProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
-  const [userRole, setUserRole] = useState<UserRole>("supporter");
+  const [userRole, setUserRole] = useState<UserRole>("manager");
   const [userId, setUserId] = useState<string>("");
   const [userName, setUserName] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
@@ -42,13 +42,13 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
       const userDoc = await getDoc(doc(db, "users", uid));
       if (userDoc.exists()) {
         const userData = userDoc.data();
-        const role = (userData.role || "supporter").replace(/"/g, "");
-        return role as UserRole;
+        // Always return manager - supporter role removed
+        return "manager" as UserRole;
       }
-      return "supporter" as UserRole;
+      return "manager" as UserRole;
     } catch (error) {
-      console.error("Error fetching user role from Firestore:", error);
-      return "supporter" as UserRole;
+      // Error fetching role - default to manager
+      return "manager" as UserRole;
     }
   }, []);
 
@@ -84,7 +84,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
         setIsAuthenticated(false);
         setUserId("");
         setUserName("");
-        setUserRole("supporter");
+        setUserRole("manager");
 
         // Clear AsyncStorage
         try {

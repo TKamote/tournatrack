@@ -245,7 +245,6 @@ const TournamentBracketScreen: React.FC<TournamentBracketScreenProps> = ({
       const initialMatches = createDEInitialMatches(players, selectedFormat);
       setMatches(initialMatches);
       setCurrentRound(1);
-      console.log("Tournament initialized with 8 players");
     }
   }, [players, selectedFormat]);
 
@@ -323,7 +322,6 @@ const TournamentBracketScreen: React.FC<TournamentBracketScreenProps> = ({
     newPosition: { round: number; matchNumber: number; bracket: string }
   ) => {
     // TODO: Implement drag & drop logic
-    console.log(`Moving player ${playerId} to position:`, newPosition);
   };
 
   // Start tournament
@@ -405,7 +403,6 @@ const TournamentBracketScreen: React.FC<TournamentBracketScreenProps> = ({
   // Advance to next round
   const handleAdvanceRound = () => {
     // TODO: Implement round advancement logic
-    console.log("Advancing to next round");
   };
 
   return (

@@ -49,7 +49,7 @@ const AuthScreen: React.FC<any> = ({ navigation, route }) => {
       // Save user info and role to Firestore
       await setDoc(doc(db, "users", userCredential.user.uid), {
         email: userCredential.user.email,
-        role: "supporter", // Default to supporter for new signups
+        role: "manager", // All users are managers
       });
       // UserContext will automatically sync user data via onAuthStateChanged
       // No need to manually set user data - just navigate
@@ -179,8 +179,8 @@ const AuthScreen: React.FC<any> = ({ navigation, route }) => {
                 >
                   <Ionicons
                     name={showPassword ? "eye-off" : "eye"}
-                    size={20}
-                    color={COLORS.textLight}
+                    size={22}
+                    color={COLORS.textWhite}
                   />
                 </TouchableOpacity>
               </View>
@@ -295,6 +295,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     width: 40,
+    zIndex: 1,
   },
   submitButton: {
     backgroundColor: COLORS.primary,

@@ -31,7 +31,6 @@ const MatchCard: React.FC<MatchCardProps> = ({
     if (!player || !match || !isEditMode) return;
 
     // TODO: Implement drag functionality
-    console.log(`Dragging player: ${player.name}`);
   };
 
   // Calculate scores
