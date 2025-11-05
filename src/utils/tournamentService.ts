@@ -31,13 +31,7 @@ export class TournamentService {
         tournamentData
       );
 
-      // Only log on initial save, not updates
-      if (
-        tournament.status === "in_progress" &&
-        tournament.matches.length <= 4
-      ) {
-        console.log("✅ Created:", tournament.id);
-      }
+      // Tournament saved successfully
     } catch (error) {
       console.error("❌ Save error:", error);
       throw error;
@@ -164,7 +158,6 @@ export class TournamentService {
         matches,
         updatedAt: new Date().toISOString(),
       });
-      console.log("Tournament matches updated:", tournamentId);
     } catch (error) {
       console.error("Error updating tournament matches:", error);
       throw error;
@@ -182,7 +175,6 @@ export class TournamentService {
         status,
         updatedAt: new Date().toISOString(),
       });
-      console.log("Tournament status updated:", tournamentId, status);
     } catch (error) {
       console.error("Error updating tournament status:", error);
       throw error;
@@ -193,7 +185,6 @@ export class TournamentService {
   static async deleteTournament(tournamentId: string): Promise<void> {
     try {
       await deleteDoc(doc(db, TOURNAMENTS_COLLECTION, tournamentId));
-      console.log("Tournament deleted:", tournamentId);
     } catch (error) {
       console.error("Error deleting tournament:", error);
       throw error;

@@ -1,0 +1,26 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users collection - users can read their own data and update their own data
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Tournaments collection
+    match /tournaments/{tournamentId} {
+      // Anyone can read public tournaments
+      // OR authenticated users can read their own tournaments (even if private)
+      allow read: if resource.data.isPublic == true || 
+                     (request.auth != null && resource.data.managerId == request.auth.uid);
+      
+      // Only authenticated users can create tournaments, and must set themselves as manager
+      allow create: if request.auth != null && 
+                       request.resource.data.managerId == request.auth.uid;
+      
+      // Only the tournament manager can update/delete their tournaments
+      allow update, delete: if request.auth != null && 
+                               resource.data.managerId == request.auth.uid;
+    }
+  }
+}
+

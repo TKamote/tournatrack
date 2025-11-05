@@ -159,9 +159,6 @@ export const generateDEWinnersBracketNextRound = (
     )
     .map((m) => m.winner!);
 
-  console.log(
-    `WB R${nextRound}: Creating matches for ${winners.length} winners`
-  );
 
   const matches: Match[] = [];
   for (let i = 0; i < winners.length; i += 2) {
@@ -307,9 +304,6 @@ export const generateDELosersBracketNextRoundMatches = (
     }
   }
 
-  if (matches.length > 0) {
-    console.log(`LB R${nextRound}: Created ${matches.length} matches`);
-  }
 
   return matches;
 };
@@ -332,9 +326,6 @@ export const generateGrandFinalsMatch = (
   )?.winner;
 
   if (wbChampion && lbChampion) {
-    console.log(
-      `Creating Grand Finals: ${wbChampion.name} vs ${lbChampion.name}`
-    );
 
     return [
       createMatch(
@@ -362,9 +353,6 @@ export const generateGrandFinalsReset = (
     grandFinalsMatch.winner &&
     grandFinalsMatch.player2?.id === grandFinalsMatch.winner.id
   ) {
-    console.log(
-      `Grand Finals Reset: ${grandFinalsMatch.winner.name} forces reset!`
-    );
 
     return [
       createMatch(
