@@ -205,17 +205,7 @@ const TournamentCard: React.FC<TournamentCardProps> = ({
           </View>
         )}
 
-        <TouchableOpacity
-          style={styles.managerRow}
-          onPress={() => {
-            // Navigate to manager profile
-            if (navigation) {
-              navigation.navigate("ManagerProfile", {
-                managerId: tournamentId,
-              });
-            }
-          }}
-        >
+        <View style={styles.managerRow}>
           {managerAvatar && (
             <View style={styles.avatarContainer}>
               <Text style={styles.avatarText}>
@@ -226,7 +216,7 @@ const TournamentCard: React.FC<TournamentCardProps> = ({
           <Text style={styles.manager}>
             Manager: {manager && manager.length > 0 ? manager : "Unknown"}
           </Text>
-        </TouchableOpacity>
+        </View>
       </TouchableOpacity>
     </View>
   );
