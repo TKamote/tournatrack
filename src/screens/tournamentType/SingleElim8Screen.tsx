@@ -87,18 +87,21 @@ export const SingleElim8Screen: React.FC<SingleElim8ScreenProps> = ({
         isActive: true,
       }));
 
-      const shuffledPlayers = shuffleArray(initialPlayers);
+      // Ordered seeding: 1 vs 8, 2 vs 7, 3 vs 6, 4 vs 5
+      const orderedPlayers = [...initialPlayers];
 
-      // Create Round 1 matches (4 matches)
+      // Create Round 1 matches (4 matches) with ordered seeding
       const round1Matches: Match[] = [];
       for (let i = 0; i < 4; i++) {
+        const player1Index = i;
+        const player2Index = 7 - i; // 7, 6, 5, 4
         round1Matches.push(
           createMatch(
             `se8-r1-${i + 1}`,
             1,
             i + 1,
-            shuffledPlayers[i * 2],
-            shuffledPlayers[i * 2 + 1],
+            orderedPlayers[player1Index],
+            orderedPlayers[player2Index],
             "winners",
             false,
             matchFormat
@@ -114,7 +117,7 @@ export const SingleElim8Screen: React.FC<SingleElim8ScreenProps> = ({
         type: "Single Elimination",
         manager: userName,
         managerId: userId,
-        players: shuffledPlayers,
+        players: orderedPlayers,
         matches: round1Matches,
         format: matchFormat,
         status: "in_progress",
@@ -126,7 +129,7 @@ export const SingleElim8Screen: React.FC<SingleElim8ScreenProps> = ({
         totalRounds: 3,
       };
 
-      setPlayers(shuffledPlayers);
+      setPlayers(orderedPlayers);
       setMatches(round1Matches);
       setTournamentId(tournamentId);
       setHasInitialized(true);
@@ -454,6 +457,64 @@ export const SingleElim8Screen: React.FC<SingleElim8ScreenProps> = ({
     return currentMatches.every((m) => m.winner !== null);
   }, [matches, currentRound]);
 
+  // Check if shuffle is allowed (no games have scores)
+  const canShuffle = useCallback(() => {
+    return !matches.some((match) => match.games.length > 0);
+  }, [matches]);
+
+  // Handle shuffle players
+  const handleShufflePlayers = useCallback(() => {
+    if (!canShuffle()) return;
+
+    const shuffledPlayers = shuffleArray([...players]);
+
+    // Recreate Round 1 matches with shuffled players
+    const round1Matches: Match[] = [];
+    for (let i = 0; i < 4; i++) {
+      round1Matches.push(
+        createMatch(
+          `se8-r1-${i + 1}`,
+          1,
+          i + 1,
+          shuffledPlayers[i * 2],
+          shuffledPlayers[i * 2 + 1],
+          "winners",
+          false,
+          matchFormat
+        )
+      );
+    }
+
+    // Keep matches from other rounds, only update Round 1
+    const otherMatches = matches.filter((m) => m.round !== 1);
+    const updatedMatches = [...round1Matches, ...otherMatches];
+
+    setPlayers(shuffledPlayers);
+    setMatches(updatedMatches);
+
+    // Update Firebase
+    if (tournamentId) {
+      const updatedTournament: Tournament = {
+        id: tournamentId,
+        name: "Single Elimination Tournament",
+        type: "Single Elimination",
+        manager: userName,
+        managerId: userId,
+        players: shuffledPlayers,
+        matches: updatedMatches,
+        format: matchFormat,
+        status: "in_progress",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        isPublic: true,
+        maxPlayers: 8,
+        currentRound: currentRound,
+        totalRounds: 3,
+      };
+      updateTournamentInFirebase(updatedMatches);
+    }
+  }, [players, matches, matchFormat, canShuffle, tournamentId, userName, userId, currentRound, updateTournamentInFirebase]);
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
@@ -466,6 +527,14 @@ export const SingleElim8Screen: React.FC<SingleElim8ScreenProps> = ({
           <Text style={styles.formatText}>
             Race to {matchFormat.gamesNeededToWin}
           </Text>
+          {canShuffle() && (
+            <TouchableOpacity
+              style={styles.shuffleButton}
+              onPress={handleShufflePlayers}
+            >
+              <Ionicons name="shuffle-outline" size={18} color={COLORS.textLight} />
+            </TouchableOpacity>
+          )}
         </View>
 
         <FlatList
@@ -547,6 +616,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.backgroundDark,
   },
+  shuffleButton: {
+    position: "absolute",
+    top: 1,
+    right: 1,
+    zIndex: 10,
+    padding: 7,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderRadius: 6,
+  },
   container: {
     flex: 1,
     padding: 16,
@@ -558,6 +636,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     borderWidth: 1,
     borderColor: COLORS.glassmorphism.border,
+    position: "relative",
   },
   formatText: {
     color: COLORS.textWhite,

@@ -88,18 +88,21 @@ export const SingleElim4Screen: React.FC<SingleElim4ScreenProps> = ({
         isActive: true,
       }));
 
-      const shuffledPlayers = shuffleArray(initialPlayers);
+      // Ordered seeding: 1 vs 4, 2 vs 3
+      const orderedPlayers = [...initialPlayers];
 
-      // Create Round 1 matches (2 matches)
+      // Create Round 1 matches (2 matches) with ordered seeding
       const round1Matches: Match[] = [];
       for (let i = 0; i < 2; i++) {
+        const player1Index = i;
+        const player2Index = 3 - i; // 3, 2
         round1Matches.push(
           createMatch(
             `se4-r1-${i + 1}`,
             1,
             i + 1,
-            shuffledPlayers[i * 2],
-            shuffledPlayers[i * 2 + 1],
+            orderedPlayers[player1Index],
+            orderedPlayers[player2Index],
             "winners",
             false,
             matchFormat
@@ -115,7 +118,7 @@ export const SingleElim4Screen: React.FC<SingleElim4ScreenProps> = ({
         type: "Single Elimination",
         manager: userName,
         managerId: userId,
-        players: shuffledPlayers,
+        players: orderedPlayers,
         matches: round1Matches,
         format: matchFormat,
         status: "in_progress",
@@ -127,7 +130,7 @@ export const SingleElim4Screen: React.FC<SingleElim4ScreenProps> = ({
         totalRounds: 2,
       };
 
-      setPlayers(shuffledPlayers);
+      setPlayers(orderedPlayers);
       setMatches(round1Matches);
       setTournamentId(tournamentId);
       setHasInitialized(true);
@@ -424,6 +427,47 @@ export const SingleElim4Screen: React.FC<SingleElim4ScreenProps> = ({
     return currentMatches.every((m) => m.winner !== null);
   }, [matches, currentRound, tournamentOver]);
 
+  // Check if shuffle is allowed (no games have scores)
+  const canShuffle = useCallback(() => {
+    return !matches.some((match) => match.games.length > 0);
+  }, [matches]);
+
+  // Handle shuffle players
+  const handleShufflePlayers = useCallback(() => {
+    if (!canShuffle()) return;
+
+    const shuffledPlayers = shuffleArray([...players]);
+
+    // Recreate Round 1 matches with shuffled players
+    const round1Matches: Match[] = [];
+    for (let i = 0; i < 2; i++) {
+      round1Matches.push(
+        createMatch(
+          `se4-r1-${i + 1}`,
+          1,
+          i + 1,
+          shuffledPlayers[i * 2],
+          shuffledPlayers[i * 2 + 1],
+          "winners",
+          false,
+          matchFormat
+        )
+      );
+    }
+
+    // Keep matches from other rounds, only update Round 1
+    const otherMatches = matches.filter((m) => m.round !== 1);
+    const updatedMatches = [...round1Matches, ...otherMatches];
+
+    setPlayers(shuffledPlayers);
+    setMatches(updatedMatches);
+
+    // Update Firebase
+    if (tournamentId) {
+      updateTournamentInFirebase(updatedMatches);
+    }
+  }, [players, matches, matchFormat, canShuffle, tournamentId, updateTournamentInFirebase]);
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
@@ -436,6 +480,14 @@ export const SingleElim4Screen: React.FC<SingleElim4ScreenProps> = ({
           <Text style={styles.formatText}>
             Race to {matchFormat.gamesNeededToWin}
           </Text>
+          {canShuffle() && (
+            <TouchableOpacity
+              style={styles.shuffleButton}
+              onPress={handleShufflePlayers}
+            >
+              <Ionicons name="shuffle-outline" size={18} color={COLORS.textLight} />
+            </TouchableOpacity>
+          )}
         </View>
 
         <FlatList
@@ -517,6 +569,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.backgroundDark,
   },
+  shuffleButton: {
+    position: "absolute",
+    top: 1,
+    right: 1,
+    zIndex: 10,
+    padding: 7,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderRadius: 6,
+  },
   container: {
     flex: 1,
     padding: 16,
@@ -528,6 +589,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     borderWidth: 1,
     borderColor: COLORS.glassmorphism.border,
+    position: "relative",
   },
   formatText: {
     color: COLORS.textWhite,

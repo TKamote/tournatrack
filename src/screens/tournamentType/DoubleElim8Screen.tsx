@@ -135,10 +135,12 @@ export const DoubleElimination8Screen: React.FC<
         isActive: true,
       }));
 
-      const shuffledPlayers = shuffleArray(initialPlayers);
+      // Use ordered seeding (shuffle=false)
+      const orderedPlayers = [...initialPlayers];
       const initialMatches = createDEInitialMatches(
-        shuffledPlayers,
-        matchFormat
+        orderedPlayers,
+        matchFormat,
+        false
       );
 
       // Create tournament object for Firebase
@@ -149,7 +151,7 @@ export const DoubleElimination8Screen: React.FC<
         type: "Double Elimination",
         manager: userName,
         managerId: userId,
-        players: shuffledPlayers,
+        players: orderedPlayers,
         matches: initialMatches,
         format: matchFormat,
         status: "in_progress",
@@ -161,7 +163,7 @@ export const DoubleElimination8Screen: React.FC<
         totalRounds: 4,
       };
 
-      setPlayers(shuffledPlayers);
+      setPlayers(orderedPlayers);
       setMatches(initialMatches);
       setTournamentId(tournamentId);
       setHasInitialized(true);
@@ -728,6 +730,37 @@ export const DoubleElimination8Screen: React.FC<
     return match.winner !== null || !match.player1 || !match.player2;
   }, []);
 
+  // Check if shuffle is allowed (no games have scores)
+  const canShuffle = useCallback(() => {
+    return !matches.some((match) => match.games.length > 0);
+  }, [matches]);
+
+  // Handle shuffle players
+  const handleShufflePlayers = useCallback(() => {
+    if (!canShuffle()) return;
+
+    const shuffledPlayers = shuffleArray([...players]);
+
+    // Recreate Round 1 matches with shuffled players
+    const round1Matches = createDEInitialMatches(
+      shuffledPlayers,
+      matchFormat,
+      true
+    );
+
+    // Keep matches from other rounds, only update Round 1
+    const otherMatches = matches.filter((m) => m.round !== 1);
+    const updatedMatches = [...round1Matches, ...otherMatches];
+
+    setPlayers(shuffledPlayers);
+    setMatches(updatedMatches);
+
+    // Update Firebase
+    if (tournamentId) {
+      updateTournamentInFirebase(updatedMatches);
+    }
+  }, [players, matches, matchFormat, canShuffle, tournamentId, updateTournamentInFirebase]);
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
@@ -740,6 +773,14 @@ export const DoubleElimination8Screen: React.FC<
           <Text style={styles.formatText}>
             Race to {matchFormat.gamesNeededToWin}
           </Text>
+          {canShuffle() && (
+            <TouchableOpacity
+              style={styles.shuffleButton}
+              onPress={handleShufflePlayers}
+            >
+              <Ionicons name="shuffle-outline" size={18} color={COLORS.textLight} />
+            </TouchableOpacity>
+          )}
         </View>
 
         <FlatList
@@ -826,6 +867,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.backgroundDark,
   },
+  shuffleButton: {
+    position: "absolute",
+    top: 1,
+    right: 1,
+    zIndex: 10,
+    padding: 7,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderRadius: 6,
+  },
   container: {
     flex: 1,
     padding: 16,
@@ -837,6 +887,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     borderWidth: 1,
     borderColor: COLORS.glassmorphism.border,
+    position: "relative",
   },
   formatText: {
     color: COLORS.textWhite,

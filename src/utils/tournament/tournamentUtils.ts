@@ -89,58 +89,125 @@ export const generatePlayers = (count: number): Player[] => {
 // Initial match creation for double elimination
 export const createDEInitialMatches = (
   players: Player[],
-  format: MatchFormat
+  format: MatchFormat,
+  shuffle: boolean = false
 ): Match[] => {
   const matches: Match[] = [];
-  const shuffledPlayers = shuffleArray(players);
+  const playersToUse = shuffle ? shuffleArray(players) : players;
 
-  if (players.length === 4) {
+  if (playersToUse.length === 4) {
     // Handle 4 players: 2 actual matches in Round 1
-    for (let i = 0; i < 4; i += 2) {
+    // Ordered seeding: 1 vs 4, 2 vs 3
+    if (!shuffle) {
       matches.push(
         createMatch(
-          `match-wb1-${i / 2 + 1}`,
+          `match-wb1-1`,
           1,
-          i / 2 + 1,
-          shuffledPlayers[i],
-          shuffledPlayers[i + 1],
+          1,
+          playersToUse[0],
+          playersToUse[3],
+          "winners",
+          false,
+          format
+        ),
+        createMatch(
+          `match-wb1-2`,
+          1,
+          2,
+          playersToUse[1],
+          playersToUse[2],
           "winners",
           false,
           format
         )
       );
+    } else {
+      for (let i = 0; i < 4; i += 2) {
+        matches.push(
+          createMatch(
+            `match-wb1-${i / 2 + 1}`,
+            1,
+            i / 2 + 1,
+            playersToUse[i],
+            playersToUse[i + 1],
+            "winners",
+            false,
+            format
+          )
+        );
+      }
     }
-  } else if (players.length === 8) {
+  } else if (playersToUse.length === 8) {
     // Handle 8 players: 4 actual matches in Round 1
-    for (let i = 0; i < 4; i++) {
-      matches.push(
-        createMatch(
-          `match-wb1-${i + 1}`,
-          1,
-          i + 1,
-          shuffledPlayers[i * 2],
-          shuffledPlayers[i * 2 + 1],
-          "winners",
-          false,
-          format
-        )
-      );
+    // Ordered seeding: 1 vs 8, 2 vs 7, 3 vs 6, 4 vs 5
+    if (!shuffle) {
+      for (let i = 0; i < 4; i++) {
+        const player1Index = i;
+        const player2Index = 7 - i;
+        matches.push(
+          createMatch(
+            `match-wb1-${i + 1}`,
+            1,
+            i + 1,
+            playersToUse[player1Index],
+            playersToUse[player2Index],
+            "winners",
+            false,
+            format
+          )
+        );
+      }
+    } else {
+      for (let i = 0; i < 4; i++) {
+        matches.push(
+          createMatch(
+            `match-wb1-${i + 1}`,
+            1,
+            i + 1,
+            playersToUse[i * 2],
+            playersToUse[i * 2 + 1],
+            "winners",
+            false,
+            format
+          )
+        );
+      }
     }
-  } else if (players.length === 16) {
+  } else if (playersToUse.length === 16) {
     // Handle 16 players: 8 actual matches in Round 1
-    for (let i = 0; i < 8; i++) {
-      matches.push(
-        createMatch(
-          `match-wb1-${i + 1}`,
-          1,
-          i + 1,
-          shuffledPlayers[i * 2],
-          shuffledPlayers[i * 2 + 1],
-          "winners",
-          false,
-          format
-        )
-      );
+    // Ordered seeding: 1 vs 16, 2 vs 15, 3 vs 14, 4 vs 13, 5 vs 12, 6 vs 11, 7 vs 10, 8 vs 9
+    if (!shuffle) {
+      for (let i = 0; i < 8; i++) {
+        const player1Index = i;
+        const player2Index = 15 - i;
+        matches.push(
+          createMatch(
+            `match-wb1-${i + 1}`,
+            1,
+            i + 1,
+            playersToUse[player1Index],
+            playersToUse[player2Index],
+            "winners",
+            false,
+            format
+          )
+        );
+      }
+    } else {
+      for (let i = 0; i < 8; i++) {
+        matches.push(
+          createMatch(
+            `match-wb1-${i + 1}`,
+            1,
+            i + 1,
+            playersToUse[i * 2],
+            playersToUse[i * 2 + 1],
+            "winners",
+            false,
+            format
+          )
+        );
+      }
     }
   }
 
